@@ -1,0 +1,369 @@
+import { Router } from 'express'
+import prisma from '../prisma'
+import { asyncHandler, AppError } from '../middleware/error'
+import dayjs from 'dayjs'
+
+const router = Router()
+
+// 生成工单号
+const genOrderNo = async () => {
+  const today = dayjs().format('YYYYMMDD')
+  const count = await prisma.workOrder.count({
+    where: { orderNo: { startsWith: `WO${today}` } }
+  })
+  return `WO${today}${String(count + 1).padStart(3, '0')}`
+}
+
+// 工单列表
+router.get('/', asyncHandler(async (req, res) => {
+  const { status, keyword } = req.query
+  const where: any = {}
+  if (status) where.status = status
+  if (keyword) {
+    where.OR = [
+      { orderNo: { contains: keyword as string } },
+      { complaint: { contains: keyword as string } },
+      { vehicle: { plateNumber: { contains: keyword as string } } },
+      { customer: { name: { contains: keyword as string } } }
+    ]
+  }
+  const orders = await prisma.workOrder.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      customer: { select: { id: true, name: true, phone: true } },
+      vehicle: { select: { id: true, plateNumber: true, brand: true, model: true } }
+    }
+  })
+  res.json(orders)
+}))
+
+// 工单详情（全量关联）
+router.get('/:id', asyncHandler(async (req, res) => {
+  const order = await prisma.workOrder.findUnique({
+    where: { id: Number(req.params.id) },
+    include: {
+      customer: true,
+      vehicle: true,
+      checkinRecord: true,
+      checkinPhotos: true,
+      repairItems: { orderBy: { createdAt: 'asc' } },
+      repairLogs: { orderBy: { createdAt: 'asc' } },
+      additionalItems: { orderBy: { createdAt: 'desc' } },
+      qualityCheck: true,
+      settlement: { include: { payments: { orderBy: { createdAt: 'desc' } } } },
+      reminders: true
+    }
+  })
+  if (!order) throw new AppError('工单不存在', 404)
+  res.json(order)
+}))
+
+// 更新工单状态
+router.patch('/:id/status', asyncHandler(async (req, res) => {
+  const { status, ...data } = req.body
+  const id = Number(req.params.id)
+  const order = await prisma.workOrder.findUnique({ where: { id } })
+  if (!order) throw new AppError('工单不存在', 404)
+
+  const updateData: any = { status }
+
+  // 状态流转副作用
+  switch (status) {
+    case 'repairing':
+      updateData.repairStartedAt = new Date()
+      if (!order.quoteConfirmedAt) updateData.quoteConfirmedAt = new Date()
+      break
+    case 'pending_quality_check':
+      updateData.repairFinishedAt = new Date()
+      break
+    case 'cancelled':
+      updateData.cancelledAt = new Date()
+      updateData.cancelReason = data.cancelReason
+      break
+  }
+
+  const updated = await prisma.workOrder.update({ where: { id }, data: updateData })
+  res.json(updated)
+}))
+
+// ===== 报价相关 =====
+
+// 保存报价（维修项目/配件）
+router.post('/:id/quote', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id)
+  const { items, inspection } = req.body
+
+  // 删除原有报价项目，重新写入
+  await prisma.repairItem.deleteMany({ where: { workOrderId: id, source: 'quote' } })
+
+  let total = 0
+  if (items && items.length > 0) {
+    for (const item of items) {
+      const subtotal = Number(item.quantity) * Number(item.unitPrice)
+      total += subtotal
+      await prisma.repairItem.create({
+        data: {
+          workOrderId: id,
+          type: item.type,
+          name: item.name,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          subtotal,
+          remark: item.remark,
+          source: 'quote'
+        }
+      })
+    }
+  }
+
+  await prisma.workOrder.update({
+    where: { id },
+    data: { status: 'pending_quote', quoteAmount: total }
+  })
+
+  res.json({ success: true, total })
+}))
+
+// 客户确认报价
+router.post('/:id/quote/confirm', asyncHandler(async (req, res) => {
+  const { confirmed } = req.body
+  const id = Number(req.params.id)
+  if (confirmed) {
+    await prisma.workOrder.update({
+      where: { id },
+      data: { status: 'repairing', quoteConfirmedAt: new Date(), repairStartedAt: new Date() }
+    })
+  }
+  res.json({ success: true })
+}))
+
+// ===== 维修记录 =====
+
+router.get('/:id/repair-logs', asyncHandler(async (req, res) => {
+  const logs = await prisma.repairLog.findMany({
+    where: { workOrderId: Number(req.params.id) },
+    orderBy: { createdAt: 'asc' }
+  })
+  res.json(logs)
+}))
+
+router.post('/:id/repair-logs', asyncHandler(async (req, res) => {
+  const { content } = req.body
+  if (!content) throw new AppError('内容不能为空')
+  const log = await prisma.repairLog.create({
+    data: { workOrderId: Number(req.params.id), content }
+  })
+  res.status(201).json(log)
+}))
+
+// ===== 增项 =====
+
+router.get('/:id/additional-items', asyncHandler(async (req, res) => {
+  const items = await prisma.additionalItem.findMany({
+    where: { workOrderId: Number(req.params.id) },
+    orderBy: { createdAt: 'desc' }
+  })
+  res.json(items)
+}))
+
+router.post('/:id/additional-items', asyncHandler(async (req, res) => {
+  const { name, amount, reason } = req.body
+  if (!name || !amount) throw new AppError('名称和金额不能为空')
+  const item = await prisma.additionalItem.create({
+    data: { workOrderId: Number(req.params.id), name, amount: Number(amount), reason }
+  })
+  res.status(201).json(item)
+}))
+
+// 确认增项
+router.patch('/additional-items/:itemId/confirm', asyncHandler(async (req, res) => {
+  const { confirmed } = req.body
+  const itemId = Number(req.params.itemId)
+  const item = await prisma.additionalItem.findUnique({ where: { id: itemId } })
+  if (!item) throw new AppError('增项不存在', 404)
+
+  if (confirmed) {
+    // 标记确认，并生成维修项目
+    await prisma.additionalItem.update({
+      where: { id: itemId },
+      data: { status: 'confirmed', confirmedAt: new Date() }
+    })
+    await prisma.repairItem.create({
+      data: {
+        workOrderId: item.workOrderId,
+        type: 'service',
+        name: item.name,
+        quantity: 1,
+        unitPrice: item.amount,
+        subtotal: item.amount,
+        source: 'additional'
+      }
+    })
+    // 更新最终金额
+    const order = await prisma.workOrder.findUnique({ where: { id: item.workOrderId } })
+    await prisma.workOrder.update({
+      where: { id: item.workOrderId },
+      data: { finalAmount: (order?.finalAmount || order?.quoteAmount || 0) + item.amount }
+    })
+  } else {
+    await prisma.additionalItem.update({
+      where: { id: itemId },
+      data: { status: 'rejected' }
+    })
+  }
+  res.json({ success: true })
+}))
+
+// ===== 质检 =====
+
+router.post('/:id/quality-check', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id)
+  const { result, checkItems, remark } = req.body
+  if (!result) throw new AppError('质检结果不能为空')
+
+  // 删除旧质检记录
+  await prisma.qualityCheck.deleteMany({ where: { workOrderId: id } })
+
+  const qc = await prisma.qualityCheck.create({
+    data: { workOrderId: id, result, checkItems: checkItems ? JSON.stringify(checkItems) : null, remark }
+  })
+
+  // 通过 → 待结算，自动生成结算单
+  if (result === 'pass') {
+    await prisma.workOrder.update({ where: { id }, data: { status: 'pending_settlement' } })
+    // 自动生成结算单
+    const existing = await prisma.settlement.findUnique({ where: { workOrderId: id } })
+    if (!existing) {
+      const items = await prisma.repairItem.findMany({ where: { workOrderId: id } })
+      const total = items.reduce((sum, i) => sum + i.subtotal, 0)
+      const today = dayjs().format('YYYYMMDD')
+      const count = await prisma.settlement.count({ where: { settlementNo: { startsWith: `SET${today}` } } })
+      await prisma.settlement.create({
+        data: {
+          workOrderId: id,
+          settlementNo: `SET${today}${String(count + 1).padStart(3, '0')}`,
+          totalAmount: total,
+          actualAmount: total,
+          status: 'unpaid'
+        }
+      })
+      await prisma.workOrder.update({ where: { id }, data: { finalAmount: total } })
+    }
+  } else {
+    // 不通过 → 返工
+    await prisma.workOrder.update({ where: { id }, data: { status: 'repairing' } })
+  }
+
+  res.json(qc)
+}))
+
+// ===== 结算 =====
+
+router.get('/:id/settlement', asyncHandler(async (req, res) => {
+  const s = await prisma.settlement.findUnique({
+    where: { workOrderId: Number(req.params.id) },
+    include: { payments: { orderBy: { createdAt: 'desc' } } }
+  })
+  res.json(s)
+}))
+
+router.post('/:id/settlement', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id)
+  const { discount, remark } = req.body
+  const items = await prisma.repairItem.findMany({ where: { workOrderId: id } })
+  const total = items.reduce((sum, i) => sum + i.subtotal, 0)
+  const disc = Number(discount) || 0
+  const actual = total - disc
+
+  const today = dayjs().format('YYYYMMDD')
+  const count = await prisma.settlement.count({ where: { settlementNo: { startsWith: `SET${today}` } } })
+
+  const s = await prisma.settlement.upsert({
+    where: { workOrderId: id },
+    update: { totalAmount: total, discount: disc, actualAmount: actual, remark },
+    create: {
+      workOrderId: id,
+      settlementNo: `SET${today}${String(count + 1).padStart(3, '0')}`,
+      totalAmount: total,
+      discount: disc,
+      actualAmount: actual,
+      status: 'unpaid',
+      remark
+    }
+  })
+  await prisma.workOrder.update({ where: { id }, data: { finalAmount: actual } })
+  res.json(s)
+}))
+
+// 收款
+router.post('/settlements/:sid/payments', asyncHandler(async (req, res) => {
+  const sid = Number(req.params.sid)
+  const { amount, method, type, remark } = req.body
+  if (!amount) throw new AppError('金额不能为空')
+
+  const payment = await prisma.payment.create({
+    data: {
+      settlementId: sid,
+      amount: Number(amount),
+      method: method || 'cash',
+      type: type || 'initial',
+      remark
+    }
+  })
+
+  // 更新结算单已收金额和状态
+  const s = await prisma.settlement.findUnique({ where: { id: sid }, include: { payments: true } })
+  if (s) {
+    const paid = s.payments.reduce((sum, p) => sum + p.amount, 0)
+    const status = paid >= s.actualAmount ? 'paid' : 'unpaid'
+    await prisma.settlement.update({ where: { id: sid }, data: { paidAmount: paid, status } })
+    // 同步工单
+    await prisma.workOrder.update({ where: { id: s.workOrderId }, data: { paidAmount: paid } })
+  }
+
+  res.status(201).json(payment)
+}))
+
+// ===== 交车 =====
+
+router.post('/:id/deliver', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id)
+  const { mileage_out } = req.body
+
+  await prisma.workOrder.update({
+    where: { id },
+    data: {
+      status: 'completed',
+      deliveredAt: new Date(),
+      mileageOut: mileage_out ? Number(mileage_out) : undefined
+    }
+  })
+
+  // 自动创建保养提醒（3个月后或5000公里）和回访提醒（3天后）
+  const order = await prisma.workOrder.findUnique({ where: { id } })
+  if (order) {
+    await prisma.reminder.createMany({
+      data: [
+        {
+          workOrderId: id,
+          vehicleId: order.vehicleId,
+          type: 'follow_up',
+          remindDate: dayjs().add(3, 'day').toDate(),
+          content: '维修后回访，确认车辆使用情况'
+        },
+        {
+          workOrderId: id,
+          vehicleId: order.vehicleId,
+          type: 'maintenance',
+          remindDate: dayjs().add(3, 'month').toDate(),
+          content: '建议保养（约5000公里或3个月）'
+        }
+      ]
+    })
+  }
+
+  res.json({ success: true })
+}))
+
+export default router

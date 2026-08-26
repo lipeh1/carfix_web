@@ -1,0 +1,239 @@
+// 汽修管理系统数据库 Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 客户表
+model Customer {
+  id        Int       @id @default(autoincrement())
+  name      String
+  phone     String    @unique
+  address   String?
+  remark    String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  vehicles   Vehicle[]
+  workOrders WorkOrder[]
+
+  @@map("customers")
+}
+
+// 车辆表
+model Vehicle {
+  id          Int       @id @default(autoincrement())
+  customerId  Int       @map("customer_id")
+  plateNumber String    @map("plate_number")
+  brand       String?
+  model       String?
+  year        Int?
+  vin         String?
+  color       String?
+  remark      String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  workOrders  WorkOrder[]
+  reminders   Reminder[]
+
+  @@index([customerId])
+  @@index([plateNumber])
+  @@map("vehicles")
+}
+
+// 工单表（核心）
+model WorkOrder {
+  id                Int       @id @default(autoincrement())
+  orderNo           String    @unique @map("order_no")
+  customerId        Int       @map("customer_id")
+  vehicleId         Int       @map("vehicle_id")
+  status            String    @default("pending_inspection")
+  source            String    @default("walk_in")
+  complaint         String?
+  mileageIn         Int?      @map("mileage_in")
+  mileageOut        Int?      @map("mileage_out")
+  quoteAmount       Float?    @map("quote_amount")
+  finalAmount       Float?    @map("final_amount")
+  paidAmount        Float     @default(0) @map("paid_amount")
+  quoteConfirmedAt  DateTime? @map("quote_confirmed_at")
+  repairStartedAt   DateTime? @map("repair_started_at")
+  repairFinishedAt  DateTime? @map("repair_finished_at")
+  deliveredAt       DateTime? @map("delivered_at")
+  cancelledAt       DateTime? @map("cancelled_at")
+  cancelReason      String?   @map("cancel_reason")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  customer         Customer          @relation(fields: [customerId], references: [id])
+  vehicle          Vehicle           @relation(fields: [vehicleId], references: [id])
+  checkinRecord    CheckinRecord?
+  checkinPhotos    CheckinPhoto[]
+  repairItems      RepairItem[]
+  repairLogs       RepairLog[]
+  additionalItems  AdditionalItem[]
+  qualityCheck     QualityCheck?
+  settlement       Settlement?
+  reminders        Reminder[]
+
+  @@index([customerId])
+  @@index([vehicleId])
+  @@index([status])
+  @@map("work_orders")
+}
+
+// 接车登记表
+model CheckinRecord {
+  id              Int       @id @default(autoincrement())
+  workOrderId     Int       @unique @map("work_order_id")
+  vehicleCondition String?  @map("vehicle_condition")
+  fuelLevel       String?   @map("fuel_level")
+  itemsInCar      String?   @map("items_in_car")
+  checkinBy       String?   @map("checkin_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@map("checkin_records")
+}
+
+// 接车照片表
+model CheckinPhoto {
+  id          Int       @id @default(autoincrement())
+  workOrderId Int       @map("work_order_id")
+  filePath    String    @map("file_path")
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@map("checkin_photos")
+}
+
+// 维修项目/配件明细表
+model RepairItem {
+  id          Int      @id @default(autoincrement())
+  workOrderId Int      @map("work_order_id")
+  type        String   // service(工时) / part(配件)
+  name        String
+  quantity    Float    @default(1)
+  unitPrice   Float    @map("unit_price")
+  subtotal    Float
+  remark      String?
+  source      String   @default("quote") // quote / additional
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@map("repair_items")
+}
+
+// 维修过程记录表
+model RepairLog {
+  id          Int      @id @default(autoincrement())
+  workOrderId Int      @map("work_order_id")
+  content     String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@map("repair_logs")
+}
+
+// 增项表
+model AdditionalItem {
+  id          Int       @id @default(autoincrement())
+  workOrderId Int       @map("work_order_id")
+  name        String
+  amount      Float
+  reason      String?
+  status      String    @default("pending") // pending / confirmed / rejected
+  confirmedAt DateTime? @map("confirmed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@map("additional_items")
+}
+
+// 质检表
+model QualityCheck {
+  id          Int      @id @default(autoincrement())
+  workOrderId Int      @unique @map("work_order_id")
+  result      String   // pass / fail
+  checkItems  String?  @map("check_items") // JSON
+  remark      String?
+  checkedBy   String?  @map("checked_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@map("quality_checks")
+}
+
+// 结算单表
+model Settlement {
+  id           Int      @id @default(autoincrement())
+  workOrderId  Int      @unique @map("work_order_id")
+  settlementNo String   @unique @map("settlement_no")
+  totalAmount  Float    @map("total_amount")
+  discount     Float    @default(0)
+  actualAmount Float    @map("actual_amount")
+  paidAmount   Float    @default(0) @map("paid_amount")
+  status       String   @default("unpaid") // paid / unpaid
+  remark       String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  payments  Payment[]
+
+  @@map("settlements")
+}
+
+// 收款记录表
+model Payment {
+  id           Int      @id @default(autoincrement())
+  settlementId Int      @map("settlement_id")
+  amount       Float
+  method       String   @default("cash") // cash/wechat/alipay/card/transfer
+  type         String   @default("initial") // initial / supplement
+  remark       String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  settlement Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+
+  @@index([settlementId])
+  @@map("payments")
+}
+
+// 回访/保养提醒表
+model Reminder {
+  id          Int       @id @default(autoincrement())
+  workOrderId Int       @map("work_order_id")
+  vehicleId   Int       @map("vehicle_id")
+  type        String    // maintenance / follow_up
+  remindDate  DateTime  @map("remind_date")
+  content     String?
+  status      String    @default("pending") // pending / done
+  remindedAt  DateTime? @map("reminded_at")
+  remindMethod String?  @map("remind_method")
+  feedback    String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@index([vehicleId])
+  @@index([status])
+  @@map("reminders")
+}
