@@ -3,15 +3,45 @@
     <van-nav-bar title="车辆详情" left-text="返回" left-arrow @click-left="$router.back()" />
 
     <div class="page-content" v-if="vehicle">
-      <div class="card">
-        <van-cell title="车牌号" :value="vehicle.plate_number" />
-        <van-cell title="品牌" :value="vehicle.brand || '-'" />
-        <van-cell title="车型" :value="vehicle.model || '-'" />
-        <van-cell title="年份" :value="vehicle.year || '-'" />
-        <van-cell title="VIN" :value="vehicle.vin || '-'" />
-        <van-cell title="备注" :value="vehicle.remark || '-'" />
+      <!-- 车辆信息卡片 -->
+      <div class="card vehicle-card">
+        <div class="vehicle-plate">{{ vehicle.plate_number }}</div>
+        <div class="vehicle-model">{{ vehicle.brand || '' }} {{ vehicle.model || '' }}</div>
+        <div class="vehicle-meta">
+          <span v-if="vehicle.year">{{ vehicle.year }}款</span>
+          <span v-if="vehicle.color">· {{ vehicle.color }}</span>
+          <span v-if="vehicle.vin">· VIN: {{ vehicle.vin }}</span>
+        </div>
       </div>
 
+      <!-- 维修统计 -->
+      <div class="card">
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value">{{ vehicle.stats?.totalRepairs || 0 }}</div>
+            <div class="stat-label">维修次数</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value text-danger">¥{{ formatAmount(vehicle.stats?.totalSpent) }}</div>
+            <div class="stat-label">累计消费</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value text-muted" style="font-size:14px">{{ vehicle.stats?.lastRepair ? formatDate(vehicle.stats.lastRepair) : '暂无' }}</div>
+            <div class="stat-label">最近维修</div>
+          </div>
+        </div>
+        <!-- 常见维修项目 -->
+        <div class="common-items" v-if="vehicle.stats?.commonItems?.length">
+          <div class="text-muted mb-8">常见维修项目</div>
+          <div class="item-tags">
+            <van-tag v-for="item in vehicle.stats.commonItems" :key="item.name" type="primary" plain>
+              {{ item.name }} ({{ item.count }})
+            </van-tag>
+          </div>
+        </div>
+      </div>
+
+      <!-- 所属客户 -->
       <div class="card" v-if="vehicle.customer">
         <div class="section-title">所属客户</div>
         <van-cell
@@ -19,24 +49,53 @@
           :label="vehicle.customer.phone"
           is-link
           @click="$router.push(`/customers/${vehicle.customer.id}`)"
-        />
-      </div>
-
-      <div class="card">
-        <div class="section-title">维修历史</div>
-        <van-cell
-          v-for="o in vehicle.work_orders"
-          :key="o.id"
-          :title="o.order_no"
-          :label="o.complaint"
-          is-link
-          @click="$router.push(`/orders/${o.id}`)"
         >
-          <template #value>
-            <van-tag >{{ o.status }}</van-tag>
+          <template #icon>
+            <van-icon name="contact" style="margin-right:8px;color:#1989fa" />
           </template>
         </van-cell>
-        <van-empty v-if="!vehicle.work_orders?.length" description="暂无维修记录" />
+      </div>
+
+      <!-- 保养提醒 -->
+      <div class="card" v-if="vehicle.reminders?.length">
+        <div class="section-title">待办提醒 ({{ vehicle.reminders.length }})</div>
+        <div v-for="r in vehicle.reminders" :key="r.id" class="reminder-item">
+          <van-icon :name="r.type === 'maintenance' ? 'setting-o' : 'chat-o'" class="reminder-icon" />
+          <div class="reminder-content">
+            <div class="reminder-title">{{ r.type === 'maintenance' ? '保养提醒' : '回访提醒' }}</div>
+            <div class="reminder-desc">{{ r.content || '请及时联系客户' }}</div>
+            <div class="text-muted">建议日期：{{ formatDate(r.remind_date) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 维修历史时间线 -->
+      <div class="card">
+        <div class="section-title">维修历史 ({{ vehicle.work_orders?.length || 0 }})</div>
+        <div class="timeline" v-if="vehicle.work_orders?.length">
+          <div v-for="(o, idx) in vehicle.work_orders" :key="o.id" class="timeline-item">
+            <div class="timeline-dot" :class="{ 'dot-completed': o.status === 'completed', 'dot-cancelled': o.status === 'cancelled' }"></div>
+            <div class="timeline-content" @click="$router.push(`/orders/${o.id}`)">
+              <div class="timeline-header">
+                <span class="timeline-date">{{ formatDate(o.created_at) }}</span>
+                <van-tag :type="getStatusType(o.status)" size="medium">{{ getStatusLabel(o.status) }}</van-tag>
+              </div>
+              <div class="timeline-order">{{ o.order_no }}</div>
+              <div class="timeline-complaint">{{ o.complaint || '无诉求' }}</div>
+              <!-- 维修项目 -->
+              <div class="timeline-items" v-if="o.repair_items?.length">
+                <span v-for="item in o.repair_items.slice(0, 3)" :key="item.id" class="item-chip">
+                  {{ item.name }}
+                </span>
+                <span v-if="o.repair_items.length > 3" class="item-chip">+{{ o.repair_items.length - 3 }}</span>
+              </div>
+              <div class="timeline-amount" v-if="o.settlement?.actual_amount">
+                消费 ¥{{ formatAmount(o.settlement.actual_amount) }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <van-empty v-else description="暂无维修记录" image-size="60" />
       </div>
     </div>
   </div>
@@ -46,13 +105,196 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getVehicle } from '@/api'
+import dayjs from 'dayjs'
 
 const route = useRoute()
 const vehicle = ref<any>(null)
 
-onMounted(async () => {
+// 状态映射
+const statusMap: Record<string, { label: string; type: 'default' | 'primary' | 'success' | 'warning' | 'danger' }> = {
+  pending_inspection: { label: '待检测', type: 'warning' },
+  pending_quote: { label: '待报价', type: 'primary' },
+  repairing: { label: '维修中', type: 'danger' },
+  pending_quality_check: { label: '待质检', type: 'warning' },
+  pending_settlement: { label: '待结算', type: 'primary' },
+  completed: { label: '已完成', type: 'success' },
+  cancelled: { label: '已取消', type: 'default' }
+}
+
+const getStatusLabel = (s: string) => statusMap[s]?.label || s
+const getStatusType = (s: string) => statusMap[s]?.type || 'default'
+const formatDate = (d: string) => dayjs(d).format('YYYY-MM-DD HH:mm')
+const formatAmount = (n: number) => Number(n || 0).toFixed(2)
+
+const loadData = async () => {
   try {
     vehicle.value = await getVehicle(Number(route.params.id))
   } catch (e) { /* 静默 */ }
-})
+}
+
+onMounted(loadData)
 </script>
+
+<style scoped>
+.vehicle-card {
+  background: linear-gradient(135deg, #1989fa, #07c160);
+  color: #fff;
+  text-align: center;
+}
+.vehicle-plate {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+.vehicle-model {
+  font-size: 15px;
+  margin-top: 6px;
+  opacity: 0.95;
+}
+.vehicle-meta {
+  font-size: 12px;
+  margin-top: 4px;
+  opacity: 0.8;
+}
+.stats-grid {
+  display: flex;
+  justify-content: space-around;
+}
+.stat-item {
+  text-align: center;
+  flex: 1;
+}
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #323233;
+}
+.stat-label {
+  font-size: 12px;
+  color: #969799;
+  margin-top: 4px;
+}
+.common-items {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #f2f3f5;
+}
+.item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.reminder-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f2f3f5;
+}
+.reminder-item:last-child {
+  border-bottom: none;
+}
+.reminder-icon {
+  font-size: 20px;
+  color: #ff976a;
+  margin-top: 2px;
+}
+.reminder-content {
+  flex: 1;
+}
+.reminder-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #323233;
+}
+.reminder-desc {
+  font-size: 13px;
+  color: #646566;
+  margin: 2px 0;
+}
+/* 时间线样式 */
+.timeline {
+  position: relative;
+  padding-left: 20px;
+}
+.timeline-item {
+  position: relative;
+  padding-bottom: 20px;
+}
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -16px;
+  top: 8px;
+  bottom: -8px;
+  width: 2px;
+  background: #ebedf0;
+}
+.timeline-item:last-child::before {
+  display: none;
+}
+.timeline-dot {
+  position: absolute;
+  left: -20px;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #1989fa;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px #1989fa;
+}
+.dot-completed {
+  background: #07c160;
+  box-shadow: 0 0 0 2px #07c160;
+}
+.dot-cancelled {
+  background: #c8c9cc;
+  box-shadow: 0 0 0 2px #c8c9cc;
+}
+.timeline-content {
+  cursor: pointer;
+  padding: 4px 0;
+}
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.timeline-date {
+  font-size: 12px;
+  color: #969799;
+}
+.timeline-order {
+  font-size: 14px;
+  font-weight: 600;
+  color: #323233;
+  margin-top: 4px;
+}
+.timeline-complaint {
+  font-size: 13px;
+  color: #646566;
+  margin-top: 2px;
+}
+.timeline-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.item-chip {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: #f2f3f5;
+  border-radius: 4px;
+  color: #646566;
+}
+.timeline-amount {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ee0a24;
+  margin-top: 6px;
+}
+</style>

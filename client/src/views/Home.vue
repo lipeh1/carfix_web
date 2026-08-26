@@ -5,8 +5,11 @@
     <div class="page-content">
       <!-- 快捷操作 -->
       <div class="quick-actions">
-        <van-button type="primary" block icon="add" @click="$router.push('/checkin')">
+        <van-button type="primary" icon="add" @click="$router.push('/checkin')">
           新建接车
+        </van-button>
+        <van-button type="default" icon="chart-trending-o" @click="$router.push('/stats')">
+          统计报表
         </van-button>
       </div>
 
@@ -89,6 +92,11 @@ onMounted(loadData)
 
 <style scoped>
 .quick-actions {
+  display: flex;
+  gap: 10px;
   margin-bottom: 12px;
+}
+.quick-actions .van-button {
+  flex: 1;
 }
 </style>

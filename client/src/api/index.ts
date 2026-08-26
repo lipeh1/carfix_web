@@ -3,6 +3,9 @@ import request from './request'
 // 工作台统计
 export const getDashboard = () => request.get('/dashboard')
 
+// 统计报表
+export const getStats = () => request.get('/stats')
+
 // 客户
 export const getCustomers = (params?: { keyword?: string }) =>
   request.get('/customers', { params })

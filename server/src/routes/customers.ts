@@ -24,17 +24,38 @@ router.get('/', asyncHandler(async (req, res) => {
   res.json(customers)
 }))
 
-// 客户详情
+// 客户详情（含车辆、工单、消费统计）
 router.get('/:id', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id)
   const customer = await prisma.customer.findUnique({
-    where: { id: Number(req.params.id) },
+    where: { id },
     include: {
       vehicles: true,
-      workOrders: { orderBy: { createdAt: 'desc' } }
+      workOrders: {
+        orderBy: { createdAt: 'desc' },
+        include: {
+          vehicle: { select: { plateNumber: true, brand: true, model: true } },
+          settlement: { select: { actualAmount: true, status: true, paidAmount: true } }
+        }
+      }
     }
   })
   if (!customer) throw new AppError('客户不存在', 404)
-  res.json(customer)
+
+  // 计算消费统计
+  const completedOrders = customer.workOrders.filter(o => o.status === 'completed')
+  const totalSpent = completedOrders.reduce((sum, o) => sum + (o.settlement?.actualAmount || 0), 0)
+  const lastVisit = customer.workOrders.length > 0 ? customer.workOrders[0].createdAt : null
+
+  res.json({
+    ...customer,
+    stats: {
+      totalOrders: customer.workOrders.length,
+      completedOrders: completedOrders.length,
+      totalSpent,
+      lastVisit
+    }
+  })
 }))
 
 // 新增客户

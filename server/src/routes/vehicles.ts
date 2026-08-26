@@ -22,17 +22,54 @@ router.get('/', asyncHandler(async (req, res) => {
   res.json(vehicles)
 }))
 
-// 车辆详情
+// 车辆详情（含客户、维修历史、统计、保养提醒）
 router.get('/:id', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id)
   const vehicle = await prisma.vehicle.findUnique({
-    where: { id: Number(req.params.id) },
+    where: { id },
     include: {
       customer: true,
-      workOrders: { orderBy: { createdAt: 'desc' } }
+      workOrders: {
+        orderBy: { createdAt: 'desc' },
+        include: {
+          repairItems: true,
+          settlement: { select: { actualAmount: true, status: true, paidAmount: true } }
+        }
+      },
+      reminders: {
+        where: { status: 'pending' },
+        orderBy: { remindDate: 'asc' }
+      }
     }
   })
   if (!vehicle) throw new AppError('车辆不存在', 404)
-  res.json(vehicle)
+
+  // 计算维修统计
+  const completedOrders = vehicle.workOrders.filter(o => o.status === 'completed')
+  const totalSpent = completedOrders.reduce((sum, o) => sum + (o.settlement?.actualAmount || 0), 0)
+  const lastRepair = completedOrders.length > 0 ? completedOrders[0].createdAt : null
+
+  // 统计维修项目频次
+  const itemCount: Record<string, number> = {}
+  for (const order of completedOrders) {
+    for (const item of order.repairItems) {
+      itemCount[item.name] = (itemCount[item.name] || 0) + 1
+    }
+  }
+  const commonItems = Object.entries(itemCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, count]) => ({ name, count }))
+
+  res.json({
+    ...vehicle,
+    stats: {
+      totalRepairs: completedOrders.length,
+      totalSpent,
+      lastRepair,
+      commonItems
+    }
+  })
 }))
 
 // 新增车辆
