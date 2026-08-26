@@ -29,6 +29,8 @@ export const updateOrderStatus = (id: number, status: string, data?: any) =>
 
 // 接车
 export const createCheckin = (data: any) => request.post('/checkin', data)
+export const updateCheckin = (orderId: number, data: any) =>
+  request.patch(`/orders/${orderId}/checkin`, data)
 
 // 报价
 export const getQuote = (orderId: number) => request.get(`/orders/${orderId}/quote`)

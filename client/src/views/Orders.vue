@@ -2,6 +2,19 @@
   <div class="page-container">
     <van-nav-bar title="工单" />
 
+    <!-- 搜索框 -->
+    <van-search
+      v-model="keyword"
+      placeholder="搜索工单号/车牌号/客户名/诉求"
+      show-action
+      @search="onSearch"
+      @clear="onSearch"
+    >
+      <template #action>
+        <div @click="onSearch">搜索</div>
+      </template>
+    </van-search>
+
     <van-tabs v-model:active="activeTab" sticky @change="onTabChange">
       <van-tab v-for="tab in tabs" :key="tab.value" :title="tab.label" :name="tab.value" />
     </van-tabs>
@@ -61,6 +74,7 @@ const tabs = [
 ]
 
 const activeTab = ref('')
+const keyword = ref('')
 const orders = ref<any[]>([])
 const loading = ref(false)
 const finished = ref(false)
@@ -84,6 +98,7 @@ const loadOrders = async () => {
   try {
     const params: any = {}
     if (activeTab.value) params.status = activeTab.value
+    if (keyword.value) params.keyword = keyword.value
     const data = await getOrders(params)
     orders.value = data as any[]
     finished.value = true
@@ -93,6 +108,12 @@ const loadOrders = async () => {
     loading.value = false
     refreshing.value = false
   }
+}
+
+const onSearch = () => {
+  orders.value = []
+  finished.value = false
+  loadOrders()
 }
 
 const onTabChange = () => {

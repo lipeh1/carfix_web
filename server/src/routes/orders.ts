@@ -87,6 +87,37 @@ router.patch('/:id/status', asyncHandler(async (req, res) => {
   res.json(updated)
 }))
 
+// 编辑接车信息（诉求、里程、车况）
+router.patch('/:id/checkin', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id)
+  const { complaint, mileageIn, vehicleCondition } = req.body
+
+  const order = await prisma.workOrder.findUnique({ where: { id } })
+  if (!order) throw new AppError('工单不存在', 404)
+
+  // 更新工单基本信息
+  const updateData: any = {}
+  if (complaint !== undefined) updateData.complaint = complaint
+  if (mileageIn !== undefined) updateData.mileageIn = mileageIn ? Number(mileageIn) : null
+
+  if (Object.keys(updateData).length > 0) {
+    await prisma.workOrder.update({ where: { id }, data: updateData })
+  }
+
+  // 更新接车记录的车况描述
+  if (vehicleCondition !== undefined) {
+    const checkin = await prisma.checkinRecord.findFirst({ where: { workOrderId: id } })
+    if (checkin) {
+      await prisma.checkinRecord.update({
+        where: { id: checkin.id },
+        data: { vehicleCondition }
+      })
+    }
+  }
+
+  res.json({ success: true })
+}))
+
 // ===== 报价相关 =====
 
 // 保存报价（维修项目/配件）

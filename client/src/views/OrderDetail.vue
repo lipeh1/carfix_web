@@ -18,9 +18,15 @@
 
       <!-- 接车信息 -->
       <div class="card">
-        <div class="section-title">接车信息</div>
+        <div class="flex-between">
+          <span class="section-title">接车信息</span>
+          <van-button size="mini" plain type="primary" icon="edit" @click="openEditCheckin">
+            编辑
+          </van-button>
+        </div>
         <van-cell title="客户诉求" :value="order.complaint || '-'" />
         <van-cell title="接车里程" :value="order.mileageIn ? order.mileageIn + ' km' : '-'" />
+        <van-cell title="车况描述" :value="order.checkinRecord?.vehicleCondition || '-'" />
         <van-cell title="创建时间" :value="formatDateTime(order.createdAt)" />
       </div>
 
@@ -121,6 +127,36 @@
 
     <van-empty v-else description="加载中..." />
 
+    <!-- ===== 编辑接车信息弹窗 ===== -->
+    <van-popup v-model:show="showEditCheckin" position="bottom" round>
+      <div class="popup-content">
+        <h3>编辑接车信息</h3>
+        <van-field
+          v-model="editCheckinForm.complaint"
+          label="客户诉求"
+          type="textarea"
+          rows="2"
+          placeholder="描述故障或需求"
+        />
+        <van-field
+          v-model="editCheckinForm.mileageIn"
+          label="接车里程"
+          type="digit"
+          placeholder="公里数"
+        />
+        <van-field
+          v-model="editCheckinForm.vehicleCondition"
+          label="车况描述"
+          type="textarea"
+          rows="2"
+          placeholder="可选"
+        />
+        <van-button type="primary" block class="mt-16" :loading="savingCheckin" @click="submitEditCheckin">
+          保存
+        </van-button>
+      </div>
+    </van-popup>
+
     <!-- ===== 维修记录弹窗 ===== -->
     <van-popup v-model:show="showLogPopup" position="bottom" round>
       <div class="popup-content">
@@ -182,7 +218,7 @@ import { showToast, showConfirmDialog } from 'vant'
 import {
   getOrder, updateOrderStatus, addRepairLog,
   addAdditionalItem, createQualityCheck,
-  createSettlement, addPayment, deliverOrder
+  createSettlement, addPayment, deliverOrder, updateCheckin
 } from '@/api'
 import dayjs from 'dayjs'
 
@@ -201,9 +237,14 @@ const showPreview = ref(false)
 const previewImages = ref<string[]>([])
 
 // 弹窗状态
+const showEditCheckin = ref(false)
 const showLogPopup = ref(false)
 const showAdditionalPopup = ref(false)
 const showPaymentPopup = ref(false)
+
+// 编辑接车信息表单
+const savingCheckin = ref(false)
+const editCheckinForm = reactive({ complaint: '', mileageIn: '', vehicleCondition: '' })
 
 // 维修记录
 const logContent = ref('')
@@ -285,6 +326,33 @@ const loadData = async () => {
 const openPreview = (idx: number) => {
   previewImages.value = checkinPhotos.value.map((p: any) => p.filePath)
   showPreview.value = true
+}
+
+// ===== 编辑接车信息 =====
+const openEditCheckin = () => {
+  if (!order.value) return
+  editCheckinForm.complaint = order.value.complaint || ''
+  editCheckinForm.mileageIn = order.value.mileageIn ? String(order.value.mileageIn) : ''
+  editCheckinForm.vehicleCondition = order.value.checkinRecord?.vehicleCondition || ''
+  showEditCheckin.value = true
+}
+
+const submitEditCheckin = async () => {
+  if (!editCheckinForm.complaint) return showToast('客户诉求不能为空')
+  savingCheckin.value = true
+  try {
+    await updateCheckin(orderId, {
+      complaint: editCheckinForm.complaint,
+      mileageIn: editCheckinForm.mileageIn,
+      vehicleCondition: editCheckinForm.vehicleCondition
+    })
+    showToast({ type: 'success', message: '保存成功' })
+    showEditCheckin.value = false
+    loadData()
+  } catch (e) { /* 已拦截 */ }
+  finally {
+    savingCheckin.value = false
+  }
 }
 
 // ===== 维修记录 =====
