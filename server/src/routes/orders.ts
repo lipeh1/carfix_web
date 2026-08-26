@@ -296,35 +296,6 @@ router.post('/:id/settlement', asyncHandler(async (req, res) => {
   res.json(s)
 }))
 
-// 收款
-router.post('/settlements/:sid/payments', asyncHandler(async (req, res) => {
-  const sid = Number(req.params.sid)
-  const { amount, method, type, remark } = req.body
-  if (!amount) throw new AppError('金额不能为空')
-
-  const payment = await prisma.payment.create({
-    data: {
-      settlementId: sid,
-      amount: Number(amount),
-      method: method || 'cash',
-      type: type || 'initial',
-      remark
-    }
-  })
-
-  // 更新结算单已收金额和状态
-  const s = await prisma.settlement.findUnique({ where: { id: sid }, include: { payments: true } })
-  if (s) {
-    const paid = s.payments.reduce((sum, p) => sum + p.amount, 0)
-    const status = paid >= s.actualAmount ? 'paid' : 'unpaid'
-    await prisma.settlement.update({ where: { id: sid }, data: { paidAmount: paid, status } })
-    // 同步工单
-    await prisma.workOrder.update({ where: { id: s.workOrderId }, data: { paidAmount: paid } })
-  }
-
-  res.status(201).json(payment)
-}))
-
 // ===== 交车 =====
 
 router.post('/:id/deliver', asyncHandler(async (req, res) => {

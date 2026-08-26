@@ -68,7 +68,11 @@
     <van-popup v-model:show="showCustomerPicker" position="bottom" round>
       <div class="popup-content">
         <h3>选择客户</h3>
-        <van-search v-model="customerKeyword" placeholder="搜索姓名/电话" />
+        <van-search v-model="customerKeyword" placeholder="搜索姓名/电话" @search="loadCustomers" @clear="loadCustomers" show-action>
+          <template #action>
+            <div @click="loadCustomers">搜索</div>
+          </template>
+        </van-search>
         <van-cell
           v-for="c in customerList"
           :key="c.id"

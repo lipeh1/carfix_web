@@ -9,6 +9,7 @@ import orderRoutes from './routes/orders'
 import checkinRoutes from './routes/checkin'
 import reminderRoutes from './routes/reminders'
 import uploadRoutes from './routes/upload'
+import settlementRoutes from './routes/settlements'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -29,6 +30,7 @@ app.use('/api/orders', orderRoutes)
 app.use('/api/checkin', checkinRoutes)
 app.use('/api/reminders', reminderRoutes)
 app.use('/api/upload', uploadRoutes)
+app.use('/api/settlements', settlementRoutes)
 
 // 健康检查
 app.get('/api/health', (_req, res) => {

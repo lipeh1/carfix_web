@@ -27,10 +27,7 @@
       <!-- 接车照片 -->
       <div class="card" v-if="checkinPhotos.length > 0">
         <div class="section-title">接车照片</div>
-        <van-image-preview
-          v-model:show="showPreview"
-          :images="previewImages"
-        />
+        <van-image-preview v-model:show="showPreview" :images="previewImages" />
         <div class="photo-grid">
           <img
             v-for="(photo, idx) in checkinPhotos"
@@ -71,16 +68,11 @@
       <!-- 增项 -->
       <div class="card" v-if="additionalItems.length > 0">
         <div class="section-title">维修增项</div>
-        <van-cell
-          v-for="item in additionalItems"
-          :key="item.id"
-          :title="item.name"
-          :label="item.reason"
-        >
+        <van-cell v-for="item in additionalItems" :key="item.id" :title="item.name" :label="item.reason">
           <template #value>
             <div style="text-align:right">
               <div>¥{{ Number(item.amount).toFixed(2) }}</div>
-              <van-tag :type="item.status === 'confirmed' ? 'success' : item.status === 'rejected' ? 'danger' : 'warning'" >
+              <van-tag :type="item.status === 'confirmed' ? 'success' : item.status === 'rejected' ? 'danger' : 'warning'">
                 {{ item.status === 'confirmed' ? '已确认' : item.status === 'rejected' ? '已拒绝' : '待确认' }}
               </van-tag>
             </div>
@@ -98,11 +90,19 @@
         <van-cell title="已收金额" :value="`¥${Number(settlement.paid_amount).toFixed(2)}`" />
         <van-cell title="状态">
           <template #value>
-            <van-tag :type="settlement.status === 'paid' ? 'success' : 'warning'" >
+            <van-tag :type="settlement.status === 'paid' ? 'success' : 'warning'">
               {{ settlement.status === 'paid' ? '已结清' : '挂账' }}
             </van-tag>
           </template>
         </van-cell>
+        <!-- 收款记录 -->
+        <div v-if="settlement.payments?.length > 0" class="mt-12">
+          <div class="text-muted mb-8">收款记录</div>
+          <div v-for="p in settlement.payments" :key="p.id" class="payment-item">
+            <span>{{ formatDateTime(p.created_at) }} · {{ methodLabel(p.method) }}</span>
+            <span class="text-success">+¥{{ Number(p.amount).toFixed(2) }}</span>
+          </div>
+        </div>
       </div>
 
       <!-- 底部操作栏 -->
@@ -120,23 +120,108 @@
     </div>
 
     <van-empty v-else description="加载中..." />
+
+    <!-- ===== 检测报价弹窗 ===== -->
+    <van-popup v-model:show="showQuotePopup" position="bottom" round>
+      <div class="popup-content">
+        <h3>检测报价</h3>
+        <van-field v-model="quoteForm.inspection" label="故障描述" type="textarea" rows="2" placeholder="描述检测到的故障" />
+        <div class="section-title mt-12">维修项目 / 配件</div>
+        <div v-for="(item, idx) in quoteForm.items" :key="idx" class="quote-item">
+          <van-field v-model="item.name" placeholder="项目/配件名称" :border="false" />
+          <div class="quote-item-row">
+            <van-radio-group v-model="item.type" direction="horizontal">
+              <van-radio name="service">工时</van-radio>
+              <van-radio name="part">配件</van-radio>
+            </van-radio-group>
+          </div>
+          <div class="quote-item-row">
+            <van-field v-model="item.quantity" type="digit" placeholder="数量" style="flex:1" :border="false" />
+            <van-field v-model="item.unitPrice" type="digit" placeholder="单价" style="flex:1" :border="false" />
+            <span class="quote-subtotal">¥{{ quoteItemSubtotal(item) }}</span>
+          </div>
+          <van-icon name="cross" class="quote-del" @click="removeQuoteItem(idx)" />
+        </div>
+        <van-button size="small" plain type="primary" block class="mt-8" @click="addQuoteItem">
+          + 添加项目
+        </van-button>
+        <div class="flex-between mt-16">
+          <span>合计</span>
+          <span class="amount">¥{{ quoteTotal.toFixed(2) }}</span>
+        </div>
+        <van-button type="primary" block class="mt-16" @click="submitQuote">生成报价</van-button>
+      </div>
+    </van-popup>
+
+    <!-- ===== 维修记录弹窗 ===== -->
+    <van-popup v-model:show="showLogPopup" position="bottom" round>
+      <div class="popup-content">
+        <h3>记录维修</h3>
+        <van-field v-model="logContent" label="维修内容" type="textarea" rows="3" placeholder="描述维修过程和操作" />
+        <van-button type="primary" block class="mt-16" @click="submitLog">保存</van-button>
+      </div>
+    </van-popup>
+
+    <!-- ===== 增项弹窗 ===== -->
+    <van-popup v-model:show="showAdditionalPopup" position="bottom" round>
+      <div class="popup-content">
+        <h3>新增增项</h3>
+        <van-field v-model="additionalForm.name" label="项目名称" placeholder="如更换刹车片" />
+        <van-field v-model="additionalForm.amount" label="费用" type="digit" placeholder="元" />
+        <van-field v-model="additionalForm.reason" label="原因" type="textarea" rows="2" placeholder="说明新增原因" />
+        <van-button type="primary" block class="mt-16" @click="submitAdditional">提交增项</van-button>
+      </div>
+    </van-popup>
+
+    <!-- ===== 收款弹窗 ===== -->
+    <van-popup v-model:show="showPaymentPopup" position="bottom" round>
+      <div class="popup-content">
+        <h3>收款</h3>
+        <div class="payment-info" v-if="settlement">
+          <div class="flex-between">
+            <span>应收金额</span>
+            <span>¥{{ Number(settlement.actual_amount).toFixed(2) }}</span>
+          </div>
+          <div class="flex-between mt-8">
+            <span>已收金额</span>
+            <span>¥{{ Number(settlement.paid_amount).toFixed(2) }}</span>
+          </div>
+          <div class="flex-between mt-8">
+            <span class="text-danger">待收金额</span>
+            <span class="text-danger">¥{{ unpaidAmount.toFixed(2) }}</span>
+          </div>
+        </div>
+        <van-field v-model="paymentForm.amount" label="收款金额" type="digit" placeholder="元" class="mt-12" />
+        <van-field name="method" label="收款方式">
+          <template #input>
+            <van-radio-group v-model="paymentForm.method" direction="horizontal">
+              <van-radio name="cash">现金</van-radio>
+              <van-radio name="wechat">微信</van-radio>
+              <van-radio name="alipay">支付宝</van-radio>
+            </van-radio-group>
+          </template>
+        </van-field>
+        <van-button type="primary" block class="mt-16" @click="submitPayment">确认收款</van-button>
+      </div>
+    </van-popup>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
 import {
   getOrder, updateOrderStatus, addRepairLog,
-  addAdditionalItem, confirmAdditionalItem,
-  createQualityCheck, createSettlement, addPayment, deliverOrder
+  addAdditionalItem, createQualityCheck,
+  createSettlement, addPayment, deliverOrder, saveQuote
 } from '@/api'
 import dayjs from 'dayjs'
 
 const route = useRoute()
 const orderId = Number(route.params.id)
 
+// 工单数据
 const order = ref<any>(null)
 const checkinPhotos = ref<any[]>([])
 const repairItems = ref<any[]>([])
@@ -146,6 +231,28 @@ const settlement = ref<any>(null)
 const showPreview = ref(false)
 const previewImages = ref<string[]>([])
 
+// 弹窗状态
+const showQuotePopup = ref(false)
+const showLogPopup = ref(false)
+const showAdditionalPopup = ref(false)
+const showPaymentPopup = ref(false)
+
+// 检测报价表单
+const quoteForm = reactive({
+  inspection: '',
+  items: [] as Array<{ name: string; type: string; quantity: string; unitPrice: string }>
+})
+
+// 维修记录
+const logContent = ref('')
+
+// 增项表单
+const additionalForm = reactive({ name: '', amount: '', reason: '' })
+
+// 收款表单
+const paymentForm = reactive({ amount: '', method: 'cash' })
+
+// 状态映射
 const statusMap: Record<string, { label: string; type: 'default' | 'primary' | 'success' | 'warning' | 'danger' }> = {
   pending_inspection: { label: '待检测', type: 'warning' },
   pending_quote: { label: '待报价确认', type: 'primary' },
@@ -159,11 +266,25 @@ const statusMap: Record<string, { label: string; type: 'default' | 'primary' | '
 const getStatusLabel = (s: string) => statusMap[s]?.label || s
 const getStatusType = (s: string) => statusMap[s]?.type || 'default'
 const formatDateTime = (d: string) => dayjs(d).format('YYYY-MM-DD HH:mm')
+const methodLabel = (m: string) => ({ cash: '现金', wechat: '微信', alipay: '支付宝', card: '刷卡', transfer: '转账' } as any)[m] || m
 
+// 维修项目合计
 const itemsTotal = computed(() =>
   repairItems.value.reduce((sum, i) => sum + Number(i.subtotal), 0)
 )
 
+// 报价合计
+const quoteTotal = computed(() =>
+  quoteForm.items.reduce((sum, item) => sum + quoteItemSubtotalNum(item), 0)
+)
+
+// 待收金额
+const unpaidAmount = computed(() => {
+  if (!settlement.value) return 0
+  return Number(settlement.value.actual_amount) - Number(settlement.value.paid_amount)
+})
+
+// 底部操作按钮（根据当前状态动态显示）
 const actionButtons = computed(() => {
   const s = order.value?.status
   const btns: any[] = []
@@ -181,7 +302,7 @@ const actionButtons = computed(() => {
   }
   if (s === 'pending_quality_check') {
     btns.push({ key: 'qc_pass', label: '质检通过', type: 'success' })
-    btns.push({ key: 'qc_fail', label: '质检不通过(返工)', type: 'danger' })
+    btns.push({ key: 'qc_fail', label: '质检不通过', type: 'danger' })
   }
   if (s === 'pending_settlement') {
     btns.push({ key: 'receive_payment', label: '收款', type: 'primary' })
@@ -190,6 +311,7 @@ const actionButtons = computed(() => {
   return btns
 })
 
+// 加载工单详情
 const loadData = async () => {
   try {
     const data: any = await getOrder(orderId)
@@ -202,14 +324,100 @@ const loadData = async () => {
   } catch (e) { /* 静默 */ }
 }
 
+// 图片预览
 const openPreview = (idx: number) => {
   previewImages.value = checkinPhotos.value.map((p: any) => p.file_path)
   showPreview.value = true
 }
 
+// ===== 报价相关 =====
+const quoteItemSubtotal = (item: any) => quoteItemSubtotalNum(item).toFixed(2)
+const quoteItemSubtotalNum = (item: any) => Number(item.quantity || 0) * Number(item.unitPrice || 0)
+
+const addQuoteItem = () => {
+  quoteForm.items.push({ name: '', type: 'service', quantity: '1', unitPrice: '' })
+}
+
+const removeQuoteItem = (idx: number) => {
+  quoteForm.items.splice(idx, 1)
+}
+
+const submitQuote = async () => {
+  const validItems = quoteForm.items.filter(i => i.name && i.unitPrice)
+  if (validItems.length === 0) return showToast('请至少添加一个维修项目')
+  try {
+    await saveQuote(orderId, { items: validItems, inspection: quoteForm.inspection })
+    showToast({ type: 'success', message: '报价已生成' })
+    showQuotePopup.value = false
+    loadData()
+  } catch (e) { /* 已拦截 */ }
+}
+
+// ===== 维修记录 =====
+const submitLog = async () => {
+  if (!logContent.value) return showToast('请输入维修内容')
+  try {
+    await addRepairLog(orderId, logContent.value)
+    showToast({ type: 'success', message: '已记录' })
+    showLogPopup.value = false
+    logContent.value = ''
+    loadData()
+  } catch (e) { /* 已拦截 */ }
+}
+
+// ===== 增项 =====
+const submitAdditional = async () => {
+  if (!additionalForm.name) return showToast('请输入项目名称')
+  if (!additionalForm.amount) return showToast('请输入费用')
+  try {
+    await addAdditionalItem(orderId, {
+      name: additionalForm.name,
+      amount: Number(additionalForm.amount),
+      reason: additionalForm.reason
+    })
+    showToast({ type: 'success', message: '增项已提交，待客户确认' })
+    showAdditionalPopup.value = false
+    additionalForm.name = ''
+    additionalForm.amount = ''
+    additionalForm.reason = ''
+    loadData()
+  } catch (e) { /* 已拦截 */ }
+}
+
+// ===== 收款 =====
+const submitPayment = async () => {
+  if (!paymentForm.amount) return showToast('请输入收款金额')
+  if (!settlement.value) {
+    // 先创建结算单
+    await createSettlement(orderId)
+    await loadData()
+  }
+  try {
+    await addPayment(settlement.value.id, {
+      amount: Number(paymentForm.amount),
+      method: paymentForm.method,
+      type: settlement.value.paid_amount > 0 ? 'supplement' : 'initial'
+    })
+    showToast({ type: 'success', message: '收款成功' })
+    showPaymentPopup.value = false
+    paymentForm.amount = ''
+    loadData()
+  } catch (e) { /* 已拦截 */ }
+}
+
+// ===== 操作按钮处理 =====
 const handleAction = async (key: string) => {
   try {
     switch (key) {
+      case 'go_quote':
+        // 打开检测报价弹窗，预填充已有项目
+        quoteForm.inspection = ''
+        quoteForm.items = repairItems.value.map((i: any) => ({
+          name: i.name, type: i.type, quantity: String(i.quantity), unitPrice: String(i.unitPrice)
+        }))
+        if (quoteForm.items.length === 0) addQuoteItem()
+        showQuotePopup.value = true
+        break
       case 'confirm_quote':
         await updateOrderStatus(orderId, 'repairing')
         showToast({ type: 'success', message: '已确认，开始维修' })
@@ -221,29 +429,41 @@ const handleAction = async (key: string) => {
         showToast('已取消')
         loadData()
         break
+      case 'add_log':
+        logContent.value = ''
+        showLogPopup.value = true
+        break
+      case 'add_item':
+        additionalForm.name = ''
+        additionalForm.amount = ''
+        additionalForm.reason = ''
+        showAdditionalPopup.value = true
+        break
       case 'finish_repair':
         await updateOrderStatus(orderId, 'pending_quality_check')
-        showToast({ type: 'success', message: '维修完成' })
+        showToast({ type: 'success', message: '维修完成，待质检' })
         loadData()
         break
       case 'qc_pass':
         await createQualityCheck(orderId, { result: 'pass' })
-        showToast({ type: 'success', message: '质检通过' })
+        showToast({ type: 'success', message: '质检通过，待结算' })
         loadData()
         break
       case 'qc_fail':
         await createQualityCheck(orderId, { result: 'fail' })
-        showToast('已返工')
+        showToast('质检不通过，已返回维修')
         loadData()
         break
       case 'receive_payment':
         if (!settlement.value) {
           await createSettlement(orderId)
+          await loadData()
         }
-        showToast('请在结算页操作收款')
-        loadData()
+        paymentForm.amount = unpaidAmount.value > 0 ? unpaidAmount.value.toFixed(2) : ''
+        showPaymentPopup.value = true
         break
       case 'deliver':
+        await showConfirmDialog({ title: '确认交车', message: '确认车辆已交付客户？' })
         await deliverOrder(orderId, {})
         showToast({ type: 'success', message: '交车完成' })
         loadData()
@@ -295,6 +515,16 @@ onMounted(loadData)
   color: #323233;
   margin-bottom: 4px;
 }
+.payment-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #f2f3f5;
+}
+.payment-item:last-child {
+  border-bottom: none;
+}
 .action-bar {
   position: fixed;
   bottom: 0;
@@ -308,5 +538,46 @@ onMounted(loadData)
 }
 .action-bar .van-button {
   flex: 1;
+}
+/* 弹窗样式 */
+.popup-content {
+  padding: 20px 16px 32px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.popup-content h3 {
+  text-align: center;
+  margin-bottom: 16px;
+}
+.quote-item {
+  position: relative;
+  background: #f7f8fa;
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+.quote-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.quote-subtotal {
+  min-width: 70px;
+  text-align: right;
+  font-weight: 600;
+  color: #ee0a24;
+}
+.quote-del {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: #c8c9cc;
+  cursor: pointer;
+}
+.payment-info {
+  background: #f7f8fa;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
 }
 </style>

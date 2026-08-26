@@ -80,6 +80,7 @@ const getStatusLabel = (s: string) => statusMap[s]?.label || s
 const getStatusType = (s: string) => statusMap[s]?.type || 'default'
 
 const loadOrders = async () => {
+  loading.value = true
   try {
     const params: any = {}
     if (activeTab.value) params.status = activeTab.value
