@@ -121,38 +121,6 @@
 
     <van-empty v-else description="加载中..." />
 
-    <!-- ===== 检测报价弹窗 ===== -->
-    <van-popup v-model:show="showQuotePopup" position="bottom" round>
-      <div class="popup-content">
-        <h3>检测报价</h3>
-        <van-field v-model="quoteForm.inspection" label="故障描述" type="textarea" rows="2" placeholder="描述检测到的故障" />
-        <div class="section-title mt-12">维修项目 / 配件</div>
-        <div v-for="(item, idx) in quoteForm.items" :key="idx" class="quote-item">
-          <van-field v-model="item.name" placeholder="项目/配件名称" :border="false" />
-          <div class="quote-item-row">
-            <van-radio-group v-model="item.type" direction="horizontal">
-              <van-radio name="service">工时</van-radio>
-              <van-radio name="part">配件</van-radio>
-            </van-radio-group>
-          </div>
-          <div class="quote-item-row">
-            <van-field v-model="item.quantity" type="digit" placeholder="数量" style="flex:1" :border="false" />
-            <van-field v-model="item.unitPrice" type="digit" placeholder="单价" style="flex:1" :border="false" />
-            <span class="quote-subtotal">¥{{ quoteItemSubtotal(item) }}</span>
-          </div>
-          <van-icon name="cross" class="quote-del" @click="removeQuoteItem(idx)" />
-        </div>
-        <van-button size="small" plain type="primary" block class="mt-8" @click="addQuoteItem">
-          + 添加项目
-        </van-button>
-        <div class="flex-between mt-16">
-          <span>合计</span>
-          <span class="amount">¥{{ quoteTotal.toFixed(2) }}</span>
-        </div>
-        <van-button type="primary" block class="mt-16" @click="submitQuote">生成报价</van-button>
-      </div>
-    </van-popup>
-
     <!-- ===== 维修记录弹窗 ===== -->
     <van-popup v-model:show="showLogPopup" position="bottom" round>
       <div class="popup-content">
@@ -209,16 +177,17 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
 import {
   getOrder, updateOrderStatus, addRepairLog,
   addAdditionalItem, createQualityCheck,
-  createSettlement, addPayment, deliverOrder, saveQuote
+  createSettlement, addPayment, deliverOrder
 } from '@/api'
 import dayjs from 'dayjs'
 
 const route = useRoute()
+const router = useRouter()
 const orderId = Number(route.params.id)
 
 // 工单数据
@@ -232,16 +201,9 @@ const showPreview = ref(false)
 const previewImages = ref<string[]>([])
 
 // 弹窗状态
-const showQuotePopup = ref(false)
 const showLogPopup = ref(false)
 const showAdditionalPopup = ref(false)
 const showPaymentPopup = ref(false)
-
-// 检测报价表单
-const quoteForm = reactive({
-  inspection: '',
-  items: [] as Array<{ name: string; type: string; quantity: string; unitPrice: string }>
-})
 
 // 维修记录
 const logContent = ref('')
@@ -271,11 +233,6 @@ const methodLabel = (m: string) => ({ cash: '现金', wechat: '微信', alipay: 
 // 维修项目合计
 const itemsTotal = computed(() =>
   repairItems.value.reduce((sum, i) => sum + Number(i.subtotal), 0)
-)
-
-// 报价合计
-const quoteTotal = computed(() =>
-  quoteForm.items.reduce((sum, item) => sum + quoteItemSubtotalNum(item), 0)
 )
 
 // 待收金额
@@ -328,29 +285,6 @@ const loadData = async () => {
 const openPreview = (idx: number) => {
   previewImages.value = checkinPhotos.value.map((p: any) => p.file_path)
   showPreview.value = true
-}
-
-// ===== 报价相关 =====
-const quoteItemSubtotal = (item: any) => quoteItemSubtotalNum(item).toFixed(2)
-const quoteItemSubtotalNum = (item: any) => Number(item.quantity || 0) * Number(item.unitPrice || 0)
-
-const addQuoteItem = () => {
-  quoteForm.items.push({ name: '', type: 'service', quantity: '1', unitPrice: '' })
-}
-
-const removeQuoteItem = (idx: number) => {
-  quoteForm.items.splice(idx, 1)
-}
-
-const submitQuote = async () => {
-  const validItems = quoteForm.items.filter(i => i.name && i.unitPrice)
-  if (validItems.length === 0) return showToast('请至少添加一个维修项目')
-  try {
-    await saveQuote(orderId, { items: validItems, inspection: quoteForm.inspection })
-    showToast({ type: 'success', message: '报价已生成' })
-    showQuotePopup.value = false
-    loadData()
-  } catch (e) { /* 已拦截 */ }
 }
 
 // ===== 维修记录 =====
@@ -410,13 +344,8 @@ const handleAction = async (key: string) => {
   try {
     switch (key) {
       case 'go_quote':
-        // 打开检测报价弹窗，预填充已有项目
-        quoteForm.inspection = ''
-        quoteForm.items = repairItems.value.map((i: any) => ({
-          name: i.name, type: i.type, quantity: String(i.quantity), unitPrice: String(i.unitPrice)
-        }))
-        if (quoteForm.items.length === 0) addQuoteItem()
-        showQuotePopup.value = true
+        // 跳转到独立的检测报价页面
+        router.push(`/orders/${orderId}/quote`)
         break
       case 'confirm_quote':
         await updateOrderStatus(orderId, 'repairing')
@@ -548,31 +477,6 @@ onMounted(loadData)
 .popup-content h3 {
   text-align: center;
   margin-bottom: 16px;
-}
-.quote-item {
-  position: relative;
-  background: #f7f8fa;
-  border-radius: 8px;
-  padding: 8px;
-  margin-bottom: 8px;
-}
-.quote-item-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.quote-subtotal {
-  min-width: 70px;
-  text-align: right;
-  font-weight: 600;
-  color: #ee0a24;
-}
-.quote-del {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  color: #c8c9cc;
-  cursor: pointer;
 }
 .payment-info {
   background: #f7f8fa;

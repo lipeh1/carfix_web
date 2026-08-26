@@ -51,12 +51,66 @@
 
       <!-- 接车照片 -->
       <div class="card">
-        <div class="section-title">接车照片</div>
-        <van-uploader
-          v-model="photos"
-          :max-count="9"
-          :after-read="afterRead"
+        <div class="flex-between mb-12">
+          <span class="section-title" style="margin-bottom:0">接车照片</span>
+          <span class="text-muted">{{ photos.length }}/9 张</span>
+        </div>
+        <div class="photo-uploader">
+          <div
+            v-for="(photo, idx) in photos"
+            :key="idx"
+            class="photo-item-wrapper"
+          >
+            <img
+              v-if="photo.status !== 'failed'"
+              :src="photo.content || photo.url"
+              class="photo-thumb"
+              @click="previewPhoto(idx)"
+            />
+            <!-- 上传中遮罩 -->
+            <div v-if="photo.status === 'uploading'" class="photo-mask">
+              <van-loading type="spinner" size="24" color="#fff" />
+              <span class="photo-mask-text">上传中</span>
+            </div>
+            <!-- 上传失败 -->
+            <div v-if="photo.status === 'failed'" class="photo-mask photo-failed">
+              <van-icon name="warning-o" size="24" color="#fff" />
+              <span class="photo-mask-text">上传失败</span>
+              <span class="photo-retry" @click.stop="retryUpload(idx)">重试</span>
+            </div>
+            <!-- 删除按钮 -->
+            <van-icon
+              v-if="photo.status !== 'uploading'"
+              name="cross"
+              class="photo-delete"
+              @click.stop="deletePhoto(idx)"
+            />
+          </div>
+          <!-- 添加按钮 -->
+          <div
+            v-if="photos.length < 9"
+            class="photo-add"
+            @click="triggerFileInput"
+          >
+            <van-icon name="photograph" size="28" color="#c8c9cc" />
+            <span class="photo-add-text">拍照/相册</span>
+          </div>
+        </div>
+        <!-- 隐藏的文件输入 -->
+        <input
+          ref="fileInputRef"
+          type="file"
+          accept="image/*"
           multiple
+          style="display:none"
+          @change="onFileChange"
+        />
+        <!-- 图片预览 -->
+        <van-image-preview
+          v-model:show="showPhotoPreview"
+          :images="previewImages"
+          :start-position="previewIndex"
+          @change="onPreviewChange"
         />
       </div>
 
@@ -126,7 +180,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { showToast } from 'vant'
+import { showToast, showConfirmDialog } from 'vant'
 import { useRouter } from 'vue-router'
 import { getCustomers, createCustomer, getVehicles, createVehicle, createCheckin, uploadImage } from '@/api'
 
@@ -137,7 +191,14 @@ const selectedVehicle = ref<any>(null)
 const customerList = ref<any[]>([])
 const vehicleList = ref<any[]>([])
 const customerKeyword = ref('')
+// 照片列表，每项包含：content(本地预览)、url(服务器路径)、status(uploading/done/failed)、file(原始文件)
 const photos = ref<any[]>([])
+
+// 照片预览相关
+const fileInputRef = ref<HTMLInputElement>()
+const showPhotoPreview = ref(false)
+const previewImages = ref<string[]>([])
+const previewIndex = ref(0)
 
 const showCustomerPicker = ref(false)
 const showVehiclePicker = ref(false)
@@ -208,14 +269,107 @@ const submitNewVehicle = async () => {
   } catch (e) { /* 已拦截 */ }
 }
 
-const afterRead = async (file: any) => {
-  try {
-    const res = await uploadImage(file.file)
-    file.status = 'done'
-    file.url = (res as any).url
-  } catch (e) {
-    file.status = 'failed'
+// ===== 照片上传相关 =====
+
+// 触发文件选择
+const triggerFileInput = () => {
+  if (photos.value.length >= 9) {
+    showToast('最多上传9张照片')
+    return
   }
+  fileInputRef.value?.click()
+}
+
+// 文件选择后处理
+const onFileChange = (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const files = input.files
+  if (!files || files.length === 0) return
+
+  const remaining = 9 - photos.value.length
+  const filesToUpload = Array.from(files).slice(0, remaining)
+
+  for (const file of filesToUpload) {
+    // 校验文件类型
+    if (!file.type.startsWith('image/')) {
+      showToast('只能上传图片文件')
+      continue
+    }
+    // 校验文件大小（10MB）
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('图片大小不能超过10MB')
+      continue
+    }
+    // 添加到列表并上传
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const photoItem = {
+        content: ev.target?.result as string,
+        url: '',
+        status: 'uploading',
+        file
+      }
+      photos.value.push(photoItem)
+      uploadPhoto(photoItem)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // 清空 input，允许重复选择同一文件
+  input.value = ''
+}
+
+// 上传单张照片
+const uploadPhoto = async (photoItem: any) => {
+  try {
+    const res: any = await uploadImage(photoItem.file)
+    photoItem.url = res.url
+    photoItem.status = 'done'
+  } catch (e) {
+    photoItem.status = 'failed'
+    showToast({ type: 'fail', message: '照片上传失败，点击重试' })
+  }
+}
+
+// 重试上传
+const retryUpload = (idx: number) => {
+  const photoItem = photos.value[idx]
+  if (!photoItem || !photoItem.file) return
+  photoItem.status = 'uploading'
+  uploadPhoto(photoItem)
+}
+
+// 删除照片
+const deletePhoto = async (idx: number) => {
+  try {
+    await showConfirmDialog({
+      title: '删除照片',
+      message: '确定删除这张照片吗？'
+    })
+    photos.value.splice(idx, 1)
+  } catch (e) {
+    // 用户取消
+  }
+}
+
+// 预览照片
+const previewPhoto = (idx: number) => {
+  const donePhotos = photos.value
+    .filter((p: any) => p.status === 'done' && p.url)
+    .map((p: any) => p.url)
+  if (donePhotos.length === 0) return
+  previewImages.value = donePhotos
+  // 计算在已完成照片中的索引
+  const doneIdx = photos.value
+    .slice(0, idx + 1)
+    .filter((p: any) => p.status === 'done' && p.url)
+    .length - 1
+  previewIndex.value = Math.max(0, doneIdx)
+  showPhotoPreview.value = true
+}
+
+const onPreviewChange = (idx: number) => {
+  previewIndex.value = idx
 }
 
 const submit = async () => {
@@ -223,9 +377,27 @@ const submit = async () => {
   if (!selectedVehicle.value) return showToast('请选择车辆')
   if (!form.complaint) return showToast('请输入客户诉求')
 
+  // 检查是否有上传中的照片
+  const uploading = photos.value.some((p: any) => p.status === 'uploading')
+  if (uploading) return showToast('照片正在上传中，请稍候')
+
+  // 检查是否有上传失败的照片
+  const failed = photos.value.filter((p: any) => p.status === 'failed')
+  if (failed.length > 0) {
+    try {
+      await showConfirmDialog({
+        title: '上传失败',
+        message: `有${failed.length}张照片上传失败，是否忽略并继续？`
+      })
+    } catch (e) {
+      return // 用户取消
+    }
+  }
+
   try {
+    // 只收集上传成功的照片URL
     const photoPaths = photos.value
-      .filter((p: any) => p.url)
+      .filter((p: any) => p.status === 'done' && p.url)
       .map((p: any) => p.url)
 
     const order = await createCheckin({
@@ -258,5 +430,88 @@ onMounted(loadCustomers)
 .popup-content h3 {
   text-align: center;
   margin-bottom: 12px;
+}
+/* 照片上传区域 */
+.photo-uploader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.photo-item-wrapper {
+  position: relative;
+  width: calc((100% - 24px) / 4);
+  aspect-ratio: 1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f7f8fa;
+}
+.photo-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+}
+.photo-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.photo-mask-text {
+  color: #fff;
+  font-size: 11px;
+}
+.photo-failed {
+  background: rgba(238,10,36,0.6);
+}
+.photo-retry {
+  color: #fff;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-top: 2px;
+}
+.photo-delete {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  z-index: 2;
+}
+.photo-add {
+  width: calc((100% - 24px) / 4);
+  aspect-ratio: 1;
+  border: 1px dashed #dcdee0;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  background: #fafafa;
+}
+.photo-add:active {
+  background: #f2f3f5;
+}
+.photo-add-text {
+  font-size: 11px;
+  color: #969799;
 }
 </style>
