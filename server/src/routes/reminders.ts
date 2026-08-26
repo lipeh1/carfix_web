@@ -34,14 +34,14 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
 // 更新提醒（标记已提醒等）
 router.patch('/:id', asyncHandler(async (req, res) => {
-  const { status, reminded_at, remind_method, feedback, content, remind_date } = req.body
+  const { status, remindedAt, remindMethod, feedback, content, remindDate } = req.body
   const data: any = {}
   if (status) data.status = status
-  if (reminded_at) data.remindedAt = new Date(reminded_at)
-  if (remind_method) data.remindMethod = remind_method
+  if (remindedAt) data.remindedAt = new Date(remindedAt)
+  if (remindMethod) data.remindMethod = remindMethod
   if (feedback !== undefined) data.feedback = feedback
   if (content !== undefined) data.content = content
-  if (remind_date) data.remindDate = new Date(remind_date)
+  if (remindDate) data.remindDate = new Date(remindDate)
 
   const r = await prisma.reminder.update({
     where: { id: Number(req.params.id) },

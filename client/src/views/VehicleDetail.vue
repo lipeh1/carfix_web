@@ -5,7 +5,7 @@
     <div class="page-content" v-if="vehicle">
       <!-- 车辆信息卡片 -->
       <div class="card vehicle-card">
-        <div class="vehicle-plate">{{ vehicle.plate_number }}</div>
+        <div class="vehicle-plate">{{ vehicle.plateNumber }}</div>
         <div class="vehicle-model">{{ vehicle.brand || '' }} {{ vehicle.model || '' }}</div>
         <div class="vehicle-meta">
           <span v-if="vehicle.year">{{ vehicle.year }}款</span>
@@ -64,33 +64,33 @@
           <div class="reminder-content">
             <div class="reminder-title">{{ r.type === 'maintenance' ? '保养提醒' : '回访提醒' }}</div>
             <div class="reminder-desc">{{ r.content || '请及时联系客户' }}</div>
-            <div class="text-muted">建议日期：{{ formatDate(r.remind_date) }}</div>
+            <div class="text-muted">建议日期：{{ formatDate(r.remindDate) }}</div>
           </div>
         </div>
       </div>
 
       <!-- 维修历史时间线 -->
       <div class="card">
-        <div class="section-title">维修历史 ({{ vehicle.work_orders?.length || 0 }})</div>
-        <div class="timeline" v-if="vehicle.work_orders?.length">
-          <div v-for="(o, idx) in vehicle.work_orders" :key="o.id" class="timeline-item">
+        <div class="section-title">维修历史 ({{ vehicle.workOrders?.length || 0 }})</div>
+        <div class="timeline" v-if="vehicle.workOrders?.length">
+          <div v-for="(o, idx) in vehicle.workOrders" :key="o.id" class="timeline-item">
             <div class="timeline-dot" :class="{ 'dot-completed': o.status === 'completed', 'dot-cancelled': o.status === 'cancelled' }"></div>
             <div class="timeline-content" @click="$router.push(`/orders/${o.id}`)">
               <div class="timeline-header">
-                <span class="timeline-date">{{ formatDate(o.created_at) }}</span>
+                <span class="timeline-date">{{ formatDate(o.createdAt) }}</span>
                 <van-tag :type="getStatusType(o.status)" size="medium">{{ getStatusLabel(o.status) }}</van-tag>
               </div>
-              <div class="timeline-order">{{ o.order_no }}</div>
+              <div class="timeline-order">{{ o.orderNo }}</div>
               <div class="timeline-complaint">{{ o.complaint || '无诉求' }}</div>
               <!-- 维修项目 -->
-              <div class="timeline-items" v-if="o.repair_items?.length">
-                <span v-for="item in o.repair_items.slice(0, 3)" :key="item.id" class="item-chip">
+              <div class="timeline-items" v-if="o.repairItems?.length">
+                <span v-for="item in o.repairItems.slice(0, 3)" :key="item.id" class="item-chip">
                   {{ item.name }}
                 </span>
-                <span v-if="o.repair_items.length > 3" class="item-chip">+{{ o.repair_items.length - 3 }}</span>
+                <span v-if="o.repairItems.length > 3" class="item-chip">+{{ o.repairItems.length - 3 }}</span>
               </div>
-              <div class="timeline-amount" v-if="o.settlement?.actual_amount">
-                消费 ¥{{ formatAmount(o.settlement.actual_amount) }}
+              <div class="timeline-amount" v-if="o.settlement?.actualAmount">
+                消费 ¥{{ formatAmount(o.settlement.actualAmount) }}
               </div>
             </div>
           </div>

@@ -52,7 +52,7 @@
         <van-cell
           v-for="v in customer.vehicles"
           :key="v.id"
-          :title="v.plate_number"
+          :title="v.plateNumber"
           :label="`${v.brand || ''} ${v.model || ''}`"
           is-link
           @click="$router.push(`/vehicles/${v.id}`)"
@@ -66,27 +66,27 @@
 
       <!-- 历史工单 -->
       <div class="card">
-        <div class="section-title">历史工单 ({{ customer.work_orders?.length || 0 }})</div>
+        <div class="section-title">历史工单 ({{ customer.workOrders?.length || 0 }})</div>
         <div
-          v-for="o in customer.work_orders"
+          v-for="o in customer.workOrders"
           :key="o.id"
           class="order-item"
           @click="$router.push(`/orders/${o.id}`)"
         >
           <div class="order-header">
-            <span class="order-no">{{ o.order_no }}</span>
+            <span class="order-no">{{ o.orderNo }}</span>
             <van-tag :type="getStatusType(o.status)">{{ getStatusLabel(o.status) }}</van-tag>
           </div>
-          <div class="order-vehicle">{{ o.vehicle?.plate_number || '未知车辆' }}</div>
+          <div class="order-vehicle">{{ o.vehicle?.plateNumber || '未知车辆' }}</div>
           <div class="order-complaint">{{ o.complaint || '无诉求' }}</div>
           <div class="order-footer">
-            <span class="text-muted">{{ formatDate(o.created_at) }}</span>
-            <span class="order-amount" v-if="o.settlement?.actual_amount">
-              ¥{{ formatAmount(o.settlement.actual_amount) }}
+            <span class="text-muted">{{ formatDate(o.createdAt) }}</span>
+            <span class="order-amount" v-if="o.settlement?.actualAmount">
+              ¥{{ formatAmount(o.settlement.actualAmount) }}
             </span>
           </div>
         </div>
-        <van-empty v-if="!customer.work_orders?.length" description="暂无工单" image-size="60" />
+        <van-empty v-if="!customer.workOrders?.length" description="暂无工单" image-size="60" />
       </div>
 
       <!-- 底部快捷操作 -->

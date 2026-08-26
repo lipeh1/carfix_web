@@ -39,7 +39,7 @@
           v-for="item in pendingReminders"
           :key="item.id"
           :title="item.content || (item.type === 'maintenance' ? '保养提醒' : '回访提醒')"
-          :label="item.vehicle?.plate_number + ' · ' + formatDate(item.remind_date)"
+          :label="item.vehicle?.plateNumber + ' · ' + formatDate(item.remindDate)"
           is-link
           @click="$router.push('/reminders')"
         />

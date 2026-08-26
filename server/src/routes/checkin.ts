@@ -8,16 +8,16 @@ const router = Router()
 // 接车登记（创建工单 + 接车记录 + 照片）
 router.post('/', asyncHandler(async (req, res) => {
   const {
-    customer_id,
-    vehicle_id,
+    customerId,
+    vehicleId,
     complaint,
-    mileage_in,
-    vehicle_condition,
+    mileageIn,
+    vehicleCondition,
     photos,
     source
   } = req.body
 
-  if (!customer_id || !vehicle_id) throw new AppError('客户和车辆不能为空')
+  if (!customerId || !vehicleId) throw new AppError('客户和车辆不能为空')
   if (!complaint) throw new AppError('客户诉求不能为空')
 
   // 生成工单号
@@ -30,12 +30,12 @@ router.post('/', asyncHandler(async (req, res) => {
   const order = await prisma.workOrder.create({
     data: {
       orderNo,
-      customerId: customer_id,
-      vehicleId: vehicle_id,
+      customerId,
+      vehicleId,
       status: 'pending_inspection',
       source: source || 'walk_in',
       complaint,
-      mileageIn: mileage_in ? Number(mileage_in) : null
+      mileageIn: mileageIn ? Number(mileageIn) : null
     }
   })
 
@@ -43,7 +43,7 @@ router.post('/', asyncHandler(async (req, res) => {
   await prisma.checkinRecord.create({
     data: {
       workOrderId: order.id,
-      vehicleCondition: vehicle_condition
+      vehicleCondition
     }
   })
 

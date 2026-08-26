@@ -13,7 +13,7 @@
         v-for="item in reminders"
         :key="item.id"
         :title="item.content || getTypeLabel(item.type)"
-        :label="`${item.vehicle?.plate_number || ''} · 建议 ${formatDate(item.remind_date)}`"
+        :label="`${item.vehicle?.plateNumber || ''} · 建议 ${formatDate(item.remindDate)}`"
         is-link
         @click="showDetail(item)"
       >
@@ -31,11 +31,11 @@
     <van-popup v-model:show="showDetailPopup" position="bottom" round>
       <div class="popup-content" v-if="current">
         <h3>{{ getTypeLabel(current.type) }}</h3>
-        <van-cell title="车辆" :value="current.vehicle?.plate_number || '-'" />
-        <van-cell title="建议日期" :value="formatDate(current.remind_date)" />
+        <van-cell title="车辆" :value="current.vehicle?.plateNumber || '-'" />
+        <van-cell title="建议日期" :value="formatDate(current.remindDate)" />
         <van-cell title="内容" :value="current.content || '-'" />
         <van-cell title="状态" :value="current.status === 'done' ? '已提醒' : '待提醒'" />
-        <van-cell v-if="current.reminded_at" title="提醒时间" :value="formatDateTime(current.reminded_at)" />
+        <van-cell v-if="current.remindedAt" title="提醒时间" :value="formatDateTime(current.remindedAt)" />
         <van-cell v-if="current.feedback" title="客户反馈" :value="current.feedback" />
 
         <van-button
@@ -88,8 +88,8 @@ const markDone = async () => {
   try {
     await updateReminder(current.value.id, {
       status: 'done',
-      reminded_at: new Date().toISOString(),
-      remind_method: 'wechat'
+      remindedAt: new Date().toISOString(),
+      remindMethod: 'wechat'
     })
     showToast({ type: 'success', message: '已标记' })
     showDetailPopup.value = false

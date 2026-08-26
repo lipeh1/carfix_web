@@ -28,7 +28,7 @@
         <div class="section-title">车辆信息</div>
         <van-cell
           v-if="selectedVehicle"
-          :title="selectedVehicle.plate_number"
+          :title="selectedVehicle.plateNumber"
           :label="`${selectedVehicle.brand || ''} ${selectedVehicle.model || ''}`"
           is-link
           @click="showVehiclePicker = true"
@@ -146,7 +146,7 @@
         <van-cell
           v-for="v in vehicleList"
           :key="v.id"
-          :title="v.plate_number"
+          :title="v.plateNumber"
           :label="`${v.brand || ''} ${v.model || ''}`"
           is-link
           @click="selectVehicle(v)"
@@ -169,7 +169,7 @@
     <van-popup v-model:show="showNewVehicle" position="bottom" round>
       <div class="popup-content">
         <h3>新建车辆</h3>
-        <van-field v-model="newVehicle.plate_number" label="车牌号" placeholder="请输入车牌号" />
+        <van-field v-model="newVehicle.plateNumber" label="车牌号" placeholder="请输入车牌号" />
         <van-field v-model="newVehicle.brand" label="品牌" placeholder="如丰田" />
         <van-field v-model="newVehicle.model" label="车型" placeholder="如卡罗拉" />
         <van-button type="primary" block class="mt-16" @click="submitNewVehicle">保存</van-button>
@@ -212,7 +212,7 @@ const form = reactive({
 })
 
 const newCustomer = reactive({ name: '', phone: '' })
-const newVehicle = reactive({ plate_number: '', brand: '', model: '' })
+const newVehicle = reactive({ plateNumber: '', brand: '', model: '' })
 
 const loadCustomers = async () => {
   try {
@@ -257,12 +257,12 @@ const submitNewCustomer = async () => {
 
 const submitNewVehicle = async () => {
   if (!selectedCustomer.value) return showToast('请先选择客户')
-  if (!newVehicle.plate_number) return showToast('请输入车牌号')
+  if (!newVehicle.plateNumber) return showToast('请输入车牌号')
   try {
-    const v = await createVehicle({ ...newVehicle, customer_id: selectedCustomer.value.id })
+    const v = await createVehicle({ ...newVehicle, customerId: selectedCustomer.value.id })
     selectedVehicle.value = v
     showNewVehicle.value = false
-    newVehicle.plate_number = ''
+    newVehicle.plateNumber = ''
     newVehicle.brand = ''
     newVehicle.model = ''
     loadVehicles()
@@ -401,11 +401,11 @@ const submit = async () => {
       .map((p: any) => p.url)
 
     const order = await createCheckin({
-      customer_id: selectedCustomer.value.id,
-      vehicle_id: selectedVehicle.value.id,
+      customerId: selectedCustomer.value.id,
+      vehicleId: selectedVehicle.value.id,
       complaint: form.complaint,
-      mileage_in: form.mileage ? Number(form.mileage) : null,
-      vehicle_condition: form.vehicleCondition,
+      mileageIn: form.mileage ? Number(form.mileage) : null,
+      vehicleCondition: form.vehicleCondition,
       photos: photoPaths
     })
 

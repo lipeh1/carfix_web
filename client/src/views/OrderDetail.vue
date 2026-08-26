@@ -1,13 +1,13 @@
 <template>
   <div class="page-container">
-    <van-nav-bar :title="`工单 #${order?.order_no || ''}`" left-text="返回" left-arrow @click-left="$router.back()" />
+    <van-nav-bar :title="`工单 #${order?.orderNo || ''}`" left-text="返回" left-arrow @click-left="$router.back()" />
 
     <div class="page-content" v-if="order">
       <!-- 状态卡片 -->
       <div class="card status-card">
         <div class="flex-between">
           <div>
-            <div class="plate">{{ order.vehicle?.plate_number }}</div>
+            <div class="plate">{{ order.vehicle?.plateNumber }}</div>
             <div class="text-muted mt-8">{{ order.customer?.name }} · {{ order.customer?.phone }}</div>
           </div>
           <van-tag :type="getStatusType(order.status)" size="medium">
@@ -20,8 +20,8 @@
       <div class="card">
         <div class="section-title">接车信息</div>
         <van-cell title="客户诉求" :value="order.complaint || '-'" />
-        <van-cell title="接车里程" :value="order.mileage_in ? order.mileage_in + ' km' : '-'" />
-        <van-cell title="创建时间" :value="formatDateTime(order.created_at)" />
+        <van-cell title="接车里程" :value="order.mileageIn ? order.mileageIn + ' km' : '-'" />
+        <van-cell title="创建时间" :value="formatDateTime(order.createdAt)" />
       </div>
 
       <!-- 接车照片 -->
@@ -32,7 +32,7 @@
           <img
             v-for="(photo, idx) in checkinPhotos"
             :key="photo.id"
-            :src="photo.file_path"
+            :src="photo.filePath"
             class="photo-item"
             @click="openPreview(idx)"
           />
@@ -61,7 +61,7 @@
         <div class="section-title">维修记录</div>
         <div v-for="log in repairLogs" :key="log.id" class="log-item">
           <div class="log-content">{{ log.content }}</div>
-          <div class="text-muted">{{ formatDateTime(log.created_at) }}</div>
+          <div class="text-muted">{{ formatDateTime(log.createdAt) }}</div>
         </div>
       </div>
 
@@ -83,11 +83,11 @@
       <!-- 结算信息 -->
       <div class="card" v-if="settlement">
         <div class="section-title">结算信息</div>
-        <van-cell title="结算单号" :value="settlement.settlement_no" />
-        <van-cell title="应收金额" :value="`¥${Number(settlement.total_amount).toFixed(2)}`" />
+        <van-cell title="结算单号" :value="settlement.settlementNo" />
+        <van-cell title="应收金额" :value="`¥${Number(settlement.totalAmount).toFixed(2)}`" />
         <van-cell title="优惠" :value="`¥${Number(settlement.discount || 0).toFixed(2)}`" />
-        <van-cell title="实收金额" :value="`¥${Number(settlement.actual_amount).toFixed(2)}`" />
-        <van-cell title="已收金额" :value="`¥${Number(settlement.paid_amount).toFixed(2)}`" />
+        <van-cell title="实收金额" :value="`¥${Number(settlement.actualAmount).toFixed(2)}`" />
+        <van-cell title="已收金额" :value="`¥${Number(settlement.paidAmount).toFixed(2)}`" />
         <van-cell title="状态">
           <template #value>
             <van-tag :type="settlement.status === 'paid' ? 'success' : 'warning'">
@@ -99,7 +99,7 @@
         <div v-if="settlement.payments?.length > 0" class="mt-12">
           <div class="text-muted mb-8">收款记录</div>
           <div v-for="p in settlement.payments" :key="p.id" class="payment-item">
-            <span>{{ formatDateTime(p.created_at) }} · {{ methodLabel(p.method) }}</span>
+            <span>{{ formatDateTime(p.createdAt) }} · {{ methodLabel(p.method) }}</span>
             <span class="text-success">+¥{{ Number(p.amount).toFixed(2) }}</span>
           </div>
         </div>
@@ -148,11 +148,11 @@
         <div class="payment-info" v-if="settlement">
           <div class="flex-between">
             <span>应收金额</span>
-            <span>¥{{ Number(settlement.actual_amount).toFixed(2) }}</span>
+            <span>¥{{ Number(settlement.actualAmount).toFixed(2) }}</span>
           </div>
           <div class="flex-between mt-8">
             <span>已收金额</span>
-            <span>¥{{ Number(settlement.paid_amount).toFixed(2) }}</span>
+            <span>¥{{ Number(settlement.paidAmount).toFixed(2) }}</span>
           </div>
           <div class="flex-between mt-8">
             <span class="text-danger">待收金额</span>
@@ -238,7 +238,7 @@ const itemsTotal = computed(() =>
 // 待收金额
 const unpaidAmount = computed(() => {
   if (!settlement.value) return 0
-  return Number(settlement.value.actual_amount) - Number(settlement.value.paid_amount)
+  return Number(settlement.value.actualAmount) - Number(settlement.value.paidAmount)
 })
 
 // 底部操作按钮（根据当前状态动态显示）
@@ -273,17 +273,17 @@ const loadData = async () => {
   try {
     const data: any = await getOrder(orderId)
     order.value = data
-    checkinPhotos.value = data.checkin_photos || []
-    repairItems.value = data.repair_items || []
-    repairLogs.value = data.repair_logs || []
-    additionalItems.value = data.additional_items || []
+    checkinPhotos.value = data.checkinPhotos || []
+    repairItems.value = data.repairItems || []
+    repairLogs.value = data.repairLogs || []
+    additionalItems.value = data.additionalItems || []
     settlement.value = data.settlement || null
   } catch (e) { /* 静默 */ }
 }
 
 // 图片预览
 const openPreview = (idx: number) => {
-  previewImages.value = checkinPhotos.value.map((p: any) => p.file_path)
+  previewImages.value = checkinPhotos.value.map((p: any) => p.filePath)
   showPreview.value = true
 }
 
@@ -330,7 +330,7 @@ const submitPayment = async () => {
     await addPayment(settlement.value.id, {
       amount: Number(paymentForm.amount),
       method: paymentForm.method,
-      type: settlement.value.paid_amount > 0 ? 'supplement' : 'initial'
+      type: settlement.value.paidAmount > 0 ? 'supplement' : 'initial'
     })
     showToast({ type: 'success', message: '收款成功' })
     showPaymentPopup.value = false

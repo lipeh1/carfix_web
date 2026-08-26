@@ -318,8 +318,8 @@ const loadExistingQuote = async () => {
     if (order.complaint) {
       inspection.value = order.complaint
     }
-    if (order.repair_items && order.repair_items.length > 0) {
-      items.value = order.repair_items.map((item: any) => ({
+    if (order.repairItems && order.repairItems.length > 0) {
+      items.value = order.repairItems.map((item: any) => ({
         _id: genId(),
         type: item.type,
         name: item.name,

@@ -74,12 +74,12 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
 // 新增车辆
 router.post('/', asyncHandler(async (req, res) => {
-  const { customer_id, plate_number, brand, model, year, vin, color, remark } = req.body
-  if (!customer_id || !plate_number) throw new AppError('客户和车牌号不能为空')
+  const { customerId, plateNumber, brand, model, year, vin, color, remark } = req.body
+  if (!customerId || !plateNumber) throw new AppError('客户和车牌号不能为空')
   const vehicle = await prisma.vehicle.create({
     data: {
-      customerId: customer_id,
-      plateNumber: plate_number,
+      customerId,
+      plateNumber,
       brand, model, year, vin, color, remark
     }
   })
@@ -88,10 +88,10 @@ router.post('/', asyncHandler(async (req, res) => {
 
 // 更新车辆
 router.put('/:id', asyncHandler(async (req, res) => {
-  const { plate_number, brand, model, year, vin, color, remark } = req.body
+  const { plateNumber, brand, model, year, vin, color, remark } = req.body
   const vehicle = await prisma.vehicle.update({
     where: { id: Number(req.params.id) },
-    data: { plateNumber: plate_number, brand, model, year, vin, color, remark }
+    data: { plateNumber, brand, model, year, vin, color, remark }
   })
   res.json(vehicle)
 }))

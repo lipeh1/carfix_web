@@ -22,7 +22,7 @@
           >
             <template #title>
               <div class="order-title">
-                <span class="plate">{{ order.vehicle?.plate_number || '未知车辆' }}</span>
+                <span class="plate">{{ order.vehicle?.plateNumber || '未知车辆' }}</span>
                 <van-tag :type="getStatusType(order.status)" >
                   {{ getStatusLabel(order.status) }}
                 </van-tag>
@@ -33,8 +33,8 @@
                 <span>{{ order.customer?.name || '未知客户' }}</span>
                 <span class="text-muted">{{ order.complaint || '无诉求' }}</span>
               </div>
-              <div class="order-amount" v-if="order.final_amount">
-                ¥{{ Number(order.final_amount).toFixed(2) }}
+              <div class="order-amount" v-if="order.finalAmount">
+                ¥{{ Number(order.finalAmount).toFixed(2) }}
               </div>
             </template>
           </van-cell>

@@ -18,7 +18,7 @@
         @click="$router.push(`/customers/${c.id}`)"
       >
         <template #right-icon>
-          <span class="text-muted">{{ c._vehicle_count || 0 }}辆车</span>
+          <span class="text-muted">{{ c._count?.vehicles || 0 }}辆车</span>
         </template>
       </van-cell>
 
