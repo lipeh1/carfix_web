@@ -142,8 +142,8 @@ npm install
 npm run dev
 
 # 分别启动
-npm run dev:client   # 前端 http://localhost:5173
-npm run dev:server   # 后端 http://localhost:3000
+npm run dev:client   # 前端 http://localhost:8850
+npm run dev:server   # 后端 http://localhost:8851
 
 # 构建
 npm run build

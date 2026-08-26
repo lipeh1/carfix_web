@@ -53,8 +53,8 @@ npm run db:init
 npm run dev
 ```
 
-- 前端: http://localhost:5173
-- 后端: http://localhost:3000
+- 前端: http://localhost:8850
+- 后端: http://localhost:8851
 
 ### 4. 构建生产版本
 
