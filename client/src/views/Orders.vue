@@ -55,7 +55,10 @@
       </van-pull-refresh>
     </div>
 
-    <van-fab icon="plus" @click="$router.push('/checkin')" />
+    <!-- 右下角新建接车按钮 -->
+    <div class="fab-button" @click="$router.push('/checkin')">
+      <van-icon name="plus" size="24" />
+    </div>
   </div>
 </template>
 
@@ -149,5 +152,25 @@ onMounted(loadOrders)
   color: #ee0a24;
   font-weight: 600;
   margin-top: 4px;
+}
+/* 右下角浮动按钮 */
+.fab-button {
+  position: fixed;
+  right: 20px;
+  bottom: 80px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #1989fa;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(25,137,250,0.4);
+  z-index: 100;
+  cursor: pointer;
+}
+.fab-button:active {
+  transform: scale(0.95);
 }
 </style>
