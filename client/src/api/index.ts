@@ -51,7 +51,7 @@ export const getAdditionalItems = (orderId: number) =>
 export const addAdditionalItem = (orderId: number, data: any) =>
   request.post(`/orders/${orderId}/additional-items`, data)
 export const confirmAdditionalItem = (id: number, confirmed: boolean) =>
-  request.patch(`/additional-items/${id}/confirm`, { confirmed })
+  request.patch(`/orders/additional-items/${id}/confirm`, { confirmed })
 
 // 质检
 export const createQualityCheck = (orderId: number, data: any) =>

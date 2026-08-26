@@ -74,16 +74,23 @@
       <!-- 增项 -->
       <div class="card" v-if="additionalItems.length > 0">
         <div class="section-title">维修增项</div>
-        <van-cell v-for="item in additionalItems" :key="item.id" :title="item.name" :label="item.reason">
-          <template #value>
-            <div style="text-align:right">
-              <div>¥{{ Number(item.amount).toFixed(2) }}</div>
-              <van-tag :type="item.status === 'confirmed' ? 'success' : item.status === 'rejected' ? 'danger' : 'warning'">
-                {{ item.status === 'confirmed' ? '已确认' : item.status === 'rejected' ? '已拒绝' : '待确认' }}
-              </van-tag>
-            </div>
-          </template>
-        </van-cell>
+        <div v-for="item in additionalItems" :key="item.id" class="additional-item">
+          <van-cell :title="item.name" :label="item.reason">
+            <template #value>
+              <div style="text-align:right">
+                <div>¥{{ Number(item.amount).toFixed(2) }}</div>
+                <van-tag :type="item.status === 'confirmed' ? 'success' : item.status === 'rejected' ? 'danger' : 'warning'">
+                  {{ item.status === 'confirmed' ? '已确认' : item.status === 'rejected' ? '已拒绝' : '待确认' }}
+                </van-tag>
+              </div>
+            </template>
+          </van-cell>
+          <!-- 待确认增项的操作按钮 -->
+          <div v-if="item.status === 'pending'" class="additional-actions">
+            <van-button size="small" type="success" @click="handleConfirmAdditional(item, true)">确认</van-button>
+            <van-button size="small" type="danger" plain @click="handleConfirmAdditional(item, false)">拒绝</van-button>
+          </div>
+        </div>
       </div>
 
       <!-- 结算信息 -->
@@ -217,7 +224,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
 import {
   getOrder, updateOrderStatus, addRepairLog,
-  addAdditionalItem, createQualityCheck,
+  addAdditionalItem, confirmAdditionalItem, createQualityCheck,
   createSettlement, addPayment, deliverOrder, updateCheckin
 } from '@/api'
 import dayjs from 'dayjs'
@@ -386,6 +393,28 @@ const submitAdditional = async () => {
   } catch (e) { /* 已拦截 */ }
 }
 
+// 确认或拒绝增项
+const handleConfirmAdditional = async (item: any, confirmed: boolean) => {
+  try {
+    if (confirmed) {
+      await showConfirmDialog({
+        title: '确认增项',
+        message: `确认添加「${item.name}」（¥${Number(item.amount).toFixed(2)}）？确认后将计入维修项目和结算金额。`
+      })
+    } else {
+      await showConfirmDialog({
+        title: '拒绝增项',
+        message: `确定拒绝「${item.name}」？`
+      })
+    }
+    await confirmAdditionalItem(item.id, confirmed)
+    showToast({ type: 'success', message: confirmed ? '增项已确认' : '增项已拒绝' })
+    loadData()
+  } catch (e: any) {
+    if (e !== 'cancel') { /* 已拦截 */ }
+  }
+}
+
 // ===== 收款 =====
 const submitPayment = async () => {
   if (!paymentForm.amount) return showToast('请输入收款金额')
@@ -521,6 +550,19 @@ onMounted(loadData)
 }
 .payment-item:last-child {
   border-bottom: none;
+}
+/* 增项 */
+.additional-item {
+  border-bottom: 1px solid #f2f3f5;
+}
+.additional-item:last-child {
+  border-bottom: none;
+}
+.additional-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px 12px;
+  justify-content: flex-end;
 }
 .action-bar {
   position: fixed;

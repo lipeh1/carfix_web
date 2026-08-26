@@ -154,7 +154,7 @@
           <span class="amount-large">¥{{ formatAmount(finalAmount) }}</span>
         </div>
       </div>
-      <van-button type="primary" block class="save-btn" :loading="saving" @click="saveQuote">
+      <van-button type="primary" block class="save-btn" :loading="saving" @click="saveQuoteHandler">
         生成报价单
       </van-button>
     </div>
