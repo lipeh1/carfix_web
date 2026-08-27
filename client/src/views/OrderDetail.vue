@@ -33,7 +33,7 @@
       <!-- 接车照片 -->
       <div class="card" v-if="checkinPhotos.length > 0">
         <div class="section-title">接车照片</div>
-        <van-image-preview v-model:show="showPreview" :images="previewImages" />
+        <van-image-preview v-model:show="showPreview" :images="previewImages" :start-position="previewIndex" />
         <div class="photo-grid">
           <img
             v-for="(photo, idx) in checkinPhotos"
@@ -264,6 +264,7 @@ const additionalItems = ref<any[]>([])
 const settlement = ref<any>(null)
 const showPreview = ref(false)
 const previewImages = ref<string[]>([])
+const previewIndex = ref(0)
 
 // 弹窗状态
 const showEditCheckin = ref(false)
@@ -359,9 +360,10 @@ const loadData = async () => {
   }
 }
 
-// 图片预览
+// 图片预览（定位到所点击的照片，而非每次都从头看）
 const openPreview = (idx: number) => {
   previewImages.value = checkinPhotos.value.map((p: any) => p.filePath)
+  previewIndex.value = idx
   showPreview.value = true
 }
 
