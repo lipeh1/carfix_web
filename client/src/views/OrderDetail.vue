@@ -197,7 +197,11 @@
         <div class="payment-info" v-if="settlement">
           <div class="flex-between">
             <span>应收金额</span>
-            <span>¥{{ Number(settlement.actualAmount).toFixed(2) }}</span>
+            <span>¥{{ Number(settlement.totalAmount).toFixed(2) }}</span>
+          </div>
+          <div class="flex-between mt-8" v-if="Number(settlement.discount) > 0">
+            <span class="text-success">优惠</span>
+            <span class="text-success">-¥{{ Number(settlement.discount).toFixed(2) }}</span>
           </div>
           <div class="flex-between mt-8">
             <span>已收金额</span>
@@ -447,8 +451,8 @@ const submitPayment = async () => {
     return showToast('请输入有效的收款金额')
   }
   if (!settlement.value) {
-    // 先创建结算单
-    await createSettlement(orderId)
+    // 先创建结算单，带上报价阶段登记的优惠
+    await createSettlement(orderId, { discount: Number(order.value?.discount) || 0 })
     await loadData()
   }
   try {
@@ -525,7 +529,8 @@ const handleAction = async (key: string) => {
         break
       case 'receive_payment':
         if (!settlement.value) {
-          await createSettlement(orderId)
+          // 建单时沿用报价阶段登记的优惠
+          await createSettlement(orderId, { discount: Number(order.value?.discount) || 0 })
           await loadData()
         }
         paymentForm.amount = unpaidAmount.value > 0 ? unpaidAmount.value.toFixed(2) : ''

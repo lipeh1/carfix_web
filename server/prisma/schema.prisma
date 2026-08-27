@@ -60,6 +60,7 @@ model WorkOrder {
   mileageIn         Int?      @map("mileage_in")
   mileageOut        Int?      @map("mileage_out")
   quoteAmount       Float?    @map("quote_amount")
+  discount          Float     @default(0) @map("discount")
   finalAmount       Float?    @map("final_amount")
   paidAmount        Float     @default(0) @map("paid_amount")
   quoteConfirmedAt  DateTime? @map("quote_confirmed_at")

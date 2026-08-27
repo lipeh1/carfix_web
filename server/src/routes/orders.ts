@@ -123,11 +123,14 @@ router.patch('/:id/checkin', asyncHandler(async (req, res) => {
 // 保存报价（维修项目/配件）
 router.post('/:id/quote', asyncHandler(async (req, res) => {
   const id = Number(req.params.id)
-  const { items, inspection } = req.body
+  const { items, inspection, discount } = req.body
 
   // 校验工单存在，避免外键约束失败时返回裸 500
   const order = await prisma.workOrder.findUnique({ where: { id } })
   if (!order) throw new AppError('工单不存在', 404)
+
+  // 优惠金额随报价落库，后续结算直接沿用（此前仅前端展示、传到结算就丢了）
+  const disc = Math.max(0, Number(discount) || 0)
 
   // 删除原有报价项目，重新写入
   await prisma.repairItem.deleteMany({ where: { workOrderId: id, source: 'quote' } })
@@ -157,6 +160,7 @@ router.post('/:id/quote', asyncHandler(async (req, res) => {
     data: {
       status: 'pending_quote',
       quoteAmount: total,
+      discount: disc,
       // 检测结果独立持久化（此前该字段被直接丢弃，页面用客户诉求回充）
       inspection: inspection || null
     }
@@ -272,6 +276,10 @@ router.post('/:id/quality-check', asyncHandler(async (req, res) => {
   const { result, checkItems, remark } = req.body
   if (!result) throw new AppError('质检结果不能为空')
 
+  // 校验工单存在，结算金额计算也需要工单上的优惠信息
+  const order = await prisma.workOrder.findUnique({ where: { id } })
+  if (!order) throw new AppError('工单不存在', 404)
+
   // 删除旧质检记录
   await prisma.qualityCheck.deleteMany({ where: { workOrderId: id } })
 
@@ -287,6 +295,8 @@ router.post('/:id/quality-check', asyncHandler(async (req, res) => {
     if (!existing) {
       const items = await prisma.repairItem.findMany({ where: { workOrderId: id } })
       const total = items.reduce((sum, i) => sum + i.subtotal, 0)
+      // 沿用报价阶段登记的优惠金额，优惠不大于应收总额
+      const disc = Math.min(Math.max(0, order.discount || 0), total)
       const today = dayjs().format('YYYYMMDD')
       const count = await prisma.settlement.count({ where: { settlementNo: { startsWith: `SET${today}` } } })
       await prisma.settlement.create({
@@ -294,11 +304,12 @@ router.post('/:id/quality-check', asyncHandler(async (req, res) => {
           workOrderId: id,
           settlementNo: `SET${today}${String(count + 1).padStart(3, '0')}`,
           totalAmount: total,
-          actualAmount: total,
+          discount: disc,
+          actualAmount: total - disc,
           status: 'unpaid'
         }
       })
-      await prisma.workOrder.update({ where: { id }, data: { finalAmount: total } })
+      await prisma.workOrder.update({ where: { id }, data: { finalAmount: total - disc } })
     }
   } else {
     // 不通过 → 返工
@@ -323,7 +334,13 @@ router.post('/:id/settlement', asyncHandler(async (req, res) => {
   const { discount, remark } = req.body
   const items = await prisma.repairItem.findMany({ where: { workOrderId: id } })
   const total = items.reduce((sum, i) => sum + i.subtotal, 0)
-  const disc = Number(discount) || 0
+  // 请求未携带优惠时回落到报价阶段登记的工单优惠
+  const order = await prisma.workOrder.findUnique({ where: { id } })
+  if (!order) throw new AppError('工单不存在', 404)
+  const disc = Math.min(
+    discount !== undefined ? Math.max(0, Number(discount) || 0) : Math.max(0, order.discount || 0),
+    total
+  )
   const actual = total - disc
 
   const today = dayjs().format('YYYYMMDD')
