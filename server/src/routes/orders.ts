@@ -59,12 +59,31 @@ router.get('/:id', asyncHandler(async (req, res) => {
   res.json(order)
 }))
 
+// 合法状态流转表（对应 DESIGN.md 的状态机）；不在表中的目标状态视为非法
+const allowedTransitions: Record<string, string[]> = {
+  pending_inspection: ['pending_quote', 'cancelled'],
+  pending_quote: ['repairing', 'cancelled'],
+  repairing: ['pending_quality_check'],
+  pending_quality_check: ['pending_settlement', 'repairing'],
+  pending_settlement: ['completed'],
+  completed: [],
+  cancelled: []
+}
+
 // 更新工单状态
 router.patch('/:id/status', asyncHandler(async (req, res) => {
   const { status, ...data } = req.body
   const id = Number(req.params.id)
   const order = await prisma.workOrder.findUnique({ where: { id } })
   if (!order) throw new AppError('工单不存在', 404)
+
+  // 目标必须是已知状态，且从当前状态出发允许到达
+  if (!status || !(status in allowedTransitions)) {
+    throw new AppError('未知的工单状态')
+  }
+  if (!allowedTransitions[order.status].includes(status)) {
+    throw new AppError('当前状态下不允许执行该操作')
+  }
 
   const updateData: any = { status }
 
@@ -128,7 +147,11 @@ router.post('/:id/quote', asyncHandler(async (req, res) => {
   // 校验工单存在，避免外键约束失败时返回裸 500
   const order = await prisma.workOrder.findUnique({ where: { id } })
   if (!order) throw new AppError('工单不存在', 404)
-
+  // 报价只能在待检测/待报价确认阶段编辑：
+  // 客户确认后再修改会使确认结果与实际项目脱节
+  if (!['pending_inspection', 'pending_quote'].includes(order.status)) {
+    throw new AppError('当前状态不可修改报价')
+  }
   // 优惠金额随报价落库，后续结算直接沿用（此前仅前端展示、传到结算就丢了）
   const disc = Math.max(0, Number(discount) || 0)
 
@@ -176,6 +199,12 @@ router.post('/:id/quote', asyncHandler(async (req, res) => {
 router.post('/:id/quote/confirm', asyncHandler(async (req, res) => {
   const { confirmed } = req.body
   const id = Number(req.params.id)
+  const order = await prisma.workOrder.findUnique({ where: { id } })
+  if (!order) throw new AppError('工单不存在', 404)
+  // 只有待报价确认的工单可以执行客户确认
+  if (order.status !== 'pending_quote') {
+    throw new AppError('工单不处于待报价确认状态')
+  }
   if (confirmed) {
     await prisma.workOrder.update({
       where: { id },
@@ -282,6 +311,10 @@ router.post('/:id/quality-check', asyncHandler(async (req, res) => {
   // 校验工单存在，结算金额计算也需要工单上的优惠信息
   const order = await prisma.workOrder.findUnique({ where: { id } })
   if (!order) throw new AppError('工单不存在', 404)
+  // 只有待质检的工单可以录入质检结果
+  if (order.status !== 'pending_quality_check') {
+    throw new AppError('工单未处于待质检状态，无法质检')
+  }
 
   // 质检记录的替换、状态流转与结算单生成同事务执行，
   // 保证质检结果、工单状态、结算单三者始终一致
