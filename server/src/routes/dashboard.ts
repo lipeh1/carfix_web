@@ -7,23 +7,18 @@ const router = Router()
 
 // 工作台统计
 router.get('/', asyncHandler(async (_req, res) => {
-  const [pendingInspection, repairing, pendingSettlement, completed, settlements] = await Promise.all([
+  const [pendingInspection, repairing, pendingSettlement, completed, monthPayments] = await Promise.all([
     prisma.workOrder.count({ where: { status: 'pending_inspection' } }),
     prisma.workOrder.count({ where: { status: 'repairing' } }),
     prisma.workOrder.count({ where: { status: 'pending_settlement' } }),
     prisma.workOrder.count({ where: { status: 'completed' } }),
-    prisma.settlement.findMany({
-      where: {
-        createdAt: {
-          gte: dayjs().startOf('month').toDate()
-        }
-      },
-      include: { payments: true }
+    // 本月实际发生的收款（按支付时间），与统计报表页的月度趋势口径保持一致
+    prisma.payment.findMany({
+      where: { createdAt: { gte: dayjs().startOf('month').toDate() } }
     })
   ])
 
-  // 本月营收 = 本月结算单的已收金额
-  const monthlyRevenue = settlements.reduce((sum, s) => sum + (s.paidAmount || 0), 0)
+  const monthlyRevenue = monthPayments.reduce((sum, p) => sum + p.amount, 0)
 
   // 挂账总额 = 所有未结清的 actualAmount - paidAmount
   const unpaidSettlements = await prisma.settlement.findMany({ where: { status: 'unpaid' } })
