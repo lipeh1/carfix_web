@@ -20,6 +20,16 @@ router.post('/:id/payments', asyncHandler(async (req, res) => {
   // 收款记录与结算单/工单已收金额的同步重算同事务执行，
   // 避免"记录建了、金额没更"或反向的不一致状态
   const payment = await prisma.$transaction(async (tx) => {
+    const s = await tx.settlement.findUnique({ where: { id } })
+    if (!s) throw new AppError('结算单不存在', 404)
+
+    // 拦截超额收款：超出剩余应收的入账会让挂账统计变负、实收与账单不符
+    const sumsBefore = await tx.payment.aggregate({ where: { settlementId: id }, _sum: { amount: true } })
+    const paidBefore = sumsBefore._sum.amount ?? 0
+    if (amt > s.actualAmount - paidBefore) {
+      throw new AppError('收款金额超过该结算单的剩余待收金额')
+    }
+
     const created = await tx.payment.create({
       data: {
         settlementId: id,
@@ -31,8 +41,6 @@ router.post('/:id/payments', asyncHandler(async (req, res) => {
     })
 
     // 重新计算结算单已收金额和状态
-    const s = await tx.settlement.findUnique({ where: { id } })
-    if (!s) throw new AppError('结算单不存在', 404)
     const sums = await tx.payment.aggregate({ where: { settlementId: id }, _sum: { amount: true } })
     const paid = sums._sum.amount ?? 0
     await tx.settlement.update({
