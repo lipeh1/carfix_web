@@ -213,29 +213,39 @@ router.patch('/additional-items/:itemId/confirm', asyncHandler(async (req, res) 
   const itemId = Number(req.params.itemId)
   const item = await prisma.additionalItem.findUnique({ where: { id: itemId } })
   if (!item) throw new AppError('增项不存在', 404)
+  // 幂等保护：已处理的增项禁止再次确认/拒绝，避免重复写入项目和重复加价
+  if (item.status !== 'pending') {
+    throw new AppError('该增项已确认或拒绝，请刷新后查看最新状态')
+  }
 
   if (confirmed) {
-    // 标记确认，并生成维修项目
-    await prisma.additionalItem.update({
-      where: { id: itemId },
-      data: { status: 'confirmed', confirmedAt: new Date() }
-    })
-    await prisma.repairItem.create({
-      data: {
-        workOrderId: item.workOrderId,
-        type: 'service',
-        name: item.name,
-        quantity: 1,
-        unitPrice: item.amount,
-        subtotal: item.amount,
-        source: 'additional'
-      }
-    })
-    // 更新最终金额
-    const order = await prisma.workOrder.findUnique({ where: { id: item.workOrderId } })
-    await prisma.workOrder.update({
-      where: { id: item.workOrderId },
-      data: { finalAmount: (order?.finalAmount || order?.quoteAmount || 0) + item.amount }
+    await prisma.$transaction(async (tx) => {
+      // 标记确认，并生成对应的维修项目
+      await tx.additionalItem.update({
+        where: { id: itemId },
+        data: { status: 'confirmed', confirmedAt: new Date() }
+      })
+      await tx.repairItem.create({
+        data: {
+          workOrderId: item.workOrderId,
+          type: 'service',
+          name: item.name,
+          quantity: 1,
+          unitPrice: item.amount,
+          subtotal: item.amount,
+          source: 'additional'
+        }
+      })
+      // 基于工单当前全部明细重算最终金额：
+      // 替代原先 finalAmount || quoteAmount 的增量累加，防止基数错误和重复累加
+      const sums = await tx.repairItem.aggregate({
+        where: { workOrderId: item.workOrderId },
+        _sum: { subtotal: true }
+      })
+      await tx.workOrder.update({
+        where: { id: item.workOrderId },
+        data: { finalAmount: sums._sum.subtotal ?? 0 }
+      })
     })
   } else {
     await prisma.additionalItem.update({
