@@ -24,90 +24,112 @@
           </van-button>
         </div>
 
-        <!-- 工时项目 -->
+        <!-- 工时项目：AnimatePresence 让增删项目时平滑进出，layout 让删除后排版平滑收拢 -->
         <div v-if="serviceItems.length > 0" class="item-group">
           <div class="group-title">工时项目</div>
-          <div v-for="(item, idx) in serviceItems" :key="item._id" class="quote-item">
-            <div class="item-header">
-              <van-field
-                v-model="item.name"
-                placeholder="项目名称"
-                :border="false"
-                class="item-name"
-              />
-              <van-icon name="cross" class="item-delete" @click="removeItem(item._id)" />
-            </div>
-            <div class="item-row">
-              <div class="item-field">
-                <label>数量</label>
+          <AnimatePresence>
+            <motion.div
+              v-for="item in serviceItems"
+              :key="item._id"
+              class="quote-item"
+              :initial="{ opacity: 0, y: -8 }"
+              :animate="{ opacity: 1, y: 0 }"
+              :exit="{ opacity: 0, transition: { duration: 0.15 } }"
+              :transition="{ duration: 0.2, ease: 'easeOut' }"
+              layout
+            >
+              <div class="item-header">
                 <van-field
-                  v-model="item.quantity"
-                  type="digit"
-                  placeholder="1"
+                  v-model="item.name"
+                  placeholder="项目名称"
                   :border="false"
-                  @update:model-value="calcSubtotal(item)"
+                  class="item-name"
                 />
+                <van-icon name="cross" class="item-delete" @click="removeItem(item._id)" />
               </div>
-              <div class="item-field">
-                <label>单价</label>
-                <!-- 单价允许小数，用 number 键盘而非 digit 整数键盘 -->
-                <van-field
-                  v-model="item.unitPrice"
-                  type="number"
-                  placeholder="0.00"
-                  :border="false"
-                  @update:model-value="calcSubtotal(item)"
-                />
+              <div class="item-row">
+                <div class="item-field">
+                  <label>数量</label>
+                  <van-field
+                    v-model="item.quantity"
+                    type="digit"
+                    placeholder="1"
+                    :border="false"
+                    @update:model-value="calcSubtotal(item)"
+                  />
+                </div>
+                <div class="item-field">
+                  <label>单价</label>
+                  <!-- 单价允许小数，用 number 键盘而非 digit 整数键盘 -->
+                  <van-field
+                    v-model="item.unitPrice"
+                    type="number"
+                    placeholder="0.00"
+                    :border="false"
+                    @update:model-value="calcSubtotal(item)"
+                  />
+                </div>
+                <div class="item-subtotal">
+                  <span class="text-muted">小计</span>
+                  <span class="amount">¥{{ formatAmount(item.subtotal) }}</span>
+                </div>
               </div>
-              <div class="item-subtotal">
-                <span class="text-muted">小计</span>
-                <span class="amount">¥{{ formatAmount(item.subtotal) }}</span>
-              </div>
-            </div>
-          </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
 
-        <!-- 配件项目 -->
+        <!-- 配件项目：同上 -->
         <div v-if="partItems.length > 0" class="item-group">
           <div class="group-title">配件项目</div>
-          <div v-for="(item, idx) in partItems" :key="item._id" class="quote-item">
-            <div class="item-header">
-              <van-field
-                v-model="item.name"
-                placeholder="配件名称"
-                :border="false"
-                class="item-name"
-              />
-              <van-icon name="cross" class="item-delete" @click="removeItem(item._id)" />
-            </div>
-            <div class="item-row">
-              <div class="item-field">
-                <label>数量</label>
+          <AnimatePresence>
+            <motion.div
+              v-for="item in partItems"
+              :key="item._id"
+              class="quote-item"
+              :initial="{ opacity: 0, y: -8 }"
+              :animate="{ opacity: 1, y: 0 }"
+              :exit="{ opacity: 0, transition: { duration: 0.15 } }"
+              :transition="{ duration: 0.2, ease: 'easeOut' }"
+              layout
+            >
+              <div class="item-header">
                 <van-field
-                  v-model="item.quantity"
-                  type="digit"
-                  placeholder="1"
+                  v-model="item.name"
+                  placeholder="配件名称"
                   :border="false"
-                  @update:model-value="calcSubtotal(item)"
+                  class="item-name"
                 />
+                <van-icon name="cross" class="item-delete" @click="removeItem(item._id)" />
               </div>
-              <div class="item-field">
-                <label>单价</label>
-                <!-- 单价允许小数，用 number 键盘而非 digit 整数键盘 -->
-                <van-field
-                  v-model="item.unitPrice"
-                  type="number"
-                  placeholder="0.00"
-                  :border="false"
-                  @update:model-value="calcSubtotal(item)"
-                />
+              <div class="item-row">
+                <div class="item-field">
+                  <label>数量</label>
+                  <van-field
+                    v-model="item.quantity"
+                    type="digit"
+                    placeholder="1"
+                    :border="false"
+                    @update:model-value="calcSubtotal(item)"
+                  />
+                </div>
+                <div class="item-field">
+                  <label>单价</label>
+                  <!-- 单价允许小数，用 number 键盘而非 digit 整数键盘 -->
+                  <van-field
+                    v-model="item.unitPrice"
+                    type="number"
+                    placeholder="0.00"
+                    :border="false"
+                    @update:model-value="calcSubtotal(item)"
+                  />
+                </div>
+                <div class="item-subtotal">
+                  <span class="text-muted">小计</span>
+                  <span class="amount">¥{{ formatAmount(item.subtotal) }}</span>
+                </div>
               </div>
-              <div class="item-subtotal">
-                <span class="text-muted">小计</span>
-                <span class="amount">¥{{ formatAmount(item.subtotal) }}</span>
-              </div>
-            </div>
-          </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         <!-- 空状态 -->
@@ -190,6 +212,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
+import { motion, AnimatePresence } from 'motion-v'
 import { getOrder, saveQuote } from '@/api'
 import { fenToYuan, yuanToFen } from '@/utils/money'
 

@@ -27,43 +27,48 @@
           finished-text="没有更多了"
           @load="loadOrders"
         >
-          <van-cell
+          <!-- 列表项进场：挂载时轻微上移淡入（不用 whileInView，嵌入式 webview 的视口检测不可靠，失败会导致列表永久不可见） -->
+          <motion.div
             v-for="order in orders"
             :key="order.id"
-            is-link
-            @click="$router.push(`/orders/${order.id}`)"
+            :initial="{ opacity: 0, y: 10 }"
+            :animate="{ opacity: 1, y: 0 }"
+            :transition="{ duration: 0.25, ease: 'easeOut' }"
           >
-            <template #title>
-              <div class="order-title">
-                <span class="plate">{{ order.vehicle?.plateNumber || '未知车辆' }}</span>
-                <van-tag :type="getStatusType(order.status)" >
-                  {{ getStatusLabel(order.status) }}
-                </van-tag>
-              </div>
-            </template>
-            <template #label>
-              <div class="order-info">
-                <span>{{ order.customer?.name || '未知客户' }}</span>
-                <span class="text-muted">{{ order.complaint || '无诉求' }}</span>
-              </div>
-              <div class="order-amount" v-if="order.finalAmount">
-                ¥{{ fenToYuan(order.finalAmount) }}
-              </div>
-            </template>
-          </van-cell>
+            <van-cell is-link @click="$router.push(`/orders/${order.id}`)">
+              <template #title>
+                <div class="order-title">
+                  <span class="plate">{{ order.vehicle?.plateNumber || '未知车辆' }}</span>
+                  <van-tag :type="getStatusType(order.status)" >
+                    {{ getStatusLabel(order.status) }}
+                  </van-tag>
+                </div>
+              </template>
+              <template #label>
+                <div class="order-info">
+                  <span>{{ order.customer?.name || '未知客户' }}</span>
+                  <span class="text-muted">{{ order.complaint || '无诉求' }}</span>
+                </div>
+                <div class="order-amount" v-if="order.finalAmount">
+                  ¥{{ fenToYuan(order.finalAmount) }}
+                </div>
+              </template>
+            </van-cell>
+          </motion.div>
         </van-list>
       </van-pull-refresh>
     </div>
 
-    <!-- 右下角新建接车按钮 -->
-    <div class="fab-button" @click="$router.push('/checkin')">
+    <!-- 右下角新建接车按钮：按压弹簧缩放反馈（transform 由 motion 接管） -->
+    <motion.div class="fab-button" :while-press="{ scale: 0.9 }" @click="$router.push('/checkin')">
       <van-icon name="plus" size="24" />
-    </div>
+    </motion.div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { motion } from 'motion-v'
 import { getOrders } from '@/api'
 import { fenToYuan } from '@/utils/money'
 
@@ -174,8 +179,5 @@ onMounted(loadOrders)
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   z-index: 100;
   cursor: pointer;
-}
-.fab-button:active {
-  transform: scale(0.95);
 }
 </style>

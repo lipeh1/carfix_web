@@ -175,3 +175,16 @@ a {
 .mt-16 { margin-top: 16px; }
 .mb-8 { margin-bottom: 8px; }
 .mb-12 { margin-bottom: 12px; }
+
+/* ===== 路由页面切换过渡：淡入 + 轻微上移（配合 <transition mode="out-in">） ===== */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.page-leave-to {
+  opacity: 0;
+}

@@ -9,18 +9,25 @@
     <van-search v-model="keyword" placeholder="搜索姓名/电话" @search="onSearch" />
 
     <div class="page-content">
-      <van-cell
+      <!-- 列表项进场：挂载时轻微上移淡入（不用 whileInView，嵌入式 webview 的视口检测不可靠） -->
+      <motion.div
         v-for="c in customers"
         :key="c.id"
-        :title="c.name"
-        :label="c.phone"
-        is-link
-        @click="$router.push(`/customers/${c.id}`)"
+        :initial="{ opacity: 0, y: 10 }"
+        :animate="{ opacity: 1, y: 0 }"
+        :transition="{ duration: 0.25, ease: 'easeOut' }"
       >
-        <template #right-icon>
-          <span class="text-muted">{{ c._count?.vehicles || 0 }}辆车</span>
-        </template>
-      </van-cell>
+        <van-cell
+          :title="c.name"
+          :label="c.phone"
+          is-link
+          @click="$router.push(`/customers/${c.id}`)"
+        >
+          <template #right-icon>
+            <span class="text-muted">{{ c._count?.vehicles || 0 }}辆车</span>
+          </template>
+        </van-cell>
+      </motion.div>
 
       <van-empty v-if="customers.length === 0 && !loading" description="暂无客户" />
     </div>
@@ -41,6 +48,7 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
 import { showToast } from 'vant'
+import { motion } from 'motion-v'
 import { getCustomers, createCustomer } from '@/api'
 
 const customers = ref<any[]>([])

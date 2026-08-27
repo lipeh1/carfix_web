@@ -28,7 +28,7 @@
       <div class="card">
         <div class="flex-between">
           <span class="section-title" style="margin-bottom:0">本月营收</span>
-          <span class="amount">¥{{ fenToYuan(stats.monthlyRevenue) }}</span>
+          <span class="amount">¥{{ monthlyRevenueDisplay }}</span>
         </div>
       </div>
 
@@ -57,10 +57,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { getDashboard, getReminders } from '@/api'
 import dayjs from 'dayjs'
 import { fenToYuan } from '@/utils/money'
+import { useAnimatedYuan } from '@/utils/countup'
 
 const stats = ref({
   pendingInspection: 0,
@@ -70,6 +71,10 @@ const stats = ref({
   monthlyRevenue: 0,
   unpaidAmount: 0
 })
+
+// 本月营收数字滚动展示（分值驱动）
+const monthlyRevenueFen = computed(() => stats.value.monthlyRevenue)
+const monthlyRevenueDisplay = useAnimatedYuan(monthlyRevenueFen)
 
 const pendingReminders = ref<any[]>([])
 

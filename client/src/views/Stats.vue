@@ -20,7 +20,7 @@
             <div class="overview-label">总工单</div>
           </div>
           <div class="overview-item">
-            <div class="overview-value text-danger">¥{{ formatAmount(stats.overview?.totalRevenue) }}</div>
+            <div class="overview-value text-danger">¥{{ revenueDisplay }}</div>
             <div class="overview-label">总营收</div>
           </div>
         </div>
@@ -117,10 +117,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { getStats } from '@/api'
 import { fenToYuan } from '@/utils/money'
+import { useAnimatedYuan } from '@/utils/countup'
 import dayjs from 'dayjs'
 
 const stats = ref<any>(null)
 const loadFailed = ref(false)
+
+// 总营收数字滚动展示（分值驱动）
+const totalRevenueFen = computed(() => stats.value?.overview?.totalRevenue || 0)
+const revenueDisplay = useAnimatedYuan(totalRevenueFen, 1)
 
 // 状态定义（用于展示）：低饱和徽章色，小面积使用（规范允许）
 const statusList: Array<{ status: string; label: string; type: 'default' | 'primary' | 'success' | 'warning' | 'danger'; color: string }> = [

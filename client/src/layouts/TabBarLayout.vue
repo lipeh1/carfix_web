@@ -1,6 +1,11 @@
 <template>
   <div class="tab-layout">
-    <router-view />
+    <!-- 底部 Tab 间的页面切换也走统一的淡入过渡 -->
+    <router-view v-slot="{ Component }">
+      <transition name="page" mode="out-in">
+        <component :is="Component" />
+      </transition>
+    </router-view>
     <van-tabbar v-model="active" active-color="#828fff" @change="onTabChange">
       <van-tabbar-item icon="wap-home-o">工作台</van-tabbar-item>
       <van-tabbar-item icon="orders-o">工单</van-tabbar-item>
