@@ -2,7 +2,7 @@
   <div class="page-container">
     <van-nav-bar title="客户详情" left-text="返回" left-arrow @click-left="$router.back()">
       <template #right>
-        <van-icon name="edit" size="18" @click="showEdit = true" />
+        <van-icon name="edit" size="18" @click="openEdit" />
       </template>
     </van-nav-bar>
 
