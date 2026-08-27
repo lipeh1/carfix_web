@@ -83,3 +83,7 @@ export const uploadImage = (file: File) => {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
 }
+
+// 删除已上传的图片（按上传接口返回的 url）
+export const deleteUpload = (url: string) =>
+  request.delete('/upload', { params: { url } })

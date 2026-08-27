@@ -182,7 +182,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { showToast, showConfirmDialog } from 'vant'
 import { useRouter } from 'vue-router'
-import { getCustomers, createCustomer, getVehicles, createVehicle, createCheckin, uploadImage } from '@/api'
+import { getCustomers, createCustomer, getVehicles, createVehicle, createCheckin, uploadImage, deleteUpload } from '@/api'
 
 const router = useRouter()
 
@@ -339,13 +339,20 @@ const retryUpload = (idx: number) => {
   uploadPhoto(photoItem)
 }
 
-// 删除照片
+// 删除照片：已上传成功的同步删除服务器文件，避免孤儿文件堆积
 const deletePhoto = async (idx: number) => {
+  const photoItem = photos.value[idx]
+  if (!photoItem) return
   try {
     await showConfirmDialog({
       title: '删除照片',
       message: '确定删除这张照片吗？'
     })
+    if (photoItem.status === 'done' && photoItem.url) {
+      await deleteUpload(photoItem.url).catch(() => {
+        // 服务器清理失败不阻塞本地移除（提交前仍可重试）
+      })
+    }
     photos.value.splice(idx, 1)
   } catch (e) {
     // 用户取消
