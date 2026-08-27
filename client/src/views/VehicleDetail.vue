@@ -98,6 +98,9 @@
         <van-empty v-else description="暂无维修记录" image-size="60" />
       </div>
     </div>
+
+    <van-empty v-else-if="!loadFailed" description="加载中..." />
+    <van-empty v-else image="error" description="加载失败，点击重试" @click="loadData" />
   </div>
 </template>
 
@@ -109,6 +112,7 @@ import dayjs from 'dayjs'
 
 const route = useRoute()
 const vehicle = ref<any>(null)
+const loadFailed = ref(false)
 
 // 状态映射
 const statusMap: Record<string, { label: string; type: 'default' | 'primary' | 'success' | 'warning' | 'danger' }> = {
@@ -127,9 +131,13 @@ const formatDate = (d: string) => dayjs(d).format('YYYY-MM-DD HH:mm')
 const formatAmount = (n: number) => Number(n || 0).toFixed(2)
 
 const loadData = async () => {
+  loadFailed.value = false
   try {
     vehicle.value = await getVehicle(Number(route.params.id))
-  } catch (e) { /* 静默 */ }
+  } catch (e) {
+    // 展示失败态并允许点击重试
+    loadFailed.value = true
+  }
 }
 
 onMounted(loadData)

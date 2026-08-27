@@ -108,7 +108,8 @@
       </div>
     </div>
 
-    <van-empty v-else description="加载中..." />
+    <van-empty v-else-if="!loadFailed" description="加载中..." />
+    <van-empty v-else image="error" description="加载失败，点击重试" @click="loadData" />
   </div>
 </template>
 
@@ -118,6 +119,7 @@ import { getStats } from '@/api'
 import dayjs from 'dayjs'
 
 const stats = ref<any>(null)
+const loadFailed = ref(false)
 
 // 状态定义（用于展示）
 const statusList: Array<{ status: string; label: string; type: 'default' | 'primary' | 'success' | 'warning' | 'danger'; color: string }> = [
@@ -162,9 +164,13 @@ const getStatusPercent = (status: string) => {
 }
 
 const loadData = async () => {
+  loadFailed.value = false
   try {
     stats.value = await getStats()
-  } catch (e) { /* 静默 */ }
+  } catch (e) {
+    // 展示失败态并允许点击重试
+    loadFailed.value = true
+  }
 }
 
 onMounted(loadData)

@@ -138,7 +138,8 @@
       </div>
     </div>
 
-    <van-empty v-else description="加载中..." />
+    <van-empty v-else-if="!loadFailed" description="加载中..." />
+    <van-empty v-else image="error" description="加载失败，点击重试" class="retry-empty" @click="loadData" />
 
     <!-- ===== 编辑接车信息弹窗 ===== -->
     <van-popup v-model:show="showEditCheckin" position="bottom" round>
@@ -255,6 +256,7 @@ const orderId = Number(route.params.id)
 
 // 工单数据
 const order = ref<any>(null)
+const loadFailed = ref(false)
 const checkinPhotos = ref<any[]>([])
 const repairItems = ref<any[]>([])
 const repairLogs = ref<any[]>([])
@@ -342,6 +344,7 @@ const actionButtons = computed(() => {
 
 // 加载工单详情
 const loadData = async () => {
+  loadFailed.value = false
   try {
     const data: any = await getOrder(orderId)
     order.value = data
@@ -350,7 +353,10 @@ const loadData = async () => {
     repairLogs.value = data.repairLogs || []
     additionalItems.value = data.additionalItems || []
     settlement.value = data.settlement || null
-  } catch (e) { /* 静默 */ }
+  } catch (e) {
+    // 展示失败态并允许点击重试，而非永远停留在"加载中"
+    loadFailed.value = true
+  }
 }
 
 // 图片预览
@@ -649,5 +655,8 @@ onMounted(loadData)
   font-size: 14px;
   color: #646566;
   line-height: 1.6;
+}
+.retry-empty {
+  cursor: pointer;
 }
 </style>

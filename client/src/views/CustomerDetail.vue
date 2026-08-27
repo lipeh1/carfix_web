@@ -97,6 +97,9 @@
       </div>
     </div>
 
+    <van-empty v-else-if="!loadFailed" description="加载中..." />
+    <van-empty v-else image="error" description="加载失败，点击重试" @click="loadData" />
+
     <!-- 编辑客户弹窗 -->
     <van-popup v-model:show="showEdit" position="bottom" round>
       <div class="popup-content">
@@ -119,6 +122,7 @@ import dayjs from 'dayjs'
 
 const route = useRoute()
 const customer = ref<any>(null)
+const loadFailed = ref(false)
 const showEdit = ref(false)
 const editForm = reactive({ name: '', phone: '', remark: '' })
 
@@ -145,9 +149,13 @@ const callPhone = () => {
 }
 
 const loadData = async () => {
+  loadFailed.value = false
   try {
     customer.value = await getCustomer(Number(route.params.id))
-  } catch (e) { /* 静默 */ }
+  } catch (e) {
+    // 展示失败态并允许点击重试
+    loadFailed.value = true
+  }
 }
 
 const openEdit = () => {
