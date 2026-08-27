@@ -21,7 +21,11 @@ export const errorHandler = (
   res.status(500).json({ message: err.message || '服务器内部错误' })
 }
 
-export const asyncHandler = (fn: Function) =>
-  (req: Request, res: Response, next: NextFunction) => {
+// 回调参数显式声明为 Express 类型，路由内联处理函数可借此获得类型上下文，
+// 避免 strict 模式下每个 (req, res) 参数都报 TS7006 隐式 any
+export const asyncHandler = (
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>
+) =>
+  (req: Request, res: Response, next: NextFunction): void => {
     Promise.resolve(fn(req, res, next)).catch(next)
   }
