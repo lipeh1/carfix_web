@@ -72,9 +72,20 @@ router.post('/', asyncHandler(async (req, res) => {
 
 // 更新客户
 router.put('/:id', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id)
   const { name, phone, address, remark } = req.body
+
+  const existing = await prisma.customer.findUnique({ where: { id } })
+  if (!existing) throw new AppError('客户不存在', 404)
+
+  // 修改手机号时校验唯一，避免唯一约束冲突抛出裸 500
+  if (phone && phone !== existing.phone) {
+    const dup = await prisma.customer.findUnique({ where: { phone } })
+    if (dup) throw new AppError('该手机号已被其他客户使用')
+  }
+
   const customer = await prisma.customer.update({
-    where: { id: Number(req.params.id) },
+    where: { id },
     data: { name, phone, address, remark }
   })
   res.json(customer)
@@ -82,7 +93,17 @@ router.put('/:id', asyncHandler(async (req, res) => {
 
 // 删除客户
 router.delete('/:id', asyncHandler(async (req, res) => {
-  await prisma.customer.delete({ where: { id: Number(req.params.id) } })
+  const id = Number(req.params.id)
+  const existing = await prisma.customer.findUnique({ where: { id } })
+  if (!existing) throw new AppError('客户不存在', 404)
+
+  // 工单强制引用客户无法级联，先给业务化提示而非数据库裸错误
+  const orderCount = await prisma.workOrder.count({ where: { customerId: id } })
+  if (orderCount > 0) {
+    throw new AppError(`该客户名下存在 ${orderCount} 张工单，无法删除`)
+  }
+
+  await prisma.customer.delete({ where: { id } })
   res.json({ success: true })
 }))
 

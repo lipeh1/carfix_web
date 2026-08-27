@@ -88,10 +88,21 @@ router.post('/', asyncHandler(async (req, res) => {
 
 // 更新车辆
 router.put('/:id', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id)
+  const existing = await prisma.vehicle.findUnique({ where: { id } })
+  if (!existing) throw new AppError('车辆不存在', 404)
+
   const { plateNumber, brand, model, year, vin, color, remark } = req.body
   const vehicle = await prisma.vehicle.update({
-    where: { id: Number(req.params.id) },
-    data: { plateNumber, brand, model, year, vin, color, remark }
+    where: { id },
+    data: {
+      plateNumber,
+      brand,
+      model,
+      // 年份转为数字入库，字符串会触发 Prisma 校验错误
+      year: year === undefined || year === null || year === '' ? null : Number(year),
+      vin, color, remark
+    }
   })
   res.json(vehicle)
 }))
