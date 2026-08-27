@@ -317,9 +317,8 @@ const removeItem = (id: string) => {
 const loadExistingQuote = async () => {
   try {
     const order: any = await getOrder(orderId)
-    if (order.complaint) {
-      inspection.value = order.complaint
-    }
+    // 检测结果用独立的 inspection 字段回填（与客户诉求 complaint 是两回事）
+    inspection.value = order.inspection || ''
     if (order.repairItems && order.repairItems.length > 0) {
       // 只载入报价来源的项目：增项有独立的确认流程，
       // 若混入编辑列表，再次保存报价会重建出重复项目，造成双重计费

@@ -125,6 +125,10 @@ router.post('/:id/quote', asyncHandler(async (req, res) => {
   const id = Number(req.params.id)
   const { items, inspection } = req.body
 
+  // 校验工单存在，避免外键约束失败时返回裸 500
+  const order = await prisma.workOrder.findUnique({ where: { id } })
+  if (!order) throw new AppError('工单不存在', 404)
+
   // 删除原有报价项目，重新写入
   await prisma.repairItem.deleteMany({ where: { workOrderId: id, source: 'quote' } })
 
@@ -150,7 +154,12 @@ router.post('/:id/quote', asyncHandler(async (req, res) => {
 
   await prisma.workOrder.update({
     where: { id },
-    data: { status: 'pending_quote', quoteAmount: total }
+    data: {
+      status: 'pending_quote',
+      quoteAmount: total,
+      // 检测结果独立持久化（此前该字段被直接丢弃，页面用客户诉求回充）
+      inspection: inspection || null
+    }
   })
 
   res.json({ success: true, total })

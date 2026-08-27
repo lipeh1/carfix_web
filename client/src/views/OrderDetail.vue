@@ -45,6 +45,12 @@
         </div>
       </div>
 
+      <!-- 检测结果 -->
+      <div class="card" v-if="order.inspection">
+        <div class="section-title">检测结果</div>
+        <div class="inspection-text">{{ order.inspection }}</div>
+      </div>
+
       <!-- 维修项目 -->
       <div class="card" v-if="repairItems.length > 0">
         <div class="section-title">维修项目 / 配件</div>
@@ -633,5 +639,10 @@ onMounted(loadData)
 .deliver-tip {
   font-size: 12px;
   padding: 8px 16px 0;
+}
+.inspection-text {
+  font-size: 14px;
+  color: #646566;
+  line-height: 1.6;
 }
 </style>
