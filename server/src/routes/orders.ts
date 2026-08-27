@@ -152,8 +152,8 @@ router.post('/:id/quote', asyncHandler(async (req, res) => {
   if (!['pending_inspection', 'pending_quote'].includes(order.status)) {
     throw new AppError('当前状态不可修改报价')
   }
-  // 优惠金额随报价落库，后续结算直接沿用（此前仅前端展示、传到结算就丢了）
-  const disc = Math.max(0, Number(discount) || 0)
+  // 优惠金额随报价落库（单位:分），后续结算直接沿用
+  const disc = Math.max(0, Math.round(Number(discount) || 0))
 
   // 删旧明细与重建、更新工单在同一事务内完成，
   // 中途失败时保留原报价而不是留下半份报价
@@ -163,7 +163,12 @@ router.post('/:id/quote', asyncHandler(async (req, res) => {
 
     if (items && items.length > 0) {
       for (const item of items) {
-        const subtotal = Number(item.quantity) * Number(item.unitPrice)
+        // 单价入参为"元"，入库换算为整数"分"；数量支持小数，小计四舍五入到分
+        const unitFen = Math.round(Number(item.unitPrice) * 100)
+        if (!Number.isFinite(unitFen) || unitFen < 0) {
+          throw new AppError('单价必须是不小于0的数字')
+        }
+        const subtotal = Math.round(Number(item.quantity) * unitFen)
         total += subtotal
         await tx.repairItem.create({
           data: {
@@ -171,7 +176,7 @@ router.post('/:id/quote', asyncHandler(async (req, res) => {
             type: item.type,
             name: item.name,
             quantity: Number(item.quantity),
-            unitPrice: Number(item.unitPrice),
+            unitPrice: unitFen,
             subtotal,
             remark: item.remark,
             source: 'quote'
@@ -245,9 +250,14 @@ router.get('/:id/additional-items', asyncHandler(async (req, res) => {
 
 router.post('/:id/additional-items', asyncHandler(async (req, res) => {
   const { name, amount, reason } = req.body
-  if (!name || !amount) throw new AppError('名称和金额不能为空')
+  if (!name) throw new AppError('名称不能为空')
+  // 金额为整数"分"，必须是正整数
+  const amountFen = Number(amount)
+  if (!Number.isSafeInteger(amountFen) || amountFen <= 0) {
+    throw new AppError('金额必须为大于0的整数（单位:分）')
+  }
   const item = await prisma.additionalItem.create({
-    data: { workOrderId: Number(req.params.id), name, amount: Number(amount), reason }
+    data: { workOrderId: Number(req.params.id), name, amount: amountFen, reason }
   })
   res.status(201).json(item)
 }))

@@ -9,10 +9,11 @@ const router = Router()
 router.post('/:id/payments', asyncHandler(async (req, res) => {
   const id = Number(req.params.id)
   const { amount, method, type, remark } = req.body
-  if (!amount) throw new AppError('金额不能为空')
-  // 金额必须是有限正数，拦截负数冲减已收、非数字导致 Prisma 报错
+  // 金额为整数"分"，必须是正整数，拦截负数冲减、小数或非数字
   const amt = Number(amount)
-  if (!Number.isFinite(amt) || amt <= 0) throw new AppError('收款金额必须大于0')
+  if (!Number.isSafeInteger(amt) || amt <= 0) {
+    throw new AppError('收款金额必须为大于0的整数（单位:分）')
+  }
 
   const exists = await prisma.settlement.findUnique({ where: { id } })
   if (!exists) throw new AppError('结算单不存在', 404)

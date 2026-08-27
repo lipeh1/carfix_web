@@ -59,10 +59,10 @@ model WorkOrder {
   inspection        String?   @map("inspection")
   mileageIn         Int?      @map("mileage_in")
   mileageOut        Int?      @map("mileage_out")
-  quoteAmount       Float?    @map("quote_amount")
-  discount          Float     @default(0) @map("discount")
-  finalAmount       Float?    @map("final_amount")
-  paidAmount        Float     @default(0) @map("paid_amount")
+  quoteAmount       Int?      @map("quote_amount") // 单位:分
+  discount          Int       @default(0) @map("discount") // 单位:分
+  finalAmount       Int?      @map("final_amount") // 单位:分
+  paidAmount        Int       @default(0) @map("paid_amount") // 单位:分
   quoteConfirmedAt  DateTime? @map("quote_confirmed_at")
   repairStartedAt   DateTime? @map("repair_started_at")
   repairFinishedAt  DateTime? @map("repair_finished_at")
@@ -125,8 +125,8 @@ model RepairItem {
   type        String   // service(工时) / part(配件)
   name        String
   quantity    Float    @default(1)
-  unitPrice   Float    @map("unit_price")
-  subtotal    Float
+  unitPrice   Int      @map("unit_price") // 单位:分；quantity 保持小数以支持 0.5 等数量
+  subtotal    Int // 单位:分
   remark      String?
   source      String   @default("quote") // quote / additional
   createdAt   DateTime @default(now()) @map("created_at")
@@ -155,7 +155,7 @@ model AdditionalItem {
   id          Int       @id @default(autoincrement())
   workOrderId Int       @map("work_order_id")
   name        String
-  amount      Float
+  amount      Int // 单位:分
   reason      String?
   status      String    @default("pending") // pending / confirmed / rejected
   confirmedAt DateTime? @map("confirmed_at")
@@ -187,10 +187,10 @@ model Settlement {
   id           Int      @id @default(autoincrement())
   workOrderId  Int      @unique @map("work_order_id")
   settlementNo String   @unique @map("settlement_no")
-  totalAmount  Float    @map("total_amount")
-  discount     Float    @default(0)
-  actualAmount Float    @map("actual_amount")
-  paidAmount   Float    @default(0) @map("paid_amount")
+  totalAmount  Int      @map("total_amount") // 单位:分
+  discount     Int      @default(0) // 单位:分
+  actualAmount Int      @map("actual_amount") // 单位:分
+  paidAmount   Int      @default(0) @map("paid_amount") // 单位:分
   status       String   @default("unpaid") // paid / unpaid
   remark       String?
   createdAt    DateTime @default(now()) @map("created_at")
@@ -205,7 +205,7 @@ model Settlement {
 model Payment {
   id           Int      @id @default(autoincrement())
   settlementId Int      @map("settlement_id")
-  amount       Float
+  amount       Int // 单位:分
   method       String   @default("cash") // cash/wechat/alipay/card/transfer
   type         String   @default("initial") // initial / supplement
   remark       String?
