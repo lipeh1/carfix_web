@@ -6,6 +6,13 @@ node_modules/
 client/dist/
 server/dist/
 
+# TS 增量构建缓存（vue-tsc -b 生成）
+*.tsbuildinfo
+
+# vue-tsc -b 编译 vite.config.ts 的副产物
+client/vite.config.js
+client/vite.config.d.ts
+
 # Database
 *.db
 *.db-journal
