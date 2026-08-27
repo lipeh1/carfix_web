@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import path from 'path'
+import fs from 'fs'
 import { errorHandler } from './middleware/error'
 import dashboardRoutes from './routes/dashboard'
 import customerRoutes from './routes/customers'
@@ -33,6 +34,16 @@ app.use('/api/reminders', reminderRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/settlements', settlementRoutes)
 app.use('/api/stats', statsRoutes)
+
+// 生产环境：托管前端构建产物（dist 目录存在时才启用，开发模式不受影响）
+const clientDistDir = path.resolve(__dirname, '../../client/dist')
+if (fs.existsSync(clientDistDir)) {
+  app.use(express.static(clientDistDir))
+  // vue-router 历史模式刷新回退：API 与上传文件之外的路径一律返回前端入口
+  app.get(/^\/(?!api\/|uploads\/).*/, (_req, res) => {
+    res.sendFile(path.join(clientDistDir, 'index.html'))
+  })
+}
 
 // 健康检查
 app.get('/api/health', (_req, res) => {
