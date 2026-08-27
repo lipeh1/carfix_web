@@ -223,6 +223,14 @@
             </van-radio-group>
           </template>
         </van-field>
+        <van-field name="method2" label=" ">
+          <template #input>
+            <van-radio-group v-model="paymentForm.method" direction="horizontal">
+              <van-radio name="card">刷卡</van-radio>
+              <van-radio name="transfer">转账</van-radio>
+            </van-radio-group>
+          </template>
+        </van-field>
         <van-button type="primary" block class="mt-16" @click="submitPayment">确认收款</van-button>
       </div>
     </van-popup>
