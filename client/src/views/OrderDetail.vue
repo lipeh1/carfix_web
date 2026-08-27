@@ -215,6 +215,16 @@
         <van-button type="primary" block class="mt-16" @click="submitPayment">确认收款</van-button>
       </div>
     </van-popup>
+
+    <!-- ===== 交车弹窗 ===== -->
+    <van-popup v-model:show="showDeliverPopup" position="bottom" round>
+      <div class="popup-content">
+        <h3>确认交车</h3>
+        <van-field v-model="deliverMileage" label="交车里程" type="digit" placeholder="公里数，可不填" />
+        <div class="text-muted deliver-tip">交车后工单完成，将自动创建回访与保养提醒</div>
+        <van-button type="primary" block class="mt-16" @click="submitDeliver">确认交车</van-button>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -261,6 +271,10 @@ const additionalForm = reactive({ name: '', amount: '', reason: '' })
 
 // 收款表单
 const paymentForm = reactive({ amount: '', method: 'cash' })
+
+// 交车弹窗
+const showDeliverPopup = ref(false)
+const deliverMileage = ref('')
 
 // 状态映射
 const statusMap: Record<string, { label: string; type: 'default' | 'primary' | 'success' | 'warning' | 'danger' }> = {
@@ -444,6 +458,21 @@ const submitPayment = async () => {
   } catch (e) { /* 已拦截 */ }
 }
 
+// ===== 交车 =====
+const submitDeliver = async () => {
+  // 交车里程为整数，选填
+  const mileage = deliverMileage.value ? Number(deliverMileage.value) : null
+  if (mileage !== null && !Number.isFinite(mileage)) {
+    return showToast('请输入有效的交车里程')
+  }
+  try {
+    await deliverOrder(orderId, { mileageOut: mileage })
+    showToast({ type: 'success', message: '交车完成' })
+    showDeliverPopup.value = false
+    loadData()
+  } catch (e) { /* 已拦截 */ }
+}
+
 // ===== 操作按钮处理 =====
 const handleAction = async (key: string) => {
   try {
@@ -497,10 +526,9 @@ const handleAction = async (key: string) => {
         showPaymentPopup.value = true
         break
       case 'deliver':
-        await showConfirmDialog({ title: '确认交车', message: '确认车辆已交付客户？' })
-        await deliverOrder(orderId, {})
-        showToast({ type: 'success', message: '交车完成' })
-        loadData()
+        // 打开交车弹窗，录入交车里程后确认
+        deliverMileage.value = ''
+        showDeliverPopup.value = true
         break
       default:
         showToast('功能开发中')
@@ -601,5 +629,9 @@ onMounted(loadData)
   border-radius: 8px;
   padding: 12px;
   font-size: 14px;
+}
+.deliver-tip {
+  font-size: 12px;
+  padding: 8px 16px 0;
 }
 </style>

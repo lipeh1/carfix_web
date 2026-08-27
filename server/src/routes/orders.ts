@@ -331,39 +331,47 @@ router.post('/:id/settlement', asyncHandler(async (req, res) => {
 
 router.post('/:id/deliver', asyncHandler(async (req, res) => {
   const id = Number(req.params.id)
-  const { mileage_out } = req.body
+  const { mileageOut } = req.body
+
+  const order = await prisma.workOrder.findUnique({ where: { id } })
+  if (!order) throw new AppError('工单不存在', 404)
+  // 只有待结算工单可以交车
+  if (order.status !== 'pending_settlement') {
+    throw new AppError('工单未处于待结算状态，无法交车')
+  }
+  // 防止重复交车：每次交车都会创建提醒记录，重复执行会产生多组冗余提醒
+  if (order.deliveredAt) {
+    throw new AppError('该工单已交车，请勿重复操作')
+  }
 
   await prisma.workOrder.update({
     where: { id },
     data: {
       status: 'completed',
       deliveredAt: new Date(),
-      mileageOut: mileage_out ? Number(mileage_out) : undefined
+      mileageOut: mileageOut ? Number(mileageOut) : null
     }
   })
 
   // 自动创建保养提醒（3个月后或5000公里）和回访提醒（3天后）
-  const order = await prisma.workOrder.findUnique({ where: { id } })
-  if (order) {
-    await prisma.reminder.createMany({
-      data: [
-        {
-          workOrderId: id,
-          vehicleId: order.vehicleId,
-          type: 'follow_up',
-          remindDate: dayjs().add(3, 'day').toDate(),
-          content: '维修后回访，确认车辆使用情况'
-        },
-        {
-          workOrderId: id,
-          vehicleId: order.vehicleId,
-          type: 'maintenance',
-          remindDate: dayjs().add(3, 'month').toDate(),
-          content: '建议保养（约5000公里或3个月）'
-        }
-      ]
-    })
-  }
+  await prisma.reminder.createMany({
+    data: [
+      {
+        workOrderId: id,
+        vehicleId: order.vehicleId,
+        type: 'follow_up',
+        remindDate: dayjs().add(3, 'day').toDate(),
+        content: '维修后回访，确认车辆使用情况'
+      },
+      {
+        workOrderId: id,
+        vehicleId: order.vehicleId,
+        type: 'maintenance',
+        remindDate: dayjs().add(3, 'month').toDate(),
+        content: '建议保养（约5000公里或3个月）'
+      }
+    ]
+  })
 
   res.json({ success: true })
 }))
