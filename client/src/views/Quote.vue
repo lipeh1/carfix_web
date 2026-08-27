@@ -321,7 +321,10 @@ const loadExistingQuote = async () => {
       inspection.value = order.complaint
     }
     if (order.repairItems && order.repairItems.length > 0) {
-      items.value = order.repairItems.map((item: any) => ({
+      // 只载入报价来源的项目：增项有独立的确认流程，
+      // 若混入编辑列表，再次保存报价会重建出重复项目，造成双重计费
+      const quoteItems = order.repairItems.filter((i: any) => i.source === 'quote')
+      items.value = quoteItems.map((item: any) => ({
         _id: genId(),
         type: item.type,
         name: item.name,
