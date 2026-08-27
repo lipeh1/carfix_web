@@ -73,7 +73,8 @@ const tabs = [
   { label: '维修中', value: 'repairing' },
   { label: '待质检', value: 'pending_quality_check' },
   { label: '待结算', value: 'pending_settlement' },
-  { label: '已完成', value: 'completed' }
+  { label: '已完成', value: 'completed' },
+  { label: '已取消', value: 'cancelled' }
 ]
 
 const activeTab = ref('')
