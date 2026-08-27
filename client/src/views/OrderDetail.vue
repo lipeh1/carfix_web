@@ -570,16 +570,15 @@ onMounted(loadData)
 </script>
 
 <style scoped>
+/* 状态卡片：表面1 + 发丝线，主车牌信息放大展示（不用彩色渐变） */
 .status-card {
-  background: linear-gradient(135deg, #1989fa, #07c160);
-  color: #fff;
+  background: var(--surface-2);
 }
 .status-card .plate {
   font-size: 20px;
   font-weight: 700;
-}
-.status-card .text-muted {
-  color: rgba(255,255,255,0.8);
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
 }
 .photo-grid {
   display: flex;
@@ -590,19 +589,20 @@ onMounted(loadData)
   width: 80px;
   height: 80px;
   object-fit: cover;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
+  border: 1px solid var(--hairline);
 }
 .log-item {
   padding: 8px 0;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid var(--hairline);
 }
 .log-item:last-child {
   border-bottom: none;
 }
 .log-content {
   font-size: 14px;
-  color: #323233;
+  color: var(--ink);
   margin-bottom: 4px;
 }
 .payment-item {
@@ -610,14 +610,15 @@ onMounted(loadData)
   justify-content: space-between;
   padding: 6px 0;
   font-size: 13px;
-  border-bottom: 1px solid #f2f3f5;
+  font-family: var(--font-mono);
+  border-bottom: 1px solid var(--hairline);
 }
 .payment-item:last-child {
   border-bottom: none;
 }
 /* 增项 */
 .additional-item {
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid var(--hairline);
 }
 .additional-item:last-child {
   border-bottom: none;
@@ -628,14 +629,15 @@ onMounted(loadData)
   padding: 8px 16px 12px;
   justify-content: flex-end;
 }
+/* 底部操作栏：表面浮层 + 发丝线上边框（规范禁止投影做层级） */
 .action-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   padding: 12px;
-  background: #fff;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+  background: var(--surface-1);
+  border-top: 1px solid var(--hairline);
   display: flex;
   gap: 8px;
 }
@@ -653,7 +655,8 @@ onMounted(loadData)
   margin-bottom: 16px;
 }
 .payment-info {
-  background: #f7f8fa;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
   border-radius: 8px;
   padding: 12px;
   font-size: 14px;
@@ -664,7 +667,7 @@ onMounted(loadData)
 }
 .inspection-text {
   font-size: 14px;
-  color: #646566;
+  color: var(--ink-muted);
   line-height: 1.6;
 }
 .retry-empty {

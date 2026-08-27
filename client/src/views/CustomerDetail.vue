@@ -58,7 +58,7 @@
           @click="$router.push(`/vehicles/${v.id}`)"
         >
           <template #icon>
-            <van-icon name="orders-o" style="margin-right:8px;color:#1989fa" />
+            <van-icon name="orders-o" style="margin-right:8px;color:var(--primary-hover)" />
           </template>
         </van-cell>
         <van-empty v-if="!customer.vehicles?.length" description="暂无车辆" image-size="60" />
@@ -181,18 +181,20 @@ onMounted(loadData)
 </script>
 
 <style scoped>
+/* 客户卡片：表面浮层 + 发丝线（不用彩色渐变） */
 .customer-card {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: linear-gradient(135deg, #1989fa, #07c160);
-  color: #fff;
+  background: var(--surface-2);
 }
 .customer-avatar {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.3);
+  /* 主色低透明度底 + 提亮文字，克制使用主色 */
+  background: rgba(94, 106, 210, 0.2);
+  color: var(--primary-hover);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -205,15 +207,17 @@ onMounted(loadData)
 .customer-name {
   font-size: 18px;
   font-weight: 600;
+  color: var(--ink);
 }
 .customer-phone {
   font-size: 13px;
-  opacity: 0.9;
+  color: var(--ink-muted);
   margin-top: 2px;
+  font-family: var(--font-mono);
 }
 .call-icon {
   font-size: 24px;
-  color: #fff;
+  color: var(--ink-muted);
 }
 .stats-grid {
   display: flex;
@@ -225,21 +229,21 @@ onMounted(loadData)
 .stat-value {
   font-size: 20px;
   font-weight: 700;
-  color: #323233;
+  color: var(--ink);
 }
 .stat-label {
   font-size: 12px;
-  color: #969799;
+  color: var(--ink-subtle);
   margin-top: 4px;
 }
 .remark-text {
   font-size: 14px;
-  color: #646566;
+  color: var(--ink-muted);
   line-height: 1.6;
 }
 .order-item {
   padding: 12px 0;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid var(--hairline);
   cursor: pointer;
 }
 .order-item:last-child {
@@ -253,16 +257,17 @@ onMounted(loadData)
 .order-no {
   font-size: 14px;
   font-weight: 600;
-  color: #323233;
+  color: var(--ink);
+  font-family: var(--font-mono);
 }
 .order-vehicle {
   font-size: 13px;
-  color: #1989fa;
+  color: var(--primary-hover);
   margin-top: 4px;
 }
 .order-complaint {
   font-size: 13px;
-  color: #646566;
+  color: var(--ink-subtle);
   margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -277,16 +282,18 @@ onMounted(loadData)
 .order-amount {
   font-size: 14px;
   font-weight: 600;
-  color: #ee0a24;
+  font-family: var(--font-mono);
+  color: var(--danger);
 }
+/* 底部操作栏：发丝线上边框替代投影 */
 .bottom-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   padding: 12px;
-  background: #fff;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+  background: var(--surface-1);
+  border-top: 1px solid var(--hairline);
 }
 .popup-content {
   padding: 20px 16px 32px;

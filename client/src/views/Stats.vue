@@ -122,15 +122,15 @@ import dayjs from 'dayjs'
 const stats = ref<any>(null)
 const loadFailed = ref(false)
 
-// 状态定义（用于展示）
+// 状态定义（用于展示）：低饱和徽章色，小面积使用（规范允许）
 const statusList: Array<{ status: string; label: string; type: 'default' | 'primary' | 'success' | 'warning' | 'danger'; color: string }> = [
-  { status: 'pending_inspection', label: '待检测', type: 'warning', color: '#ff976a' },
-  { status: 'pending_quote', label: '待报价', type: 'primary', color: '#1989fa' },
-  { status: 'repairing', label: '维修中', type: 'danger', color: '#ee0a24' },
-  { status: 'pending_quality_check', label: '待质检', type: 'warning', color: '#ff976a' },
-  { status: 'pending_settlement', label: '待结算', type: 'primary', color: '#1989fa' },
-  { status: 'completed', label: '已完成', type: 'success', color: '#07c160' },
-  { status: 'cancelled', label: '已取消', type: 'default', color: '#c8c9cc' }
+  { status: 'pending_inspection', label: '待检测', type: 'warning', color: '#ffa059' },
+  { status: 'pending_quote', label: '待报价', type: 'primary', color: '#7a85d9' },
+  { status: 'repairing', label: '维修中', type: 'danger', color: '#f2566a' },
+  { status: 'pending_quality_check', label: '待质检', type: 'warning', color: '#e6c14c' },
+  { status: 'pending_settlement', label: '待结算', type: 'primary', color: '#7a85d9' },
+  { status: 'completed', label: '已完成', type: 'success', color: '#34b757' },
+  { status: 'cancelled', label: '已取消', type: 'default', color: '#4a4e57' }
 ]
 
 const formatDate = (d: string) => dayjs(d).format('YYYY-MM-DD')
@@ -178,6 +178,7 @@ onMounted(loadData)
 </script>
 
 <style scoped>
+/* 概览宫格：表面2底色 */
 .overview-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -186,20 +187,21 @@ onMounted(loadData)
 .overview-item {
   text-align: center;
   padding: 12px;
-  background: #f7f8fa;
-  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
 }
 .overview-value {
   font-size: 20px;
   font-weight: 700;
-  color: #323233;
+  color: var(--ink);
 }
 .overview-label {
   font-size: 12px;
-  color: #969799;
+  color: var(--ink-subtle);
   margin-top: 4px;
 }
-/* 柱状图 */
+/* 柱状图：单一主色实心柱（规范禁止渐变装饰） */
 .chart-container {
   padding: 10px 0;
 }
@@ -220,7 +222,7 @@ onMounted(loadData)
 }
 .chart-bar {
   width: 28px;
-  background: linear-gradient(180deg, #1989fa, #07c160);
+  background: var(--primary);
   border-radius: 4px 4px 0 0;
   position: relative;
   min-height: 2px;
@@ -232,12 +234,13 @@ onMounted(loadData)
   position: absolute;
   top: -18px;
   font-size: 10px;
-  color: #646566;
+  font-family: var(--font-mono);
+  color: var(--ink-subtle);
   white-space: nowrap;
 }
 .chart-bar-label {
   font-size: 11px;
-  color: #969799;
+  color: var(--ink-subtle);
   margin-top: 6px;
 }
 .chart-summary {
@@ -246,7 +249,7 @@ onMounted(loadData)
   align-items: center;
   font-size: 13px;
   padding-top: 8px;
-  border-top: 1px solid #f2f3f5;
+  border-top: 1px solid var(--hairline);
 }
 /* 状态分布 */
 .status-list {
@@ -266,7 +269,7 @@ onMounted(loadData)
 .status-bar {
   flex: 1;
   height: 12px;
-  background: #f2f3f5;
+  background: var(--surface-2);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -280,7 +283,8 @@ onMounted(loadData)
   text-align: right;
   font-size: 13px;
   font-weight: 600;
-  color: #323233;
+  font-family: var(--font-mono);
+  color: var(--ink);
 }
 /* 排行榜 */
 .rank-list {
@@ -292,11 +296,12 @@ onMounted(loadData)
   align-items: center;
   gap: 12px;
   padding: 10px 0;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid var(--hairline);
 }
 .rank-item:last-child {
   border-bottom: none;
 }
+/* 前三名用主色低透明度徽章，其余用中性表面（克制用色） */
 .rank-num {
   width: 24px;
   height: 24px;
@@ -306,30 +311,32 @@ onMounted(loadData)
   justify-content: center;
   font-size: 12px;
   font-weight: 600;
-  background: #f2f3f5;
-  color: #969799;
+  font-family: var(--font-mono);
+  background: var(--surface-2);
+  color: var(--ink-subtle);
   flex-shrink: 0;
 }
-.rank-1 { background: #ffd700; color: #fff; }
-.rank-2 { background: #c0c0c0; color: #fff; }
-.rank-3 { background: #cd7f32; color: #fff; }
+.rank-1 { background: rgba(94,106,210,0.28); color: #aab2ff; }
+.rank-2 { background: rgba(94,106,210,0.18); color: #9aa2e8; }
+.rank-3 { background: rgba(94,106,210,0.12); color: #8f97d6; }
 .rank-info {
   flex: 1;
 }
 .rank-name {
   font-size: 14px;
   font-weight: 500;
-  color: #323233;
+  color: var(--ink);
 }
 .rank-meta {
   font-size: 12px;
-  color: #646566;
+  color: var(--ink-muted);
   margin-top: 2px;
 }
 .rank-amount {
   font-size: 14px;
   font-weight: 600;
-  color: #ee0a24;
+  font-family: var(--font-mono);
+  color: var(--danger);
 }
 /* 挂账列表 */
 .unpaid-list {
@@ -338,7 +345,7 @@ onMounted(loadData)
 }
 .unpaid-item {
   padding: 12px 0;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid var(--hairline);
   cursor: pointer;
 }
 .unpaid-item:last-child {
@@ -352,15 +359,17 @@ onMounted(loadData)
 .unpaid-customer {
   font-size: 14px;
   font-weight: 600;
-  color: #323233;
+  color: var(--ink);
 }
 .unpaid-plate {
   font-size: 13px;
-  color: #1989fa;
+  font-family: var(--font-mono);
+  color: var(--primary-hover);
 }
 .unpaid-no {
   font-size: 12px;
-  color: #969799;
+  font-family: var(--font-mono);
+  color: var(--ink-subtle);
   margin-top: 4px;
 }
 .unpaid-footer {

@@ -1,3 +1,39 @@
+/* ============================================================
+   全局样式 - Linear 深色风格（规范见 AGENTS.md 第 6 节）
+   深色画布即留白：层级靠表面阶梯 + 1px 发丝线，禁止投影做层级
+   ============================================================ */
+
+/* 设计令牌：与 AGENTS.md 色彩表一一对应 */
+:root {
+  /* 表面 */
+  --canvas: #010102;          /* 页面画布（近黑微蓝） */
+  --surface-1: #0f1011;       /* 卡片/面板 */
+  --surface-2: #141516;       /* 选中态/次级面板 */
+  --surface-3: #18191a;       /* 下拉/浮层 */
+  --hairline: #23252a;        /* 1px 发丝线 */
+  --hairline-strong: #34343a; /* 强调边框 */
+
+  /* 文字 */
+  --ink: #f7f8f8;
+  --ink-muted: #d0d6e0;
+  --ink-subtle: #8a8f98;
+  --ink-tertiary: #62666d;
+
+  /* 主色：薰衣草蓝只用于主按钮、焦点环、链接强调 */
+  --primary: #5e6ad2;
+  --primary-hover: #828fff;
+
+  /* 语义色（深色底提亮版本，仅限小面积徽章/文字） */
+  --success: #34b757;
+  --danger: #f2566a;
+  --warning: #ffa059;
+
+  /* 字体栈：Linear 自有字体不公开分发，系统字体为官方替代 */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Consolas, Menlo, monospace;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -7,8 +43,9 @@
 html, body, #app {
   height: 100%;
   width: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background-color: #f7f8fa;
+  font-family: var(--font-sans);
+  background-color: var(--canvas);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -17,19 +54,68 @@ a {
   color: inherit;
 }
 
+/* ===== Vant 暗色变量对齐规范（优先级需高于 .van-theme-dark 默认值） ===== */
+.van-theme-dark {
+  --van-primary-color: var(--primary);
+  --van-blue: var(--primary);
+  --van-background: var(--canvas);
+  --van-background-2: var(--surface-1);
+  --van-background-3: var(--surface-2);
+  --van-text-color: var(--ink);
+  --van-text-color-2: var(--ink-muted);
+  --van-text-color-3: var(--ink-subtle);
+  --van-border-color: var(--hairline);
+  --van-gray-2: var(--surface-3);
+  --van-gray-3: #23252a;
+  --van-cell-background: transparent;
+  --van-nav-bar-background: var(--canvas);
+  --van-nav-bar-title-text-color: var(--ink);
+  --van-nav-bar-text-color: var(--ink-muted);
+  --van-nav-bar-icon-color: var(--ink-muted);
+  --van-tabbar-background: var(--surface-1);
+  --van-search-background: var(--canvas);
+  --van-search-input-background: var(--surface-2);
+  --van-tabs-background: var(--canvas);
+  --van-sticky-background: inherit;
+  --van-grid-item-content-background: transparent;
+  --van-popup-background: var(--surface-1);
+  --van-field-label-color: var(--ink-subtle);
+  --van-button-default-background: var(--surface-1);
+  --van-button-default-border-color: var(--hairline);
+  --van-button-default-color: var(--ink);
+  --van-button-primary-background: var(--primary);
+  --van-button-primary-border-color: var(--primary);
+  --van-empty-text-color: var(--ink-subtle);
+  --van-loading-text-color: var(--ink-subtle);
+  /* 语义色统一为规范低饱和版本（按钮、标签、单选等小面积控件） */
+  --van-danger-color: var(--danger);
+  --van-success-color: var(--success);
+  --van-warning-color: var(--warning);
+  --van-button-danger-background: #e2536a;
+  --van-button-danger-border-color: #e2536a;
+  --van-button-success-background: #2fae52;
+  --van-button-success-border-color: #2fae52;
+  --van-button-warning-background: #f09b57;
+  --van-button-warning-border-color: #f09b57;
+}
+
+/* ===== 页面骨架 ===== */
+
 .page-container {
   min-height: 100vh;
   padding-bottom: 60px;
-  background-color: #f7f8fa;
+  background-color: var(--canvas);
 }
 
 .page-content {
   padding: 12px;
 }
 
+/* 卡片：表面1 + 发丝线 + 12px 圆角，不用投影 */
 .card {
-  background: #fff;
-  border-radius: 8px;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
   padding: 16px;
   margin-bottom: 12px;
 }
@@ -37,31 +123,39 @@ a {
 .section-title {
   font-size: 14px;
   font-weight: 600;
-  color: #323233;
+  color: var(--ink);
   margin-bottom: 12px;
 }
 
+/* 卡片内部 Cell 通铺时压掉卡片自带内边距的违和感 */
+.card .van-cell {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .text-muted {
-  color: #969799;
+  color: var(--ink-subtle);
   font-size: 12px;
 }
 
 .text-primary {
-  color: #1989fa;
+  color: var(--primary-hover);
 }
 
 .text-danger {
-  color: #ee0a24;
+  color: var(--danger);
 }
 
 .text-success {
-  color: #07c160;
+  color: var(--success);
 }
 
+/* 金额：等宽字体保证数字对齐（规范要求） */
 .amount {
+  font-family: var(--font-mono);
   font-size: 18px;
   font-weight: 600;
-  color: #ee0a24;
+  color: var(--danger);
 }
 
 .flex-between {

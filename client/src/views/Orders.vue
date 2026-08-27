@@ -143,6 +143,8 @@ onMounted(loadOrders)
 }
 .plate {
   font-weight: 600;
+  /* 车牌号用等宽字体便于快速比对 */
+  font-family: var(--font-mono);
 }
 .order-info {
   display: flex;
@@ -151,11 +153,12 @@ onMounted(loadOrders)
   margin-top: 4px;
 }
 .order-amount {
-  color: #ee0a24;
+  font-family: var(--font-mono);
+  color: var(--danger);
   font-weight: 600;
   margin-top: 4px;
 }
-/* 右下角浮动按钮 */
+/* 右下角浮动按钮：主色圆钮，深色底用暗投影而非彩色光晕 */
 .fab-button {
   position: fixed;
   right: 20px;
@@ -163,12 +166,12 @@ onMounted(loadOrders)
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: #1989fa;
+  background: var(--primary);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(25,137,250,0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   z-index: 100;
   cursor: pointer;
 }

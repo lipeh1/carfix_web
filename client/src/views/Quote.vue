@@ -390,7 +390,7 @@ onMounted(loadExistingQuote)
 <style scoped>
 .quote-page {
   min-height: 100vh;
-  background: #f7f8fa;
+  background: var(--canvas);
   padding-bottom: 140px;
 }
 .quote-content {
@@ -405,12 +405,13 @@ onMounted(loadExistingQuote)
 .group-title {
   font-size: 13px;
   font-weight: 600;
-  color: #969799;
+  color: var(--ink-subtle);
   margin-bottom: 8px;
   padding-left: 4px;
 }
+/* 报价项目：表面2浮层 */
 .quote-item {
-  background: #f7f8fa;
+  background: var(--surface-2);
   border-radius: 8px;
   padding: 8px 12px;
   margin-bottom: 8px;
@@ -427,7 +428,7 @@ onMounted(loadExistingQuote)
   font-weight: 500;
 }
 .item-delete {
-  color: #c8c9cc;
+  color: var(--ink-tertiary);
   font-size: 18px;
   cursor: pointer;
   padding: 4px;
@@ -445,13 +446,14 @@ onMounted(loadExistingQuote)
 }
 .item-field label {
   font-size: 11px;
-  color: #969799;
+  color: var(--ink-subtle);
   margin-bottom: 2px;
 }
+/* 嵌套输入框：表面1 + 发丝线，与外层表面2区分 */
 .item-field :deep(.van-field) {
-  padding: 0;
-  background: #fff;
-  border-radius: 4px;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
   padding: 4px 8px;
 }
 .item-field :deep(.van-field__control) {
@@ -465,9 +467,10 @@ onMounted(loadExistingQuote)
   flex-direction: column;
 }
 .item-subtotal .amount {
+  font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 600;
-  color: #ee0a24;
+  color: var(--danger);
 }
 .add-buttons {
   display: flex;
@@ -476,14 +479,14 @@ onMounted(loadExistingQuote)
 .add-buttons .van-button {
   flex: 1;
 }
-/* 底部汇总 */
+/* 底部汇总：表面浮层 + 发丝线上边框（不用投影） */
 .quote-footer {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: #fff;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+  background: var(--surface-1);
+  border-top: 1px solid var(--hairline);
   padding: 12px;
   z-index: 100;
 }
@@ -494,21 +497,22 @@ onMounted(loadExistingQuote)
   display: flex;
   justify-content: space-between;
   font-size: 13px;
-  color: #646566;
+  color: var(--ink-muted);
   padding: 2px 0;
 }
 .summary-total {
   font-size: 14px;
   font-weight: 600;
-  color: #323233;
-  border-top: 1px solid #f2f3f5;
+  color: var(--ink);
+  border-top: 1px solid var(--hairline);
   padding-top: 6px;
   margin-top: 4px;
 }
 .amount-large {
+  font-family: var(--font-mono);
   font-size: 20px;
   font-weight: 700;
-  color: #ee0a24;
+  color: var(--danger);
 }
 .save-btn {
   height: 44px;

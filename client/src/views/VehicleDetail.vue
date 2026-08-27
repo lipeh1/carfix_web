@@ -51,7 +51,7 @@
           @click="$router.push(`/customers/${vehicle.customer.id}`)"
         >
           <template #icon>
-            <van-icon name="contact" style="margin-right:8px;color:#1989fa" />
+            <van-icon name="contact" style="margin-right:8px;color:var(--primary-hover)" />
           </template>
         </van-cell>
       </div>
@@ -145,25 +145,27 @@ onMounted(loadData)
 </script>
 
 <style scoped>
+/* 车辆卡片：表面浮层，车牌放大等宽展示（不用彩色渐变） */
 .vehicle-card {
-  background: linear-gradient(135deg, #1989fa, #07c160);
-  color: #fff;
+  background: var(--surface-2);
   text-align: center;
 }
 .vehicle-plate {
   font-size: 24px;
   font-weight: 700;
   letter-spacing: 2px;
+  font-family: var(--font-mono);
 }
 .vehicle-model {
   font-size: 15px;
   margin-top: 6px;
-  opacity: 0.95;
+  color: var(--ink-muted);
 }
 .vehicle-meta {
   font-size: 12px;
   margin-top: 4px;
-  opacity: 0.8;
+  color: var(--ink-subtle);
+  font-family: var(--font-mono);
 }
 .stats-grid {
   display: flex;
@@ -176,17 +178,17 @@ onMounted(loadData)
 .stat-value {
   font-size: 18px;
   font-weight: 700;
-  color: #323233;
+  color: var(--ink);
 }
 .stat-label {
   font-size: 12px;
-  color: #969799;
+  color: var(--ink-subtle);
   margin-top: 4px;
 }
 .common-items {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid #f2f3f5;
+  border-top: 1px solid var(--hairline);
 }
 .item-tags {
   display: flex;
@@ -197,14 +199,14 @@ onMounted(loadData)
   display: flex;
   gap: 12px;
   padding: 10px 0;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid var(--hairline);
 }
 .reminder-item:last-child {
   border-bottom: none;
 }
 .reminder-icon {
   font-size: 20px;
-  color: #ff976a;
+  color: var(--warning);
   margin-top: 2px;
 }
 .reminder-content {
@@ -213,11 +215,11 @@ onMounted(loadData)
 .reminder-title {
   font-size: 14px;
   font-weight: 600;
-  color: #323233;
+  color: var(--ink);
 }
 .reminder-desc {
   font-size: 13px;
-  color: #646566;
+  color: var(--ink-muted);
   margin: 2px 0;
 }
 /* 时间线样式 */
@@ -239,11 +241,12 @@ onMounted(loadData)
   top: 8px;
   bottom: -8px;
   width: 2px;
-  background: #ebedf0;
+  background: var(--hairline);
 }
 .timeline-item:last-child::before {
   display: none;
 }
+/* 时间线节点：实心主色圆点 + 表面同色描边替代白边 */
 .timeline-dot {
   position: absolute;
   left: -20px;
@@ -251,17 +254,17 @@ onMounted(loadData)
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #1989fa;
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 2px #1989fa;
+  background: var(--primary);
+  border: 2px solid var(--surface-1);
+  box-shadow: 0 0 0 2px var(--primary);
 }
 .dot-completed {
-  background: #07c160;
-  box-shadow: 0 0 0 2px #07c160;
+  background: var(--success);
+  box-shadow: 0 0 0 2px var(--success);
 }
 .dot-cancelled {
-  background: #c8c9cc;
-  box-shadow: 0 0 0 2px #c8c9cc;
+  background: var(--ink-tertiary);
+  box-shadow: 0 0 0 2px var(--ink-tertiary);
 }
 .timeline-content {
   cursor: pointer;
@@ -274,17 +277,18 @@ onMounted(loadData)
 }
 .timeline-date {
   font-size: 12px;
-  color: #969799;
+  color: var(--ink-subtle);
 }
 .timeline-order {
   font-size: 14px;
   font-weight: 600;
-  color: #323233;
+  color: var(--ink);
   margin-top: 4px;
+  font-family: var(--font-mono);
 }
 .timeline-complaint {
   font-size: 13px;
-  color: #646566;
+  color: var(--ink-subtle);
   margin-top: 2px;
 }
 .timeline-items {
@@ -293,17 +297,19 @@ onMounted(loadData)
   gap: 4px;
   margin-top: 6px;
 }
+/* 项目小标签：表面2底色 pill */
 .item-chip {
   font-size: 11px;
-  padding: 2px 6px;
-  background: #f2f3f5;
-  border-radius: 4px;
-  color: #646566;
+  padding: 2px 8px;
+  background: var(--surface-2);
+  border-radius: 9999px;
+  color: var(--ink-muted);
 }
 .timeline-amount {
   font-size: 14px;
   font-weight: 600;
-  color: #ee0a24;
+  font-family: var(--font-mono);
+  color: var(--danger);
   margin-top: 6px;
 }
 </style>

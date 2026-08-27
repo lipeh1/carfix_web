@@ -1,7 +1,7 @@
 <template>
   <div class="tab-layout">
     <router-view />
-    <van-tabbar v-model="active" active-color="#1989fa" @change="onTabChange">
+    <van-tabbar v-model="active" active-color="#828fff" @change="onTabChange">
       <van-tabbar-item icon="wap-home-o">工作台</van-tabbar-item>
       <van-tabbar-item icon="orders-o">工单</van-tabbar-item>
       <van-tabbar-item icon="contact-o">客户</van-tabbar-item>

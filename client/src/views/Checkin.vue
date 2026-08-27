@@ -92,7 +92,7 @@
             class="photo-add"
             @click="triggerFileInput"
           >
-            <van-icon name="photograph" size="28" color="#c8c9cc" />
+            <van-icon name="photograph" size="28" />
             <span class="photo-add-text">拍照/相册</span>
           </div>
         </div>
@@ -448,9 +448,9 @@ onMounted(loadCustomers)
   position: relative;
   width: calc((100% - 24px) / 4);
   aspect-ratio: 1;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
-  background: #f7f8fa;
+  background: var(--surface-2);
 }
 .photo-thumb {
   width: 100%;
@@ -464,7 +464,7 @@ onMounted(loadCustomers)
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.6);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -476,7 +476,7 @@ onMounted(loadCustomers)
   font-size: 11px;
 }
 .photo-failed {
-  background: rgba(238,10,36,0.6);
+  background: rgba(242,86,106,0.75);
 }
 .photo-retry {
   color: #fff;
@@ -491,7 +491,7 @@ onMounted(loadCustomers)
   right: 2px;
   width: 20px;
   height: 20px;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.6);
   border-radius: 50%;
   color: #fff;
   display: flex;
@@ -501,24 +501,28 @@ onMounted(loadCustomers)
   cursor: pointer;
   z-index: 2;
 }
+/* 添加按钮：表面1底色 + 发丝线虚线框 */
 .photo-add {
   width: calc((100% - 24px) / 4);
   aspect-ratio: 1;
-  border: 1px dashed #dcdee0;
-  border-radius: 6px;
+  border: 1px dashed var(--hairline-strong);
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 4px;
   cursor: pointer;
-  background: #fafafa;
+  background: var(--surface-1);
 }
 .photo-add:active {
-  background: #f2f3f5;
+  background: var(--surface-2);
+}
+.photo-add :deep(.van-icon) {
+  color: var(--ink-tertiary);
 }
 .photo-add-text {
   font-size: 11px;
-  color: #969799;
+  color: var(--ink-subtle);
 }
 </style>
