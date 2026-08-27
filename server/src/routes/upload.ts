@@ -27,11 +27,14 @@ const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (_req, file, cb) => {
-    const allowed = /jpeg|jpg|png|gif|webp/i
-    if (allowed.test(path.extname(file.originalname))) {
+    // 扩展名与 MIME 双重校验：仅改扩展名伪装的文件同样拒绝
+    const allowed = /\.(jpe?g|png|gif|webp)$/i
+    const allowedMime = /^image\/(jpeg|png|gif|webp)$/i
+    if (allowed.test(path.extname(file.originalname)) && allowedMime.test(file.mimetype)) {
       cb(null, true)
     } else {
-      cb(new Error('只支持图片文件'))
+      // 用 AppError 携带 400 状态码，避免落入统一错误处理的 500 分支
+      cb(new AppError('只支持图片文件'))
     }
   }
 })
