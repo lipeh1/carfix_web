@@ -47,7 +47,7 @@
                 <span class="text-muted">{{ order.complaint || '无诉求' }}</span>
               </div>
               <div class="order-amount" v-if="order.finalAmount">
-                ¥{{ Number(order.finalAmount).toFixed(2) }}
+                ¥{{ fenToYuan(order.finalAmount) }}
               </div>
             </template>
           </van-cell>
@@ -65,6 +65,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getOrders } from '@/api'
+import { fenToYuan } from '@/utils/money'
 
 const tabs = [
   { label: '全部', value: '' },

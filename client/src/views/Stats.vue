@@ -116,6 +116,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { getStats } from '@/api'
+import { fenToYuan } from '@/utils/money'
 import dayjs from 'dayjs'
 
 const stats = ref<any>(null)
@@ -133,7 +134,7 @@ const statusList: Array<{ status: string; label: string; type: 'default' | 'prim
 ]
 
 const formatDate = (d: string) => dayjs(d).format('YYYY-MM-DD')
-const formatAmount = (n: number) => Number(n || 0).toFixed(2)
+const formatAmount = (n: number | string | null | undefined) => fenToYuan(n)
 
 // 近6个月营收总额
 const total6Months = computed(() =>

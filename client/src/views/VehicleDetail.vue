@@ -109,6 +109,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getVehicle } from '@/api'
 import dayjs from 'dayjs'
+import { fenToYuan } from '@/utils/money'
 
 const route = useRoute()
 const vehicle = ref<any>(null)
@@ -128,7 +129,7 @@ const statusMap: Record<string, { label: string; type: 'default' | 'primary' | '
 const getStatusLabel = (s: string) => statusMap[s]?.label || s
 const getStatusType = (s: string) => statusMap[s]?.type || 'default'
 const formatDate = (d: string) => dayjs(d).format('YYYY-MM-DD HH:mm')
-const formatAmount = (n: number) => Number(n || 0).toFixed(2)
+const formatAmount = (n: number | string | null | undefined) => fenToYuan(n)
 
 const loadData = async () => {
   loadFailed.value = false

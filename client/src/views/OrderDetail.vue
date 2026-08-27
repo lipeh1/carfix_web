@@ -60,11 +60,11 @@
           :title="item.name"
           :label="`${item.type === 'service' ? '工时' : '配件'} × ${item.quantity}`"
         >
-          <template #value>¥{{ Number(item.subtotal).toFixed(2) }}</template>
+          <template #value>¥{{ fenToYuan(item.subtotal) }}</template>
         </van-cell>
         <div class="flex-between mt-12">
           <span>合计</span>
-          <span class="amount">¥{{ itemsTotal.toFixed(2) }}</span>
+          <span class="amount">¥{{ fenToYuan(itemsTotal) }}</span>
         </div>
       </div>
 
@@ -84,7 +84,7 @@
           <van-cell :title="item.name" :label="item.reason">
             <template #value>
               <div style="text-align:right">
-                <div>¥{{ Number(item.amount).toFixed(2) }}</div>
+                <div>¥{{ fenToYuan(item.amount) }}</div>
                 <van-tag :type="item.status === 'confirmed' ? 'success' : item.status === 'rejected' ? 'danger' : 'warning'">
                   {{ item.status === 'confirmed' ? '已确认' : item.status === 'rejected' ? '已拒绝' : '待确认' }}
                 </van-tag>
@@ -103,10 +103,10 @@
       <div class="card" v-if="settlement">
         <div class="section-title">结算信息</div>
         <van-cell title="结算单号" :value="settlement.settlementNo" />
-        <van-cell title="应收金额" :value="`¥${Number(settlement.totalAmount).toFixed(2)}`" />
-        <van-cell title="优惠" :value="`¥${Number(settlement.discount || 0).toFixed(2)}`" />
-        <van-cell title="实收金额" :value="`¥${Number(settlement.actualAmount).toFixed(2)}`" />
-        <van-cell title="已收金额" :value="`¥${Number(settlement.paidAmount).toFixed(2)}`" />
+        <van-cell title="应收金额" :value="`¥${fenToYuan(settlement.totalAmount)}`" />
+        <van-cell title="优惠" :value="`¥${fenToYuan(settlement.discount || 0)}`" />
+        <van-cell title="实收金额" :value="`¥${fenToYuan(settlement.actualAmount)}`" />
+        <van-cell title="已收金额" :value="`¥${fenToYuan(settlement.paidAmount)}`" />
         <van-cell title="状态">
           <template #value>
             <van-tag :type="settlement.status === 'paid' ? 'success' : 'warning'">
@@ -119,7 +119,7 @@
           <div class="text-muted mb-8">收款记录</div>
           <div v-for="p in settlement.payments" :key="p.id" class="payment-item">
             <span>{{ formatDateTime(p.createdAt) }} · {{ methodLabel(p.method) }}</span>
-            <span class="text-success">+¥{{ Number(p.amount).toFixed(2) }}</span>
+            <span class="text-success">+¥{{ fenToYuan(p.amount) }}</span>
           </div>
         </div>
       </div>
@@ -198,19 +198,19 @@
         <div class="payment-info" v-if="settlement">
           <div class="flex-between">
             <span>应收金额</span>
-            <span>¥{{ Number(settlement.totalAmount).toFixed(2) }}</span>
+            <span>¥{{ fenToYuan(settlement.totalAmount) }}</span>
           </div>
           <div class="flex-between mt-8" v-if="Number(settlement.discount) > 0">
             <span class="text-success">优惠</span>
-            <span class="text-success">-¥{{ Number(settlement.discount).toFixed(2) }}</span>
+            <span class="text-success">-¥{{ fenToYuan(settlement.discount) }}</span>
           </div>
           <div class="flex-between mt-8">
             <span>已收金额</span>
-            <span>¥{{ Number(settlement.paidAmount).toFixed(2) }}</span>
+            <span>¥{{ fenToYuan(settlement.paidAmount) }}</span>
           </div>
           <div class="flex-between mt-8">
             <span class="text-danger">待收金额</span>
-            <span class="text-danger">¥{{ unpaidAmount.toFixed(2) }}</span>
+            <span class="text-danger">¥{{ fenToYuan(unpaidAmount) }}</span>
           </div>
         </div>
         <van-field v-model="paymentForm.amount" label="收款金额" type="number" placeholder="元" class="mt-12" />
@@ -249,6 +249,7 @@ import {
   createSettlement, addPayment, deliverOrder, updateCheckin
 } from '@/api'
 import dayjs from 'dayjs'
+import { fenToYuan, yuanToFen } from '@/utils/money'
 
 const route = useRoute()
 const router = useRouter()
@@ -409,15 +410,15 @@ const submitLog = async () => {
 // ===== 增项 =====
 const submitAdditional = async () => {
   if (!additionalForm.name) return showToast('请输入项目名称')
-  // 费用必须是大于 0 的有效数字（允许小数）
-  const amount = Number(additionalForm.amount)
-  if (!additionalForm.amount || !Number.isFinite(amount) || amount <= 0) {
+  // 输入为"元"，校验有效后换算为整数分提交
+  const amountYuan = Number(additionalForm.amount)
+  if (!additionalForm.amount || !Number.isFinite(amountYuan) || amountYuan <= 0) {
     return showToast('请输入有效的费用金额')
   }
   try {
     await addAdditionalItem(orderId, {
       name: additionalForm.name,
-      amount,
+      amount: yuanToFen(amountYuan),
       reason: additionalForm.reason
     })
     showToast({ type: 'success', message: '增项已提交，待客户确认' })
@@ -435,7 +436,7 @@ const handleConfirmAdditional = async (item: any, confirmed: boolean) => {
     if (confirmed) {
       await showConfirmDialog({
         title: '确认增项',
-        message: `确认添加「${item.name}」（¥${Number(item.amount).toFixed(2)}）？确认后将计入维修项目和结算金额。`
+        message: `确认添加「${item.name}」（¥${fenToYuan(item.amount)}）？确认后将计入维修项目和结算金额。`
       })
     } else {
       await showConfirmDialog({
@@ -453,9 +454,9 @@ const handleConfirmAdditional = async (item: any, confirmed: boolean) => {
 
 // ===== 收款 =====
 const submitPayment = async () => {
-  // 收款金额必须是大于 0 的有效数字（允许小数）
-  const amount = Number(paymentForm.amount)
-  if (!paymentForm.amount || !Number.isFinite(amount) || amount <= 0) {
+  // 输入为"元"，校验有效后换算为整数分提交
+  const amountYuan = Number(paymentForm.amount)
+  if (!paymentForm.amount || !Number.isFinite(amountYuan) || amountYuan <= 0) {
     return showToast('请输入有效的收款金额')
   }
   if (!settlement.value) {
@@ -465,7 +466,7 @@ const submitPayment = async () => {
   }
   try {
     await addPayment(settlement.value.id, {
-      amount,
+      amount: yuanToFen(amountYuan),
       method: paymentForm.method,
       type: settlement.value.paidAmount > 0 ? 'supplement' : 'initial'
     })
@@ -541,7 +542,7 @@ const handleAction = async (key: string) => {
           await createSettlement(orderId, { discount: Number(order.value?.discount) || 0 })
           await loadData()
         }
-        paymentForm.amount = unpaidAmount.value > 0 ? unpaidAmount.value.toFixed(2) : ''
+        paymentForm.amount = unpaidAmount.value > 0 ? fenToYuan(unpaidAmount.value) : ''
         showPaymentPopup.value = true
         break
       case 'deliver':

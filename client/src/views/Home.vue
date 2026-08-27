@@ -28,7 +28,7 @@
       <div class="card">
         <div class="flex-between">
           <span class="section-title" style="margin-bottom:0">本月营收</span>
-          <span class="amount">¥{{ stats.monthlyRevenue.toFixed(2) }}</span>
+          <span class="amount">¥{{ fenToYuan(stats.monthlyRevenue) }}</span>
         </div>
       </div>
 
@@ -49,7 +49,7 @@
       <div class="card" v-if="stats.unpaidAmount > 0">
         <div class="flex-between">
           <span class="text-danger">挂账未收</span>
-          <span class="amount">¥{{ stats.unpaidAmount.toFixed(2) }}</span>
+          <span class="amount">¥{{ fenToYuan(stats.unpaidAmount) }}</span>
         </div>
       </div>
     </div>
@@ -60,6 +60,7 @@
 import { ref, onMounted } from 'vue'
 import { getDashboard, getReminders } from '@/api'
 import dayjs from 'dayjs'
+import { fenToYuan } from '@/utils/money'
 
 const stats = ref({
   pendingInspection: 0,

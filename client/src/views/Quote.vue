@@ -191,6 +191,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { getOrder, saveQuote } from '@/api'
+import { fenToYuan, yuanToFen } from '@/utils/money'
 
 const route = useRoute()
 const router = useRouter()
@@ -263,6 +264,7 @@ const finalAmount = computed(() => {
   return Math.max(0, total)
 })
 
+// 本页 item.unitPrice/subtotal 等均为输入用的"元"（提交/载入时才与后端的"分"换算）
 const formatAmount = (n: number | string) => Number(n || 0).toFixed(2)
 
 // 生成唯一ID
@@ -319,6 +321,8 @@ const loadExistingQuote = async () => {
     const order: any = await getOrder(orderId)
     // 检测结果用独立的 inspection 字段回填（与客户诉求 complaint 是两回事）
     inspection.value = order.inspection || ''
+    // 回显报价时登记的优惠（接口返回分，输入为元）
+    discount.value = fenToYuan(order.discount)
     if (order.repairItems && order.repairItems.length > 0) {
       // 只载入报价来源的项目：增项有独立的确认流程，
       // 若混入编辑列表，再次保存报价会重建出重复项目，造成双重计费
@@ -328,8 +332,8 @@ const loadExistingQuote = async () => {
         type: item.type,
         name: item.name,
         quantity: String(item.quantity),
-        unitPrice: String(item.unitPrice),
-        subtotal: item.subtotal
+        unitPrice: fenToYuan(item.unitPrice),
+        subtotal: item.subtotal / 100
       }))
     }
   } catch (e) { /* 静默 */ }
@@ -360,9 +364,10 @@ const saveQuoteHandler = async () => {
         type: i.type,
         name: i.name,
         quantity: Number(i.quantity),
-        unitPrice: Number(i.unitPrice)
+        unitPrice: yuanToFen(i.unitPrice)
       })),
-      inspection: inspection.value
+      inspection: inspection.value,
+      discount: yuanToFen(discount.value)
     })
     showToast({ type: 'success', message: '报价单已生成' })
     setTimeout(() => {
