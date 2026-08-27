@@ -38,22 +38,34 @@
         <van-cell v-if="current.remindedAt" title="提醒时间" :value="formatDateTime(current.remindedAt)" />
         <van-cell v-if="current.feedback" title="客户反馈" :value="current.feedback" />
 
-        <van-button
-          v-if="current.status === 'pending'"
-          type="primary"
-          block
-          class="mt-16"
-          @click="markDone"
-        >
-          标记已提醒
-        </van-button>
+        <!-- 标记已提醒需记录方式与客户反馈（DESIGN.md 要求） -->
+        <template v-if="current.status === 'pending'">
+          <van-field name="remindMethod" label="提醒方式" class="mt-12">
+            <template #input>
+              <van-radio-group v-model="doneForm.method" direction="horizontal">
+                <van-radio name="phone">电话</van-radio>
+                <van-radio name="wechat">微信</van-radio>
+              </van-radio-group>
+            </template>
+          </van-field>
+          <van-field
+            v-model="doneForm.feedback"
+            label="客户反馈"
+            type="textarea"
+            rows="2"
+            placeholder="可选，记录客户回应"
+          />
+          <van-button type="primary" block class="mt-16" @click="markDone">
+            标记已提醒
+          </van-button>
+        </template>
       </div>
     </van-popup>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { showToast } from 'vant'
 import { getReminders, updateReminder } from '@/api'
 import dayjs from 'dayjs'
@@ -62,6 +74,8 @@ const activeTab = ref('pending')
 const reminders = ref<any[]>([])
 const showDetailPopup = ref(false)
 const current = ref<any>(null)
+// 标记已提醒的补充信息
+const doneForm = reactive({ method: 'wechat', feedback: '' })
 
 const getTypeLabel = (t: string) => (t === 'maintenance' ? '保养提醒' : '回访提醒')
 const formatDate = (d: string) => dayjs(d).format('YYYY-MM-DD')
@@ -80,17 +94,23 @@ const loadData = async () => {
 
 const showDetail = (item: any) => {
   current.value = item
+  // 打开新条目时重置待填项，避免上一条的反馈串到下一条
+  doneForm.method = 'wechat'
+  doneForm.feedback = ''
   showDetailPopup.value = true
 }
 
 const markDone = async () => {
   if (!current.value) return
   try {
-    await updateReminder(current.value.id, {
+    const payload: any = {
       status: 'done',
       remindedAt: new Date().toISOString(),
-      remindMethod: 'wechat'
-    })
+      remindMethod: doneForm.method
+    }
+    // 反馈选填，未填写则不更新该字段
+    if (doneForm.feedback) payload.feedback = doneForm.feedback
+    await updateReminder(current.value.id, payload)
     showToast({ type: 'success', message: '已标记' })
     showDetailPopup.value = false
     loadData()
