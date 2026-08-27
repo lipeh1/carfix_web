@@ -50,9 +50,10 @@
               </div>
               <div class="item-field">
                 <label>单价</label>
+                <!-- 单价允许小数，用 number 键盘而非 digit 整数键盘 -->
                 <van-field
                   v-model="item.unitPrice"
-                  type="digit"
+                  type="number"
                   placeholder="0.00"
                   :border="false"
                   @update:model-value="calcSubtotal(item)"
@@ -92,9 +93,10 @@
               </div>
               <div class="item-field">
                 <label>单价</label>
+                <!-- 单价允许小数，用 number 键盘而非 digit 整数键盘 -->
                 <van-field
                   v-model="item.unitPrice"
-                  type="digit"
+                  type="number"
                   placeholder="0.00"
                   :border="false"
                   @update:model-value="calcSubtotal(item)"
@@ -127,7 +129,7 @@
         <div class="section-title">优惠</div>
         <van-field
           v-model="discount"
-          type="digit"
+          type="number"
           label="优惠金额"
           placeholder="0.00"
         >
@@ -336,8 +338,15 @@ const saveQuoteHandler = async () => {
   if (items.value.length === 0) {
     return showToast('请至少添加一个维修项目')
   }
-  // 校验项目名称和单价
-  const invalid = items.value.find(i => !i.name || !i.unitPrice)
+  // 校验项目名称必填；数量为正数；单价允许小数且不能为负
+  const invalid = items.value.find(
+    i => !i.name
+      || i.unitPrice === ''
+      || !Number.isFinite(Number(i.unitPrice))
+      || Number(i.unitPrice) < 0
+      || !Number.isFinite(Number(i.quantity))
+      || Number(i.quantity) <= 0
+  )
   if (invalid) {
     return showToast('请填写完整的项目名称和单价')
   }

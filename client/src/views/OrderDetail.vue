@@ -178,7 +178,7 @@
       <div class="popup-content">
         <h3>新增增项</h3>
         <van-field v-model="additionalForm.name" label="项目名称" placeholder="如更换刹车片" />
-        <van-field v-model="additionalForm.amount" label="费用" type="digit" placeholder="元" />
+        <van-field v-model="additionalForm.amount" label="费用" type="number" placeholder="元" />
         <van-field v-model="additionalForm.reason" label="原因" type="textarea" rows="2" placeholder="说明新增原因" />
         <van-button type="primary" block class="mt-16" @click="submitAdditional">提交增项</van-button>
       </div>
@@ -202,7 +202,7 @@
             <span class="text-danger">¥{{ unpaidAmount.toFixed(2) }}</span>
           </div>
         </div>
-        <van-field v-model="paymentForm.amount" label="收款金额" type="digit" placeholder="元" class="mt-12" />
+        <van-field v-model="paymentForm.amount" label="收款金额" type="number" placeholder="元" class="mt-12" />
         <van-field name="method" label="收款方式">
           <template #input>
             <van-radio-group v-model="paymentForm.method" direction="horizontal">
@@ -377,11 +377,15 @@ const submitLog = async () => {
 // ===== 增项 =====
 const submitAdditional = async () => {
   if (!additionalForm.name) return showToast('请输入项目名称')
-  if (!additionalForm.amount) return showToast('请输入费用')
+  // 费用必须是大于 0 的有效数字（允许小数）
+  const amount = Number(additionalForm.amount)
+  if (!additionalForm.amount || !Number.isFinite(amount) || amount <= 0) {
+    return showToast('请输入有效的费用金额')
+  }
   try {
     await addAdditionalItem(orderId, {
       name: additionalForm.name,
-      amount: Number(additionalForm.amount),
+      amount,
       reason: additionalForm.reason
     })
     showToast({ type: 'success', message: '增项已提交，待客户确认' })
@@ -417,7 +421,11 @@ const handleConfirmAdditional = async (item: any, confirmed: boolean) => {
 
 // ===== 收款 =====
 const submitPayment = async () => {
-  if (!paymentForm.amount) return showToast('请输入收款金额')
+  // 收款金额必须是大于 0 的有效数字（允许小数）
+  const amount = Number(paymentForm.amount)
+  if (!paymentForm.amount || !Number.isFinite(amount) || amount <= 0) {
+    return showToast('请输入有效的收款金额')
+  }
   if (!settlement.value) {
     // 先创建结算单
     await createSettlement(orderId)
@@ -425,7 +433,7 @@ const submitPayment = async () => {
   }
   try {
     await addPayment(settlement.value.id, {
-      amount: Number(paymentForm.amount),
+      amount,
       method: paymentForm.method,
       type: settlement.value.paidAmount > 0 ? 'supplement' : 'initial'
     })
