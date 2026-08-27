@@ -20,6 +20,16 @@ router.post('/', asyncHandler(async (req, res) => {
   if (!customerId || !vehicleId) throw new AppError('客户和车辆不能为空')
   if (!complaint) throw new AppError('客户诉求不能为空')
 
+  // 校验客户/车辆存在且车辆属于该客户，
+  // 避免外键约束失败变成裸 500 或产生跨客户错配的工单
+  const [customer, vehicle] = await Promise.all([
+    prisma.customer.findUnique({ where: { id: customerId } }),
+    prisma.vehicle.findUnique({ where: { id: vehicleId } })
+  ])
+  if (!customer) throw new AppError('所选客户不存在')
+  if (!vehicle) throw new AppError('所选车辆不存在')
+  if (vehicle.customerId !== customer.id) throw new AppError('该车辆不属于所选客户')
+
   // 生成工单号
   const today = dayjs().format('YYYYMMDD')
   const count = await prisma.workOrder.count({
