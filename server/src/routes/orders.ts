@@ -132,38 +132,41 @@ router.post('/:id/quote', asyncHandler(async (req, res) => {
   // 优惠金额随报价落库，后续结算直接沿用（此前仅前端展示、传到结算就丢了）
   const disc = Math.max(0, Number(discount) || 0)
 
-  // 删除原有报价项目，重新写入
-  await prisma.repairItem.deleteMany({ where: { workOrderId: id, source: 'quote' } })
-
+  // 删旧明细与重建、更新工单在同一事务内完成，
+  // 中途失败时保留原报价而不是留下半份报价
   let total = 0
-  if (items && items.length > 0) {
-    for (const item of items) {
-      const subtotal = Number(item.quantity) * Number(item.unitPrice)
-      total += subtotal
-      await prisma.repairItem.create({
-        data: {
-          workOrderId: id,
-          type: item.type,
-          name: item.name,
-          quantity: Number(item.quantity),
-          unitPrice: Number(item.unitPrice),
-          subtotal,
-          remark: item.remark,
-          source: 'quote'
-        }
-      })
-    }
-  }
+  await prisma.$transaction(async (tx) => {
+    await tx.repairItem.deleteMany({ where: { workOrderId: id, source: 'quote' } })
 
-  await prisma.workOrder.update({
-    where: { id },
-    data: {
-      status: 'pending_quote',
-      quoteAmount: total,
-      discount: disc,
-      // 检测结果独立持久化（此前该字段被直接丢弃，页面用客户诉求回充）
-      inspection: inspection || null
+    if (items && items.length > 0) {
+      for (const item of items) {
+        const subtotal = Number(item.quantity) * Number(item.unitPrice)
+        total += subtotal
+        await tx.repairItem.create({
+          data: {
+            workOrderId: id,
+            type: item.type,
+            name: item.name,
+            quantity: Number(item.quantity),
+            unitPrice: Number(item.unitPrice),
+            subtotal,
+            remark: item.remark,
+            source: 'quote'
+          }
+        })
+      }
     }
+
+    await tx.workOrder.update({
+      where: { id },
+      data: {
+        status: 'pending_quote',
+        quoteAmount: total,
+        discount: disc,
+        // 检测结果独立持久化（此前该字段被直接丢弃，页面用客户诉求回充）
+        inspection: inspection || null
+      }
+    })
   })
 
   res.json({ success: true, total })
@@ -280,41 +283,46 @@ router.post('/:id/quality-check', asyncHandler(async (req, res) => {
   const order = await prisma.workOrder.findUnique({ where: { id } })
   if (!order) throw new AppError('工单不存在', 404)
 
-  // 删除旧质检记录
-  await prisma.qualityCheck.deleteMany({ where: { workOrderId: id } })
+  // 质检记录的替换、状态流转与结算单生成同事务执行，
+  // 保证质检结果、工单状态、结算单三者始终一致
+  const qc = await prisma.$transaction(async (tx) => {
+    // 删除旧质检记录
+    await tx.qualityCheck.deleteMany({ where: { workOrderId: id } })
 
-  const qc = await prisma.qualityCheck.create({
-    data: { workOrderId: id, result, checkItems: checkItems ? JSON.stringify(checkItems) : null, remark }
-  })
+    const created = await tx.qualityCheck.create({
+      data: { workOrderId: id, result, checkItems: checkItems ? JSON.stringify(checkItems) : null, remark }
+    })
 
-  // 通过 → 待结算，自动生成结算单
-  if (result === 'pass') {
-    await prisma.workOrder.update({ where: { id }, data: { status: 'pending_settlement' } })
-    // 自动生成结算单
-    const existing = await prisma.settlement.findUnique({ where: { workOrderId: id } })
-    if (!existing) {
-      const items = await prisma.repairItem.findMany({ where: { workOrderId: id } })
-      const total = items.reduce((sum, i) => sum + i.subtotal, 0)
-      // 沿用报价阶段登记的优惠金额，优惠不大于应收总额
-      const disc = Math.min(Math.max(0, order.discount || 0), total)
-      const today = dayjs().format('YYYYMMDD')
-      const count = await prisma.settlement.count({ where: { settlementNo: { startsWith: `SET${today}` } } })
-      await prisma.settlement.create({
-        data: {
-          workOrderId: id,
-          settlementNo: `SET${today}${String(count + 1).padStart(3, '0')}`,
-          totalAmount: total,
-          discount: disc,
-          actualAmount: total - disc,
-          status: 'unpaid'
-        }
-      })
-      await prisma.workOrder.update({ where: { id }, data: { finalAmount: total - disc } })
+    // 通过 → 待结算，自动生成结算单
+    if (result === 'pass') {
+      await tx.workOrder.update({ where: { id }, data: { status: 'pending_settlement' } })
+      const existing = await tx.settlement.findUnique({ where: { workOrderId: id } })
+      if (!existing) {
+        const items = await tx.repairItem.findMany({ where: { workOrderId: id } })
+        const total = items.reduce((sum, i) => sum + i.subtotal, 0)
+        // 沿用报价阶段登记的优惠金额，优惠不大于应收总额
+        const disc = Math.min(Math.max(0, order.discount || 0), total)
+        const today = dayjs().format('YYYYMMDD')
+        const count = await tx.settlement.count({ where: { settlementNo: { startsWith: `SET${today}` } } })
+        await tx.settlement.create({
+          data: {
+            workOrderId: id,
+            settlementNo: `SET${today}${String(count + 1).padStart(3, '0')}`,
+            totalAmount: total,
+            discount: disc,
+            actualAmount: total - disc,
+            status: 'unpaid'
+          }
+        })
+        await tx.workOrder.update({ where: { id }, data: { finalAmount: total - disc } })
+      }
+    } else {
+      // 不通过 → 返工
+      await tx.workOrder.update({ where: { id }, data: { status: 'repairing' } })
     }
-  } else {
-    // 不通过 → 返工
-    await prisma.workOrder.update({ where: { id }, data: { status: 'repairing' } })
-  }
+
+    return created
+  })
 
   res.json(qc)
 }))

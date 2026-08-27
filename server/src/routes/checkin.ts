@@ -27,35 +27,39 @@ router.post('/', asyncHandler(async (req, res) => {
   })
   const orderNo = `WO${today}${String(count + 1).padStart(3, '0')}`
 
-  const order = await prisma.workOrder.create({
-    data: {
-      orderNo,
-      customerId,
-      vehicleId,
-      status: 'pending_inspection',
-      source: source || 'walk_in',
-      complaint,
-      mileageIn: mileageIn ? Number(mileageIn) : null
-    }
-  })
-
-  // 创建接车记录
-  await prisma.checkinRecord.create({
-    data: {
-      workOrderId: order.id,
-      vehicleCondition
-    }
-  })
-
-  // 保存照片
-  if (photos && photos.length > 0) {
-    await prisma.checkinPhoto.createMany({
-      data: photos.map((p: string) => ({
-        workOrderId: order.id,
-        filePath: p
-      }))
+  // 工单/接车记录/照片在同一事务写入，
+  // 避免中途失败产生没有接车记录的孤儿工单
+  const order = await prisma.$transaction(async (tx) => {
+    const created = await tx.workOrder.create({
+      data: {
+        orderNo,
+        customerId,
+        vehicleId,
+        status: 'pending_inspection',
+        source: source || 'walk_in',
+        complaint,
+        mileageIn: mileageIn ? Number(mileageIn) : null
+      }
     })
-  }
+
+    await tx.checkinRecord.create({
+      data: {
+        workOrderId: created.id,
+        vehicleCondition
+      }
+    })
+
+    if (photos && photos.length > 0) {
+      await tx.checkinPhoto.createMany({
+        data: photos.map((p: string) => ({
+          workOrderId: created.id,
+          filePath: p
+        }))
+      })
+    }
+
+    return created
+  })
 
   res.status(201).json(order)
 }))
