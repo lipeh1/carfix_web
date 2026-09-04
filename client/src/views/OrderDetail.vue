@@ -259,6 +259,7 @@ import {
 import dayjs from 'dayjs'
 import { fenToYuan, yuanToFen } from '@/utils/money'
 import { hapticFeedback } from '@/utils/feedback'
+import { generateQuoteCard } from '@/utils/quoteCard'
 
 const route = useRoute()
 const router = useRouter()
@@ -334,6 +335,7 @@ const actionButtons = computed(() => {
     btns.push({ key: 'go_quote', label: '去检测报价', type: 'primary' })
   }
   if (s === 'pending_quote') {
+    btns.push({ key: 'share_quote', label: '报价图片', type: 'default' })
     btns.push({ key: 'confirm_quote', label: '客户确认报价', type: 'primary' })
     btns.push({ key: 'cancel', label: '取消维修', type: 'danger' })
   }
@@ -512,6 +514,28 @@ const handleAction = async (key: string) => {
         // 跳转到独立的检测报价页面
         router.push(`/orders/${orderId}/quote`)
         break
+      case 'share_quote': {
+        // 生成报价单长图，预览后长按保存/微信转发给客户
+        if (!order.value) break
+        const dataUrl = generateQuoteCard({
+          orderNo: order.value.orderNo,
+          plateNumber: order.value.vehicle?.plateNumber,
+          customerName: order.value.customer?.name,
+          mileageIn: order.value.mileageIn,
+          createdAt: order.value.createdAt,
+          quoteAmount: order.value.quoteAmount,
+          discount: order.value.discount,
+          repairItems: (repairItems.value || []).map((i: any) => ({
+            name: i.name, type: i.type, quantity: i.quantity,
+            unitPrice: i.unitPrice, subtotal: i.subtotal
+          }))
+        })
+        previewImages.value = [dataUrl]
+        previewIndex.value = 0
+        showPreview.value = true
+        showToast('长按图片可保存或转发客户')
+        break
+      }
       case 'confirm_quote':
         await updateOrderStatus(orderId, 'repairing')
         showToast({ type: 'success', message: '已确认，开始维修' })
