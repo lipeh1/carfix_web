@@ -90,3 +90,24 @@ export const uploadImage = (file: File) => {
 // 删除已上传的图片（按上传接口返回的 url）
 export const deleteUpload = (url: string) =>
   request.delete('/upload', { params: { url } })
+
+// ===== OCR 识别（后端代理百度） =====
+// File 转 base64（去 data: 前缀）
+const fileToBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onload = () => resolve((reader.result as string).split(',')[1] || '')
+  reader.onerror = () => reject(new Error('读取文件失败'))
+  reader.readAsDataURL(file)
+})
+
+// 行驶证识别
+export const ocrVehicleLicense = async (file: File) => {
+  const image = await fileToBase64(file)
+  return request.post('/ocr/vehicle-license', { image })
+}
+
+// 车牌识别
+export const ocrPlate = async (file: File) => {
+  const image = await fileToBase64(file)
+  return request.post('/ocr/plate', { image })
+}

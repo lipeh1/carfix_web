@@ -6,6 +6,11 @@
       <!-- 客户选择 -->
       <div class="card">
         <div class="section-title">客户信息</div>
+        <!-- 扫行驶证一次建档：识别所有人/车牌/品牌型号/VIN，电话需人工补录 -->
+        <div class="scan-entry" @click="triggerLicenseScan">
+          <van-icon name="scan" size="16" />
+          <span>扫行驶证建档</span>
+        </div>
         <van-cell
           v-if="selectedCustomer"
           :title="selectedCustomer.name"
@@ -168,6 +173,11 @@
     <van-popup v-model:show="showVehiclePicker" position="bottom" round>
       <div class="popup-content">
         <h3>选择车辆</h3>
+        <!-- 拍车牌快速定位已建档车辆（跨客户） -->
+        <div class="scan-entry" @click="triggerPlateScan">
+          <van-icon name="photograph" size="16" />
+          <span>拍车牌找车</span>
+        </div>
         <van-cell
           v-for="v in vehicleList"
           :key="v.id"
@@ -186,6 +196,7 @@
         <h3>新建客户</h3>
         <van-field v-model="newCustomer.name" label="姓名" placeholder="请输入姓名" />
         <van-field v-model="newCustomer.phone" label="电话" placeholder="请输入电话" type="tel" />
+        <van-field v-model="newCustomer.address" label="住址" placeholder="可选，行驶证可识别" />
         <van-button type="primary" block class="mt-16" @click="submitNewCustomer">保存</van-button>
       </div>
     </van-popup>
@@ -205,12 +216,31 @@
         />
         <van-field v-model="newVehicle.brand" label="品牌" placeholder="如丰田" />
         <van-field v-model="newVehicle.model" label="车型" placeholder="如卡罗拉" />
+        <van-field v-model="newVehicle.vin" label="VIN" placeholder="选填，行驶证可识别" />
         <van-button type="primary" block class="mt-16" @click="submitNewVehicle">保存</van-button>
       </div>
     </van-popup>
 
     <!-- 车牌专用键盘 -->
     <PlateKeyboard v-model="newVehicle.plateNumber" v-model:show="showPlateKeyboard" />
+
+    <!-- 扫证件/车牌的隐藏拍照入口（capture 直接拉起相机，兼容微信内浏览器） -->
+    <input
+      ref="licenseInputRef"
+      type="file"
+      accept="image/*"
+      capture="environment"
+      style="display:none"
+      @change="onLicenseScan"
+    />
+    <input
+      ref="plateInputRef"
+      type="file"
+      accept="image/*"
+      capture="environment"
+      style="display:none"
+      @change="onPlateScan"
+    />
   </div>
 </template>
 
@@ -218,7 +248,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { showToast, showConfirmDialog } from 'vant'
 import { useRouter } from 'vue-router'
-import { getCustomers, createCustomer, getVehicles, createVehicle, createCheckin, uploadImage, deleteUpload } from '@/api'
+import { getCustomers, createCustomer, getVehicles, createVehicle, createCheckin, uploadImage, deleteUpload, ocrVehicleLicense, ocrPlate } from '@/api'
 import { compressImage } from '@/utils/image'
 import { isValidPlate } from '@/utils/plate'
 import { saveDraft, loadDraft, clearDraft, draftHasContent } from '@/utils/draft'
@@ -263,8 +293,13 @@ const appendComplaint = (tag: string) => {
   form.complaint = form.complaint ? `${form.complaint}、${tag}` : tag
 }
 
-const newCustomer = reactive({ name: '', phone: '' })
-const newVehicle = reactive({ plateNumber: '', brand: '', model: '' })
+const newCustomer = reactive({ name: '', phone: '', address: '' })
+const newVehicle = reactive({ plateNumber: '', brand: '', model: '', vin: '' })
+
+// 扫描输入引用与识别中状态
+const licenseInputRef = ref<HTMLInputElement>()
+const plateInputRef = ref<HTMLInputElement>()
+const scanning = ref(false)
 
 // 最近到店快捷区：取排序后的前三个有到店记录的客户
 const recentCustomers = computed(() =>
@@ -312,8 +347,13 @@ const submitNewCustomer = async () => {
     showNewCustomer.value = false
     newCustomer.name = ''
     newCustomer.phone = ''
+    newCustomer.address = ''
     loadCustomers()
     loadVehicles()
+    // 扫行驶证建档流程：客户保存后车辆表单已预填，直接带出建车弹窗
+    if (newVehicle.plateNumber) {
+      showNewVehicle.value = true
+    }
   } catch (e) { /* 已拦截 */ }
 }
 
@@ -329,8 +369,90 @@ const submitNewVehicle = async () => {
     newVehicle.plateNumber = ''
     newVehicle.brand = ''
     newVehicle.model = ''
+    newVehicle.vin = ''
     loadVehicles()
   } catch (e) { /* 已拦截 */ }
+}
+
+// ===== OCR 扫描（后端代理百度，未配密钥/识别失败均不阻塞手输） =====
+
+// 行驶证品牌型号解析："大众牌FV7160AAWG" → 品牌=大众 / 型号=FV7160AAWG
+const parseBrandModel = (s: string | null): { brand: string; model: string } => {
+  if (!s) return { brand: '', model: '' }
+  const m = s.match(/^([\u4e00-\u9fa5]+)牌/)
+  const brand = m ? m[1] : ''
+  const model = s.replace(/^([\u4e00-\u9fa5]+)牌?/, '')
+  return { brand, model }
+}
+
+const triggerLicenseScan = () => {
+  licenseInputRef.value?.click()
+}
+
+// 拍行驶证 → 识别 → 预填新建客户/车辆表单（电话需人工补录）
+const onLicenseScan = async (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || scanning.value) return
+  scanning.value = true
+  try {
+    const compressed = await compressImage(file)
+    const res: any = await ocrVehicleLicense(compressed)
+    if (!res.plateNumber && !res.owner) {
+      return showToast('未能识别出行驶证内容，请正对证件、避免反光后重试')
+    }
+    // 预填两个表单，客户弹窗先出（补电话），保存后自动衔接建车弹窗
+    newCustomer.name = res.owner || ''
+    newCustomer.phone = ''
+    newCustomer.address = res.address || ''
+    newVehicle.plateNumber = (res.plateNumber || '').toUpperCase()
+    const { brand, model } = parseBrandModel(res.brandModel)
+    newVehicle.brand = brand
+    newVehicle.model = model
+    newVehicle.vin = res.vin || ''
+    showNewCustomer.value = true
+    showToast({ type: 'success', message: '已识别，请补录客户电话' })
+  } catch (err: any) {
+    // 具体原因已由请求拦截器 toast（未配置/网络/识别失败），此处保持手输路径
+  } finally {
+    scanning.value = false
+  }
+}
+
+const triggerPlateScan = () => {
+  plateInputRef.value?.click()
+}
+
+// 拍车牌 → 全库找车 → 命中则同时选中客户与车辆
+const onPlateScan = async (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || scanning.value) return
+  scanning.value = true
+  try {
+    const compressed = await compressImage(file)
+    const res: any = await ocrPlate(compressed)
+    const plate = String(res.number || '').toUpperCase()
+    if (!plate) return showToast('未识别到车牌，请重试')
+    // 跨客户按车牌找车
+    const list: any[] = await getVehicles({ keyword: plate }) as any[]
+    const hit = list.find(v => (v.plateNumber || '').toUpperCase() === plate)
+    if (!hit) {
+      showToast(`车牌 ${plate} 未建档，可用「扫行驶证建档」`)
+      return
+    }
+    selectedCustomer.value = hit.customer
+    selectedVehicle.value = hit
+    showVehiclePicker.value = false
+    await loadVehicles()
+    showToast({ type: 'success', message: `已定位 ${hit.customer?.name ?? ''} · ${plate}` })
+  } catch (err: any) {
+    // 已由拦截器提示
+  } finally {
+    scanning.value = false
+  }
 }
 
 // ===== 照片上传相关 =====
@@ -553,6 +675,23 @@ onMounted(() => {
 }
 .complaint-tag:active {
   background: var(--surface-3);
+}
+/* 扫描入口（扫行驶证/拍车牌） */
+.scan-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--primary-hover);
+  border: 1px dashed var(--primary);
+  border-radius: 999px;
+  padding: 3px 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.scan-entry:active {
+  background: var(--surface-2);
 }
 /* 最近到店快捷区 */
 .recent-section {
