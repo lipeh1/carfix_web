@@ -183,6 +183,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { showToast, showConfirmDialog } from 'vant'
 import { useRouter } from 'vue-router'
 import { getCustomers, createCustomer, getVehicles, createVehicle, createCheckin, uploadImage, deleteUpload } from '@/api'
+import { compressImage } from '@/utils/image'
 
 const router = useRouter()
 
@@ -281,7 +282,7 @@ const triggerFileInput = () => {
 }
 
 // 文件选择后处理
-const onFileChange = (e: Event) => {
+const onFileChange = async (e: Event) => {
   const input = e.target as HTMLInputElement
   const files = input.files
   if (!files || files.length === 0) return
@@ -300,6 +301,8 @@ const onFileChange = (e: Event) => {
       showToast('图片大小不能超过10MB')
       continue
     }
+    // 上传前压缩：长边 1600px / JPEG 0.8，EXIF 转正；失败自动回退原文件
+    const compressed = await compressImage(file)
     // 添加到列表并上传
     const reader = new FileReader()
     reader.onload = (ev) => {
@@ -307,12 +310,12 @@ const onFileChange = (e: Event) => {
         content: ev.target?.result as string,
         url: '',
         status: 'uploading',
-        file
+        file: compressed
       }
       photos.value.push(photoItem)
       uploadPhoto(photoItem)
     }
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(compressed)
   }
 
   // 清空 input，允许重复选择同一文件
