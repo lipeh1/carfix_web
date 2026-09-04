@@ -169,12 +169,23 @@
     <van-popup v-model:show="showNewVehicle" position="bottom" round>
       <div class="popup-content">
         <h3>新建车辆</h3>
-        <van-field v-model="newVehicle.plateNumber" label="车牌号" placeholder="请输入车牌号" />
+        <!-- 车牌走专用键盘，避免系统中英文切换与小写脏数据 -->
+        <van-field
+          v-model="newVehicle.plateNumber"
+          label="车牌号"
+          placeholder="点击输入车牌"
+          readonly
+          is-link
+          @click="showPlateKeyboard = true"
+        />
         <van-field v-model="newVehicle.brand" label="品牌" placeholder="如丰田" />
         <van-field v-model="newVehicle.model" label="车型" placeholder="如卡罗拉" />
         <van-button type="primary" block class="mt-16" @click="submitNewVehicle">保存</van-button>
       </div>
     </van-popup>
+
+    <!-- 车牌专用键盘 -->
+    <PlateKeyboard v-model="newVehicle.plateNumber" v-model:show="showPlateKeyboard" />
   </div>
 </template>
 
@@ -184,6 +195,7 @@ import { showToast, showConfirmDialog } from 'vant'
 import { useRouter } from 'vue-router'
 import { getCustomers, createCustomer, getVehicles, createVehicle, createCheckin, uploadImage, deleteUpload } from '@/api'
 import { compressImage } from '@/utils/image'
+import { isValidPlate } from '@/utils/plate'
 
 const router = useRouter()
 
@@ -205,6 +217,7 @@ const showCustomerPicker = ref(false)
 const showVehiclePicker = ref(false)
 const showNewCustomer = ref(false)
 const showNewVehicle = ref(false)
+const showPlateKeyboard = ref(false)
 
 const form = reactive({
   complaint: '',
@@ -258,9 +271,11 @@ const submitNewCustomer = async () => {
 
 const submitNewVehicle = async () => {
   if (!selectedCustomer.value) return showToast('请先选择客户')
-  if (!newVehicle.plateNumber) return showToast('请输入车牌号')
+  const plate = newVehicle.plateNumber.trim().toUpperCase()
+  if (!plate) return showToast('请输入车牌号')
+  if (!isValidPlate(plate)) return showToast('车牌格式不正确（普通牌7位，新能源8位）')
   try {
-    const v = await createVehicle({ ...newVehicle, customerId: selectedCustomer.value.id })
+    const v = await createVehicle({ ...newVehicle, plateNumber: plate, customerId: selectedCustomer.value.id })
     selectedVehicle.value = v
     showNewVehicle.value = false
     newVehicle.plateNumber = ''
