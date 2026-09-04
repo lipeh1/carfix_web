@@ -44,6 +44,16 @@
       <!-- 接车信息 -->
       <div class="card">
         <div class="section-title">接车信息</div>
+        <!-- 常用诉求标签：点击追加，减少手打 -->
+        <div class="complaint-tags">
+          <span
+            v-for="t in complaintTags"
+            :key="t"
+            class="complaint-tag"
+            :class="{ active: form.complaint.includes(t) }"
+            @click="appendComplaint(t)"
+          >{{ t }}</span>
+        </div>
         <van-field v-model="form.complaint" label="客户诉求" type="textarea" rows="2" placeholder="描述故障或需求" />
         <van-field v-model="form.mileage" label="当前里程" type="digit" placeholder="公里数" />
         <van-field v-model="form.vehicleCondition" label="车况描述" type="textarea" rows="2" placeholder="可选" />
@@ -224,6 +234,15 @@ const form = reactive({
   mileage: '',
   vehicleCondition: ''
 })
+
+// 常见诉求标签：点选追加，覆盖高频口述场景
+const complaintTags = ['异响', '抖动', '故障灯亮', '保养到期', '漏油', '空调不制冷', '刹车异常', '启动困难']
+
+// 追加诉求标签：已包含则忽略，多个标签用顿号连接
+const appendComplaint = (tag: string) => {
+  if (form.complaint.includes(tag)) return
+  form.complaint = form.complaint ? `${form.complaint}、${tag}` : tag
+}
 
 const newCustomer = reactive({ name: '', phone: '' })
 const newVehicle = reactive({ plateNumber: '', brand: '', model: '' })
@@ -455,6 +474,31 @@ onMounted(loadCustomers)
 .popup-content h3 {
   text-align: center;
   margin-bottom: 12px;
+}
+/* 诉求快捷标签 */
+.complaint-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.complaint-tag {
+  font-size: 12px;
+  color: var(--ink-subtle);
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 2px 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.complaint-tag.active {
+  color: #fff;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.complaint-tag:active {
+  background: var(--surface-3);
 }
 /* 照片上传区域 */
 .photo-uploader {
