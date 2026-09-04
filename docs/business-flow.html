@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>汽修管理系统 · 业务路线图</title>
+<style>
+  /* Linear 深色风格令牌（与 AGENTS.md UI 规范一致） */
+  :root{
+    --bg:#010102; --s1:#0f1011; --s2:#141516; --s3:#18191a;
+    --line:#23252a; --line2:#34343a;
+    --t1:#f7f8f8; --t2:#d0d6e0; --t3:#8a8f98; --t4:#62666d;
+    --accent:#5e6ad2; --ok:#27a644; --warn:#d4b106; --danger:#e5534b; --info:#6e9fe8; --orange:#d9730d;
+    --mono:ui-monospace,'SF Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--t2);font-family:-apple-system,system-ui,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;line-height:1.65;padding:40px 20px}
+  .wrap{max-width:1180px;margin:0 auto}
+
+  header{border:1px solid var(--line);background:var(--s1);border-radius:16px;padding:26px 30px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+  header h1{font-size:20px;font-weight:600;letter-spacing:-.4px;color:var(--t1)}
+  header .sub{color:var(--t3);font-size:12px;margin-top:6px}
+  header .meta{text-align:right;color:var(--t3);font-size:12px}
+  header .meta b{color:var(--t2);font-family:var(--mono);font-weight:500}
+
+  section{margin-bottom:20px}
+  h2{font-size:16px;font-weight:500;letter-spacing:-.2px;color:var(--t1);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  h2 .tag{font-size:11px;font-weight:400;color:var(--t3);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+
+  .panel{border:1px solid var(--line);background:var(--s1);border-radius:16px;padding:20px}
+  svg text{font-family:-apple-system,system-ui,'PingFang SC','Microsoft YaHei',sans-serif}
+  svg .code{font-family:var(--mono)}
+
+  /* 阶段卡片 */
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  @media (max-width:980px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:540px){.grid{grid-template-columns:1fr}}
+  .stage{border:1px solid var(--line);background:var(--s1);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .stage:hover{background:var(--s2)}
+  .shead{display:flex;gap:10px;align-items:flex-start}
+  .num{flex:none;width:24px;height:24px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .shead h3{font-size:15px;font-weight:500;color:var(--t1);letter-spacing:-.2px}
+  .shead code{display:block;font-family:var(--mono);font-size:11px;color:var(--t3);margin-top:1px}
+  .flowrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--t3)}
+  .pill{border:1px solid var(--line2);background:var(--s2);border-radius:999px;padding:1px 9px;font-size:11px;white-space:nowrap}
+  .pill code{font-family:var(--mono);font-size:10px;color:var(--t4);margin-left:4px}
+  .st-inspection{color:var(--warn)} .st-quote{color:var(--info)}
+  .st-repair{color:var(--orange)} .st-qc{color:var(--warn)}
+  .st-settle{color:var(--info)} .st-done{color:var(--ok)} .st-cancel{color:var(--t4)}
+  .acts{list-style:none;display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--t2)}
+  .acts li{padding-left:14px;position:relative}
+  .acts li::before{content:'·';position:absolute;left:2px;color:var(--t4)}
+  .tbls{display:flex;flex-wrap:wrap;gap:5px}
+  .tbls span{font-family:var(--mono);font-size:10.5px;color:var(--t3);background:var(--s3);border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+  .rule{font-size:11.5px;color:var(--t3);border-top:1px solid var(--line);padding-top:8px;margin-top:auto}
+  .rule b{color:var(--warn);font-weight:500;margin-right:4px}
+
+  /* 支撑条 */
+  .strips{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:880px){.strips{grid-template-columns:1fr}}
+  .strip{border:1px solid var(--line);background:var(--s1);border-radius:12px;padding:18px 20px}
+  .strip h3{font-size:13.5px;font-weight:500;color:var(--t1);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .strip ul{list-style:none;display:flex;flex-direction:column;gap:7px;font-size:12.5px;color:var(--t2)}
+  .strip li{padding-left:16px;position:relative}
+  .strip li::before{content:'—';position:absolute;left:0;color:var(--t4)}
+  .strip li code{font-family:var(--mono);font-size:11px;color:var(--info);background:var(--s3);border-radius:4px;padding:0 5px}
+
+  footer{color:var(--t4);font-size:11.5px;text-align:center;padding:8px 0 24px}
+  footer b{color:var(--t3);font-weight:500;font-family:var(--mono)}
+  @media print{body{padding:12px}.stage:hover{background:var(--s1)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>汽修管理系统 · 业务路线图</h1>
+      <div class="sub">单用户移动端 Web · Vue3 + Vant 4 · Express + Prisma + SQLite · 金额整数分制</div>
+    </div>
+    <div class="meta">
+      状态机 <b>7 态</b> · 数据表 <b>12 张</b> · 业务阶段 <b>8 段</b><br>
+      更新于 2026-09
+    </div>
+  </header>
+
+  <!-- ============ 工单状态机 ============ -->
+  <section>
+    <h2>工单状态机 <span class="tag">核心流转 · 后端白名单校验</span></h2>
+    <div class="panel">
+      <svg viewBox="0 0 1000 250" width="100%" role="img" aria-label="工单状态机">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#34343a"/>
+          </marker>
+          <marker id="arRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#e5534b"/>
+          </marker>
+          <marker id="arOr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#d9730d"/>
+          </marker>
+        </defs>
+
+        <!-- 主线箭头 -->
+        <line x1="152" y1="70" x2="176" y2="70" stroke="#34343a" stroke-width="1.5" marker-end="url(#ar)"/>
+        <line x1="312" y1="70" x2="336" y2="70" stroke="#34343a" stroke-width="1.5" marker-end="url(#ar)"/>
+        <line x1="472" y1="70" x2="496" y2="70" stroke="#34343a" stroke-width="1.5" marker-end="url(#ar)"/>
+        <line x1="632" y1="70" x2="656" y2="70" stroke="#34343a" stroke-width="1.5" marker-end="url(#ar)"/>
+        <line x1="792" y1="70" x2="816" y2="70" stroke="#34343a" stroke-width="1.5" marker-end="url(#ar)"/>
+
+        <!-- 主线节点 -->
+        <g>
+          <rect x="20" y="46" width="132" height="48" rx="8" fill="#141516" stroke="#d4b10655"/>
+          <text x="86" y="65" text-anchor="middle" fill="#f7f8f8" font-size="13">待检测</text>
+          <text x="86" y="82" text-anchor="middle" class="code" fill="#8a8f98" font-size="9">pending_inspection</text>
+        </g>
+        <g>
+          <rect x="180" y="46" width="132" height="48" rx="8" fill="#141516" stroke="#6e9fe855"/>
+          <text x="246" y="65" text-anchor="middle" fill="#f7f8f8" font-size="13">待报价确认</text>
+          <text x="246" y="82" text-anchor="middle" class="code" fill="#8a8f98" font-size="9">pending_quote</text>
+        </g>
+        <g>
+          <rect x="340" y="46" width="132" height="48" rx="8" fill="#141516" stroke="#d9730d55"/>
+          <text x="406" y="65" text-anchor="middle" fill="#f7f8f8" font-size="13">维修中</text>
+          <text x="406" y="82" text-anchor="middle" class="code" fill="#8a8f98" font-size="9">repairing</text>
+        </g>
+        <g>
+          <rect x="500" y="46" width="132" height="48" rx="8" fill="#141516" stroke="#d4b10655"/>
+          <text x="566" y="65" text-anchor="middle" fill="#f7f8f8" font-size="13">待质检</text>
+          <text x="566" y="82" text-anchor="middle" class="code" fill="#8a8f98" font-size="9">pending_quality_check</text>
+        </g>
+        <g>
+          <rect x="660" y="46" width="132" height="48" rx="8" fill="#141516" stroke="#6e9fe855"/>
+          <text x="726" y="65" text-anchor="middle" fill="#f7f8f8" font-size="13">待结算</text>
+          <text x="726" y="82" text-anchor="middle" class="code" fill="#8a8f98" font-size="9">pending_settlement</text>
+        </g>
+        <g>
+          <rect x="820" y="46" width="132" height="48" rx="8" fill="#141516" stroke="#27a64488"/>
+          <text x="886" y="65" text-anchor="middle" fill="#f7f8f8" font-size="13">已完成</text>
+          <text x="886" y="82" text-anchor="middle" class="code" fill="#8a8f98" font-size="9">completed</text>
+        </g>
+
+        <!-- 取消分支 -->
+        <g>
+          <rect x="180" y="178" width="132" height="44" rx="8" fill="#141516" stroke="#34343a"/>
+          <text x="246" y="196" text-anchor="middle" fill="#d0d6e0" font-size="12">已取消</text>
+          <text x="246" y="212" text-anchor="middle" class="code" fill="#62666d" font-size="9">cancelled</text>
+        </g>
+        <path d="M246,96 L246,172" stroke="#e5534b" stroke-width="1.2" stroke-dasharray="4 4" fill="none" marker-end="url(#arRed)"/>
+        <path d="M100,96 L196,176" stroke="#e5534b" stroke-width="1.2" stroke-dasharray="4 4" fill="none" marker-end="url(#arRed)"/>
+        <text x="150" y="150" fill="#e5534b" font-size="10.5">客户取消维修</text>
+
+        <!-- 返工分支 -->
+        <path d="M566,96 C566,158 406,158 406,100" stroke="#d9730d" stroke-width="1.2" stroke-dasharray="4 4" fill="none" marker-end="url(#arOr)"/>
+        <text x="486" y="150" text-anchor="middle" fill="#d9730d" font-size="10.5">质检不通过 · 返工</text>
+
+        <!-- 图例 -->
+        <g font-size="10.5" fill="#8a8f98">
+          <line x1="700" y1="200" x2="726" y2="200" stroke="#34343a" stroke-width="1.5"/>
+          <text x="732" y="204">正常流转</text>
+          <line x1="796" y1="200" x2="822" y2="200" stroke="#e5534b" stroke-width="1.2" stroke-dasharray="4 4"/>
+          <text x="828" y="204">取消</text>
+          <line x1="872" y1="200" x2="898" y2="200" stroke="#d9730d" stroke-width="1.2" stroke-dasharray="4 4"/>
+          <text x="904" y="204">返工</text>
+        </g>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ============ 八段业务流程 ============ -->
+  <section>
+    <h2>业务阶段全景 <span class="tag">8 段 · 含页面路由 / 动作 / 数据表 / 规则</span></h2>
+    <div class="grid">
+
+      <div class="stage">
+        <div class="shead"><span class="num">1</span><div><h3>接车登记</h3><code>/checkin</code></div></div>
+        <div class="flowrow">→ <span class="pill st-inspection">待检测<code>pending_inspection</code></span></div>
+        <ul class="acts">
+          <li>选/新建客户，选/新建车辆</li>
+          <li>录诉求、里程、车况描述</li>
+          <li>接车照片（≤9 张，失败可重试）</li>
+        </ul>
+        <div class="tbls"><span>customers</span><span>vehicles</span><span>work_orders</span><span>checkin_records</span><span>checkin_photos</span></div>
+        <div class="rule"><b>规则</b>客户-车辆归属校验；单事务建单；工单号 <code>WO+日期+序号</code></div>
+      </div>
+
+      <div class="stage">
+        <div class="shead"><span class="num">2</span><div><h3>检测报价</h3><code>/orders/:id/quote</code></div></div>
+        <div class="flowrow">→ <span class="pill st-quote">待报价确认<code>pending_quote</code></span></div>
+        <ul class="acts">
+          <li>录检测结果（独立落库）</li>
+          <li>添加工时/配件，常用项目预设</li>
+          <li>数量 × 单价自动小计，登记优惠</li>
+        </ul>
+        <div class="tbls"><span>repair_items(quote)</span><span>work_orders.inspection/discount</span></div>
+        <div class="rule"><b>规则</b>单价元→分；仅待检测/待报价可改；删旧重建事务</div>
+      </div>
+
+      <div class="stage">
+        <div class="shead"><span class="num">3</span><div><h3>报价确认</h3><code>工单详情</code></div></div>
+        <div class="flowrow">→ <span class="pill st-repair">维修中<code>repairing</code></span> 或 <span class="pill st-cancel">已取消<code>cancelled</code></span></div>
+        <ul class="acts">
+          <li>客户确认 → 记确认时间+开工时间</li>
+          <li>客户取消 → 终态，记取消原因</li>
+        </ul>
+        <div class="tbls"><span>work_orders</span></div>
+        <div class="rule"><b>规则</b>仅待报价确认态可操作；状态机白名单把关</div>
+      </div>
+
+      <div class="stage">
+        <div class="shead"><span class="num">4</span><div><h3>维修施工</h3><code>/orders/:id</code></div></div>
+        <div class="flowrow">完成 → <span class="pill st-qc">待质检<code>pending_quality_check</code></span></div>
+        <ul class="acts">
+          <li>维修过程记录（多条追加）</li>
+          <li>新增增项 → 客户确认 / 拒绝</li>
+          <li>确认后并入明细并重算金额</li>
+        </ul>
+        <div class="tbls"><span>repair_logs</span><span>additional_items</span><span>repair_items(additional)</span></div>
+        <div class="rule"><b>规则</b>增项确认幂等；金额 = 全明细聚合重算</div>
+      </div>
+
+      <div class="stage">
+        <div class="shead"><span class="num">5</span><div><h3>质检</h3><code>工单详情</code></div></div>
+        <div class="flowrow">通过 → <span class="pill st-settle">待结算<code>pending_settlement</code></span></div>
+        <ul class="acts">
+          <li>检查项勾选 + 备注</li>
+          <li>通过 → 自动生成结算单</li>
+          <li>不通过 → 返工回维修中</li>
+        </ul>
+        <div class="tbls"><span>quality_checks</span><span>settlements</span></div>
+        <div class="rule"><b>规则</b>结算单号 <code>SET+日期+序号</code>；实收 = 明细合计 − 优惠</div>
+      </div>
+
+      <div class="stage">
+        <div class="shead"><span class="num">6</span><div><h3>结算收款</h3><code>工单详情 · 弹窗</code></div></div>
+        <div class="flowrow">收齐 → <span class="pill st-done">已结清<code>paid</code></span> / 挂账 <span class="pill st-qc">unpaid</span></div>
+        <ul class="acts">
+          <li>五种方式：现金/微信/支付宝/刷卡/转账</li>
+          <li>多笔收款，支持补款</li>
+          <li>收款记录与结算状态同步</li>
+        </ul>
+        <div class="tbls"><span>payments</span><span>settlements.paidAmount</span></div>
+        <div class="rule"><b>规则</b>金额正整数分；超额拦截；收齐自动结清</div>
+      </div>
+
+      <div class="stage">
+        <div class="shead"><span class="num">7</span><div><h3>交车</h3><code>工单详情 · 弹窗</code></div></div>
+        <div class="flowrow">→ <span class="pill st-done">已完成<code>completed</code></span></div>
+        <ul class="acts">
+          <li>录入交车里程（选填）</li>
+          <li>确认交付，写交车时间</li>
+        </ul>
+        <div class="tbls"><span>work_orders.mileageOut/deliveredAt</span></div>
+        <div class="rule"><b>规则</b>仅待结算可交车；防重复交车</div>
+      </div>
+
+      <div class="stage">
+        <div class="shead"><span class="num">8</span><div><h3>售后与统计</h3><code>/reminders · /stats</code></div></div>
+        <div class="flowrow">交车自动创建提醒</div>
+        <ul class="acts">
+          <li>回访提醒（3 天后）+ 保养提醒（3 个月后）</li>
+          <li>标记已提醒：方式（电话/微信）+ 客户反馈</li>
+          <li>报表：月度营收/工单分布/项目热度/挂账</li>
+        </ul>
+        <div class="tbls"><span>reminders</span></div>
+        <div class="rule"><b>规则</b>营收按收款时间统计，与报表口径一致</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ 支撑体系 ============ -->
+  <section>
+    <h2>支撑体系 <span class="tag">横切所有阶段</span></h2>
+    <div class="strips">
+      <div class="strip">
+        <h3><span class="dot" style="background:var(--ok)"></span>金额与一致性</h3>
+        <ul>
+          <li>全链路整数「分」存储，展示/输入边界换算 <code>fenToYuan / yuanToFen</code></li>
+          <li>报价优惠登记 → 质检生成结算单时自动抵扣</li>
+          <li>增项确认 = 幂等并入明细 + 按明细重算 <code>finalAmount</code></li>
+          <li>收款事务内重算，结算单与工单已收金额同步</li>
+          <li>挂账 = <code>actualAmount − paidAmount</code>，首页与报表口径统一</li>
+        </ul>
+      </div>
+      <div class="strip">
+        <h3><span class="dot" style="background:var(--accent)"></span>工程与防护</h3>
+        <ul>
+          <li>状态机白名单：非法流转请求返回 400</li>
+          <li>关键写路径 <code>$transaction</code>：接车/报价/质检/收款/增项</li>
+          <li>防重：重复交车、重复确认增项均拦截</li>
+          <li>校验：客户-车辆归属、存在性 404、上传 MIME 双重校验</li>
+          <li>GitHub Actions CI：前后端并行类型检查 + 构建把关</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>单用户系统 · 无鉴权设计 · 图中表名对应 <b>server/prisma/schema.prisma</b> 12 张表</footer>
+</div>
+</body>
+</html>
