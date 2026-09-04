@@ -12,6 +12,7 @@ import reminderRoutes from './routes/reminders'
 import uploadRoutes from './routes/upload'
 import settlementRoutes from './routes/settlements'
 import statsRoutes from './routes/stats'
+import ocrRoutes from './routes/ocr'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -34,6 +35,7 @@ app.use('/api/reminders', reminderRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/settlements', settlementRoutes)
 app.use('/api/stats', statsRoutes)
+app.use('/api/ocr', ocrRoutes)
 
 // 生产环境：托管前端构建产物（dist 目录存在时才启用，开发模式不受影响）
 const clientDistDir = path.resolve(__dirname, '../../client/dist')
