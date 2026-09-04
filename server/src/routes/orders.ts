@@ -139,6 +139,27 @@ router.patch('/:id/checkin', asyncHandler(async (req, res) => {
 
 // ===== 报价相关 =====
 
+// 查询该工单车辆最近一次已完成工单的报价项目（报价页"复制上次项目"）
+router.get('/:id/last-quote', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id)
+  const order = await prisma.workOrder.findUnique({ where: { id } })
+  if (!order) throw new AppError('工单不存在', 404)
+
+  const last = await prisma.workOrder.findFirst({
+    where: { vehicleId: order.vehicleId, status: 'completed', id: { not: id } },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, orderNo: true, createdAt: true }
+  })
+  if (!last) return res.json({ order: null, items: [] })
+
+  // 只取报价来源项目，增项有独立确认流程不参与复制
+  const items = await prisma.repairItem.findMany({
+    where: { workOrderId: last.id, source: 'quote' },
+    orderBy: { createdAt: 'asc' }
+  })
+  res.json({ order: last, items })
+}))
+
 // 保存报价（维修项目/配件）
 router.post('/:id/quote', asyncHandler(async (req, res) => {
   const id = Number(req.params.id)

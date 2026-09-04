@@ -38,6 +38,9 @@ export const saveQuote = (orderId: number, data: any) =>
   request.post(`/orders/${orderId}/quote`, data)
 export const confirmQuote = (orderId: number, confirmed: boolean) =>
   request.post(`/orders/${orderId}/quote/confirm`, { confirmed })
+// 这辆车上次已完成工单的报价项目（复制上次项目）
+export const getLastQuote = (orderId: number) =>
+  request.get(`/orders/${orderId}/last-quote`)
 
 // 维修记录
 export const getRepairLogs = (orderId: number) =>

@@ -19,9 +19,13 @@
       <div class="card">
         <div class="flex-between mb-12">
           <span class="section-title" style="margin-bottom:0">维修项目 ({{ items.length }})</span>
-          <van-button size="mini" type="primary" plain icon="add" @click="showItemPicker = true">
-            常用项目
-          </van-button>
+          <div class="header-btns">
+            <van-button size="mini" plain type="default" @click="applyMinorMaintenance">小保养</van-button>
+            <van-button size="mini" plain type="default" @click="copyLastItems">上次项目</van-button>
+            <van-button size="mini" type="primary" plain icon="add" @click="showItemPicker = true">
+              常用项目
+            </van-button>
+          </div>
         </div>
 
         <!-- 工时项目：AnimatePresence 让增删项目时平滑进出，layout 让删除后排版平滑收拢 -->
@@ -213,7 +217,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { motion, AnimatePresence } from 'motion-v'
-import { getOrder, saveQuote } from '@/api'
+import { getOrder, saveQuote, getLastQuote } from '@/api'
 import { fenToYuan, yuanToFen } from '@/utils/money'
 
 const route = useRoute()
@@ -338,6 +342,59 @@ const removeItem = (id: string) => {
   if (idx > -1) items.value.splice(idx, 1)
 }
 
+// 复制这辆车上次已完成工单的报价项目（金额接口返回分，转为元）
+const copyLastItems = async () => {
+  try {
+    const data: any = await getLastQuote(orderId)
+    if (!data.order || !data.items || data.items.length === 0) {
+      return showToast('这辆车还没有已完成的历史工单')
+    }
+    for (const it of data.items) {
+      const existing = items.value.find(i => i.name === it.name && i.type === it.type)
+      if (existing) {
+        existing.quantity = String(Number(existing.quantity) + it.quantity)
+        calcSubtotal(existing)
+      } else {
+        items.value.push({
+          _id: genId(),
+          type: it.type,
+          name: it.name,
+          quantity: String(it.quantity),
+          unitPrice: fenToYuan(it.unitPrice),
+          subtotal: it.subtotal / 100
+        })
+      }
+    }
+    showToast({ type: 'success', message: `已带入 ${data.order.orderNo} 的 ${data.items.length} 项` })
+  } catch (e) { /* 已拦截 */ }
+}
+
+// 小保养一键模板：最高频场景，生成后可改数量单价
+const minorMaintenanceTemplate = [
+  { type: 'part', name: '机油（4L）', price: 280 },
+  { type: 'part', name: '机油滤芯', price: 35 },
+  { type: 'service', name: '机油更换工时', price: 50 }
+]
+const applyMinorMaintenance = () => {
+  for (const t of minorMaintenanceTemplate) {
+    const existing = items.value.find(i => i.name === t.name && i.type === t.type)
+    if (existing) {
+      existing.quantity = String(Number(existing.quantity) + 1)
+      calcSubtotal(existing)
+    } else {
+      items.value.push({
+        _id: genId(),
+        type: t.type as 'service' | 'part',
+        name: t.name,
+        quantity: '1',
+        unitPrice: String(t.price),
+        subtotal: t.price
+      })
+    }
+  }
+  showToast({ type: 'success', message: '已生成小保养项目，可调整数量价格' })
+}
+
 // 加载已有报价数据
 const loadExistingQuote = async () => {
   try {
@@ -418,6 +475,11 @@ onMounted(loadExistingQuote)
 }
 .quote-content {
   padding: 12px;
+}
+/* 头部快捷按钮组 */
+.header-btns {
+  display: flex;
+  gap: 6px;
 }
 .item-group {
   margin-bottom: 16px;
