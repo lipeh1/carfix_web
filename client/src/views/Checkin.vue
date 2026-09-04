@@ -137,6 +137,21 @@
             <div @click="loadCustomers">搜索</div>
           </template>
         </van-search>
+        <!-- 最近到店快捷区：点一下同时选客户（单车自动带出车辆） -->
+        <div class="recent-section" v-if="recentCustomers.length > 0">
+          <div class="recent-title">最近到店</div>
+          <div class="recent-list">
+            <div
+              v-for="c in recentCustomers"
+              :key="c.id"
+              class="recent-item"
+              @click="selectCustomer(c)"
+            >
+              <div class="recent-name">{{ c.name }}</div>
+              <div class="recent-meta">{{ c._count?.vehicles || 0 }}辆车 · {{ c.phone }}</div>
+            </div>
+          </div>
+        </div>
         <van-cell
           v-for="c in customerList"
           :key="c.id"
@@ -200,7 +215,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { showToast, showConfirmDialog } from 'vant'
 import { useRouter } from 'vue-router'
 import { getCustomers, createCustomer, getVehicles, createVehicle, createCheckin, uploadImage, deleteUpload } from '@/api'
@@ -247,6 +262,11 @@ const appendComplaint = (tag: string) => {
 const newCustomer = reactive({ name: '', phone: '' })
 const newVehicle = reactive({ plateNumber: '', brand: '', model: '' })
 
+// 最近到店快捷区：取排序后的前三个有到店记录的客户
+const recentCustomers = computed(() =>
+  customerList.value.filter((c: any) => c.lastVisitAt).slice(0, 3)
+)
+
 const loadCustomers = async () => {
   try {
     const data = await getCustomers({ keyword: customerKeyword.value })
@@ -262,11 +282,16 @@ const loadVehicles = async () => {
   } catch (e) { /* 静默 */ }
 }
 
-const selectCustomer = (c: any) => {
+const selectCustomer = async (c: any) => {
   selectedCustomer.value = c
   selectedVehicle.value = null
   showCustomerPicker.value = false
-  loadVehicles()
+  await loadVehicles()
+  // 名下只有一辆车时自动选中，省去第二层选择弹窗
+  if (vehicleList.value.length === 1) {
+    selectedVehicle.value = vehicleList.value[0]
+    showToast({ type: 'success', message: `已选择 ${c.name} · ${selectedVehicle.value.plateNumber}` })
+  }
 }
 
 const selectVehicle = (v: any) => {
@@ -499,6 +524,42 @@ onMounted(loadCustomers)
 }
 .complaint-tag:active {
   background: var(--surface-3);
+}
+/* 最近到店快捷区 */
+.recent-section {
+  padding: 8px 4px 12px;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 8px;
+}
+.recent-title {
+  font-size: 12px;
+  color: var(--ink-subtle);
+  margin-bottom: 6px;
+}
+.recent-list {
+  display: flex;
+  gap: 8px;
+}
+.recent-item {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.recent-item:active {
+  background: var(--surface-3);
+}
+.recent-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.recent-meta {
+  font-size: 11px;
+  color: var(--ink-subtle);
+  margin-top: 2px;
 }
 /* 照片上传区域 */
 .photo-uploader {

@@ -16,12 +16,20 @@ router.get('/', asyncHandler(async (req, res) => {
   }
   const customers = await prisma.customer.findMany({
     where,
-    orderBy: { createdAt: 'desc' },
     include: {
-      _count: { select: { vehicles: true } }
-    }
+      _count: { select: { vehicles: true } },
+      // 只取最近一张工单的时间用于"最近到店"排序
+      workOrders: { select: { createdAt: true }, orderBy: { createdAt: 'desc' }, take: 1 }
+    },
+    orderBy: { createdAt: 'desc' }
   })
-  res.json(customers)
+  // 按最近到店排序（无工单的新客户排后面），并输出 lastVisitAt 供前端展示
+  const sorted = customers
+    .sort((a, b) =>
+      (b.workOrders[0]?.createdAt?.getTime() ?? 0) - (a.workOrders[0]?.createdAt?.getTime() ?? 0)
+    )
+    .map(({ workOrders, ...c }) => ({ ...c, lastVisitAt: workOrders[0]?.createdAt ?? null }))
+  res.json(sorted)
 }))
 
 // 客户详情（含车辆、工单、消费统计）
