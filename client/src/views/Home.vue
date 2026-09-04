@@ -49,7 +49,7 @@
         <van-cell
           v-for="item in pendingReminders"
           :key="item.id"
-          :title="item.content || (item.type === 'maintenance' ? '保养提醒' : '回访提醒')"
+          :title="item.content || reminderTypeLabel(item.type)"
           :label="item.vehicle?.plateNumber + ' · ' + formatDate(item.remindDate)"
           is-link
           @click="$router.push('/reminders')"
@@ -86,6 +86,8 @@ const monthlyRevenueDisplay = useAnimatedYuan(monthlyRevenueFen)
 const pendingReminders = ref<any[]>([])
 
 const formatDate = (d: string) => dayjs(d).format('MM-DD')
+// 提醒类型标签（含催收）
+const reminderTypeLabel = (t: string) => ({ maintenance: '保养提醒', follow_up: '回访提醒', collection: '催收提醒' } as Record<string, string>)[t] || '提醒'
 
 // 概览数字直达对应状态工单列表
 const goOrders = (status: string) => {

@@ -77,7 +77,9 @@ const current = ref<any>(null)
 // 标记已提醒的补充信息
 const doneForm = reactive({ method: 'wechat', feedback: '' })
 
-const getTypeLabel = (t: string) => (t === 'maintenance' ? '保养提醒' : '回访提醒')
+// 提醒类型标签（含挂账交车自动生成的催收提醒）
+const getTypeLabel = (t: string) =>
+  ({ maintenance: '保养提醒', follow_up: '回访提醒', collection: '催收提醒' } as Record<string, string>)[t] || '提醒'
 const formatDate = (d: string) => dayjs(d).format('YYYY-MM-DD')
 const formatDateTime = (d: string) => dayjs(d).format('YYYY-MM-DD HH:mm')
 

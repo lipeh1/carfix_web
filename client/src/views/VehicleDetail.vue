@@ -62,7 +62,7 @@
         <div v-for="r in vehicle.reminders" :key="r.id" class="reminder-item">
           <van-icon :name="r.type === 'maintenance' ? 'setting-o' : 'chat-o'" class="reminder-icon" />
           <div class="reminder-content">
-            <div class="reminder-title">{{ r.type === 'maintenance' ? '保养提醒' : '回访提醒' }}</div>
+            <div class="reminder-title">{{ ({ maintenance: '保养提醒', follow_up: '回访提醒', collection: '催收提醒' } as any)[r.type] || '提醒' }}</div>
             <div class="reminder-desc">{{ r.content || '请及时联系客户' }}</div>
             <div class="text-muted">建议日期：{{ formatDate(r.remindDate) }}</div>
           </div>

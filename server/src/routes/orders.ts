@@ -441,24 +441,46 @@ router.post('/:id/deliver', asyncHandler(async (req, res) => {
   })
 
   // 自动创建保养提醒（3个月后或5000公里）和回访提醒（3天后）
-  await prisma.reminder.createMany({
-    data: [
-      {
+  const reminderData: Array<{
+    workOrderId: number
+    vehicleId: number
+    type: string
+    remindDate: Date
+    content: string
+  }> = [
+    {
+      workOrderId: id,
+      vehicleId: order.vehicleId,
+      type: 'follow_up',
+      remindDate: dayjs().add(3, 'day').toDate(),
+      content: '维修后回访，确认车辆使用情况'
+    },
+    {
+      workOrderId: id,
+      vehicleId: order.vehicleId,
+      type: 'maintenance',
+      remindDate: dayjs().add(3, 'month').toDate(),
+      content: '建议保养（约5000公里或3个月）'
+    }
+  ]
+
+  // 挂账交车：自动生成 7/30 天催收提醒，欠款不追就静默流失
+  const settlement = await prisma.settlement.findUnique({ where: { workOrderId: id } })
+  if (settlement && settlement.status === 'unpaid') {
+    const unpaidFen = settlement.actualAmount - settlement.paidAmount
+    const unpaidYuan = (unpaidFen / 100).toFixed(2)
+    for (const days of [7, 30]) {
+      reminderData.push({
         workOrderId: id,
         vehicleId: order.vehicleId,
-        type: 'follow_up',
-        remindDate: dayjs().add(3, 'day').toDate(),
-        content: '维修后回访，确认车辆使用情况'
-      },
-      {
-        workOrderId: id,
-        vehicleId: order.vehicleId,
-        type: 'maintenance',
-        remindDate: dayjs().add(3, 'month').toDate(),
-        content: '建议保养（约5000公里或3个月）'
-      }
-    ]
-  })
+        type: 'collection',
+        remindDate: dayjs().add(days, 'day').toDate(),
+        content: `催收挂账尾款 ¥${unpaidYuan}（工单 ${order.orderNo}，已挂账 ${days} 天）`
+      })
+    }
+  }
+
+  await prisma.reminder.createMany({ data: reminderData })
 
   res.json({ success: true })
 }))
