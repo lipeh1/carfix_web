@@ -213,16 +213,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { motion, AnimatePresence } from 'motion-v'
 import { getOrder, saveQuote, getLastQuote } from '@/api'
 import { fenToYuan, yuanToFen } from '@/utils/money'
+import { saveDraft, loadDraft, clearDraft, draftHasContent } from '@/utils/draft'
 
 const route = useRoute()
 const router = useRouter()
 const orderId = Number(route.params.id)
+
+// 报价表单草稿键（按工单隔离）
+const DRAFT_KEY = 'quote:' + orderId
 
 const inspection = ref('')
 const discount = ref('0')
@@ -450,6 +454,7 @@ const saveQuoteHandler = async () => {
       discount: yuanToFen(discount.value)
     })
     showToast({ type: 'success', message: '报价单已生成' })
+    clearDraft(DRAFT_KEY)
     setTimeout(() => {
       router.back()
     }, 800)
@@ -464,7 +469,35 @@ const goBack = () => {
   router.back()
 }
 
-onMounted(loadExistingQuote)
+// 表单变化即存草稿（项目列表一并保存，金额为页面元单位）
+let draftTimer: ReturnType<typeof setTimeout> | null = null
+watch([inspection, discount, items], () => {
+  if (draftTimer) clearTimeout(draftTimer)
+  draftTimer = setTimeout(() => {
+    // 已载入服务端数据前不存草稿，避免用空表单覆盖有意义的草稿
+    if (!loaded.value) return
+    saveDraft(DRAFT_KEY, { inspection: inspection.value, discount: discount.value, items: items.value })
+  }, 400)
+}, { deep: true })
+
+// 服务端数据是否已载入完成（之后再开始记录草稿）
+const loaded = ref(false)
+
+onMounted(async () => {
+  await loadExistingQuote()
+  loaded.value = true
+  // 已有报价内容时不弹草稿（服务端数据优先）；空表单时询问恢复
+  const d = loadDraft<{ inspection: string; discount: string; items: any[] }>(DRAFT_KEY)
+  if (d && draftHasContent(d) && items.value.length === 0) {
+    try {
+      const { showConfirmDialog } = await import('vant')
+      await showConfirmDialog({ title: '恢复草稿', message: '检测到未提交的报价内容，是否恢复？' })
+      inspection.value = d.inspection || ''
+      discount.value = d.discount || '0'
+      items.value = (d.items || []).map((i: any) => ({ ...i }))
+    } catch (e) { /* 放弃恢复 */ }
+  }
+})
 </script>
 
 <style scoped>

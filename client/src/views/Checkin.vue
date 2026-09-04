@@ -215,12 +215,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { showToast, showConfirmDialog } from 'vant'
 import { useRouter } from 'vue-router'
 import { getCustomers, createCustomer, getVehicles, createVehicle, createCheckin, uploadImage, deleteUpload } from '@/api'
 import { compressImage } from '@/utils/image'
 import { isValidPlate } from '@/utils/plate'
+import { saveDraft, loadDraft, clearDraft, draftHasContent } from '@/utils/draft'
+
+// 接车表单草稿键
+const DRAFT_KEY = 'checkin'
 
 const router = useRouter()
 
@@ -479,6 +483,7 @@ const submit = async () => {
     })
 
     showToast({ type: 'success', message: '工单创建成功' })
+    clearDraft(DRAFT_KEY)
     setTimeout(() => {
       router.push(`/orders/${(order as any).id}`)
     }, 800)
@@ -487,7 +492,31 @@ const submit = async () => {
   }
 }
 
-onMounted(loadCustomers)
+// ===== 表单草稿兜底 =====
+// 输入变化即存（仅文本字段，照片即时上传不适用），建单成功后清除
+let draftTimer: ReturnType<typeof setTimeout> | null = null
+watch(form, () => {
+  if (draftTimer) clearTimeout(draftTimer)
+  draftTimer = setTimeout(() => saveDraft(DRAFT_KEY, { ...form }), 400)
+})
+
+// 重进页面时询问是否恢复未提交的草稿
+const tryRestoreDraft = async () => {
+  const d = loadDraft<typeof form>(DRAFT_KEY)
+  if (!draftHasContent(d)) return
+  try {
+    await showConfirmDialog({
+      title: '恢复草稿',
+      message: '检测到未提交的接车内容，是否恢复？'
+    })
+    Object.assign(form, d)
+  } catch (e) { /* 用户放弃恢复，保留草稿不动 */ }
+}
+
+onMounted(() => {
+  loadCustomers()
+  tryRestoreDraft()
+})
 </script>
 
 <style scoped>
