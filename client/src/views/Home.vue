@@ -3,6 +3,9 @@
     <van-nav-bar title="工作台" />
 
     <div class="page-content">
+      <!-- 安装到桌面引导（移动端显示） -->
+      <InstallGuide />
+
       <!-- 快捷操作 -->
       <div class="quick-actions">
         <van-button type="primary" icon="add" @click="$router.push('/checkin')">
@@ -62,6 +65,7 @@ import { getDashboard, getReminders } from '@/api'
 import dayjs from 'dayjs'
 import { fenToYuan } from '@/utils/money'
 import { useAnimatedYuan } from '@/utils/countup'
+import InstallGuide from '@/components/InstallGuide.vue'
 
 const stats = ref({
   pendingInspection: 0,
