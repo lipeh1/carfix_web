@@ -16,15 +16,23 @@
         </van-button>
       </div>
 
-      <!-- 今日概览 -->
+      <!-- 今日概览：点击数字直达对应状态的工单列表 -->
       <div class="card">
         <div class="section-title">今日概览</div>
         <van-grid :column-num="4" :border="false">
-          <van-grid-item icon="orders-o" :text="`待检测 ${stats.pendingInspection}`" />
-          <van-grid-item icon="todo-list-o" :text="`维修中 ${stats.repairing}`" />
-          <van-grid-item icon="balance-list-o" :text="`待结算 ${stats.pendingSettlement}`" />
-          <van-grid-item icon="checked" :text="`已完成 ${stats.completed}`" />
+          <van-grid-item icon="orders-o" :text="`待检测 ${stats.pendingInspection}`" @click="goOrders('pending_inspection')" />
+          <van-grid-item icon="todo-list-o" :text="`维修中 ${stats.repairing}`" @click="goOrders('repairing')" />
+          <van-grid-item icon="balance-list-o" :text="`待结算 ${stats.pendingSettlement}`" @click="goOrders('pending_settlement')" />
+          <van-grid-item icon="checked" :text="`已完成 ${stats.completed}`" @click="goOrders('completed')" />
         </van-grid>
+      </div>
+
+      <!-- 挂账提醒：点击直达统计页挂账明细 -->
+      <div class="card click-card" v-if="stats.unpaidAmount > 0" @click="$router.push('/stats')">
+        <div class="flex-between">
+          <span class="text-danger">挂账未收</span>
+          <span class="amount">¥{{ fenToYuan(stats.unpaidAmount) }}</span>
+        </div>
       </div>
 
       <!-- 本月营收 -->
@@ -47,25 +55,20 @@
           @click="$router.push('/reminders')"
         />
       </div>
-
-      <!-- 挂账提醒 -->
-      <div class="card" v-if="stats.unpaidAmount > 0">
-        <div class="flex-between">
-          <span class="text-danger">挂账未收</span>
-          <span class="amount">¥{{ fenToYuan(stats.unpaidAmount) }}</span>
-        </div>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { getDashboard, getReminders } from '@/api'
 import dayjs from 'dayjs'
 import { fenToYuan } from '@/utils/money'
 import { useAnimatedYuan } from '@/utils/countup'
 import InstallGuide from '@/components/InstallGuide.vue'
+
+const router = useRouter()
 
 const stats = ref({
   pendingInspection: 0,
@@ -83,6 +86,11 @@ const monthlyRevenueDisplay = useAnimatedYuan(monthlyRevenueFen)
 const pendingReminders = ref<any[]>([])
 
 const formatDate = (d: string) => dayjs(d).format('MM-DD')
+
+// 概览数字直达对应状态工单列表
+const goOrders = (status: string) => {
+  router.push({ path: '/orders', query: { status } })
+}
 
 const loadData = async () => {
   try {
@@ -108,5 +116,11 @@ onMounted(loadData)
 }
 .quick-actions .van-button {
   flex: 1;
+}
+.click-card {
+  cursor: pointer;
+}
+.click-card:active {
+  background: var(--surface-2);
 }
 </style>

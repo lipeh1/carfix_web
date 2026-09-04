@@ -68,9 +68,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { motion } from 'motion-v'
 import { getOrders } from '@/api'
 import { fenToYuan } from '@/utils/money'
+
+const route = useRoute()
 
 const tabs = [
   { label: '全部', value: '' },
@@ -83,7 +86,9 @@ const tabs = [
   { label: '已取消', value: 'cancelled' }
 ]
 
-const activeTab = ref('')
+// 支持 /orders?status=xxx 直达指定状态（首页概览数字跳转入口）
+const queryStatus = route.query.status as string
+const activeTab = ref(tabs.some(t => t.value === queryStatus) ? queryStatus : '')
 const keyword = ref('')
 const orders = ref<any[]>([])
 const loading = ref(false)
