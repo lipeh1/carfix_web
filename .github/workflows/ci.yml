@@ -1,0 +1,62 @@
+# 持续集成：前后端并行进行类型检查与构建
+# - 前端：vue-tsc 类型检查 + vite 构建
+# - 后端：prisma generate + tsc 构建
+name: CI
+
+on:
+  push:
+    branches: [master, main, test]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  client:
+    name: 前端检查与构建
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: 安装依赖
+        working-directory: client
+        run: npm ci
+
+      - name: 类型检查
+        working-directory: client
+        run: npx vue-tsc -b
+
+      - name: 构建
+        working-directory: client
+        run: npm run build
+
+  server:
+    name: 后端检查与构建
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: 安装依赖
+        working-directory: server
+        run: npm ci
+
+      - name: 生成 Prisma 客户端
+        working-directory: server
+        env:
+          # generate 不连库，但 schema 校验要求该变量存在
+          DATABASE_URL: "file:./dev.db"
+        run: npx prisma generate
+
+      - name: 构建
+        working-directory: server
+        run: npm run build
