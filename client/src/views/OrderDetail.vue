@@ -258,6 +258,7 @@ import {
 } from '@/api'
 import dayjs from 'dayjs'
 import { fenToYuan, yuanToFen } from '@/utils/money'
+import { hapticFeedback } from '@/utils/feedback'
 
 const route = useRoute()
 const router = useRouter()
@@ -453,6 +454,7 @@ const handleConfirmAdditional = async (item: any, confirmed: boolean) => {
       })
     }
     await confirmAdditionalItem(item.id, confirmed)
+    hapticFeedback()
     showToast({ type: 'success', message: confirmed ? '增项已确认' : '增项已拒绝' })
     loadData()
   } catch (e: any) {
@@ -478,6 +480,7 @@ const submitPayment = async () => {
       method: paymentForm.method,
       type: settlement.value.paidAmount > 0 ? 'supplement' : 'initial'
     })
+    hapticFeedback(80)
     showToast({ type: 'success', message: '收款成功' })
     showPaymentPopup.value = false
     paymentForm.amount = ''
@@ -494,6 +497,7 @@ const submitDeliver = async () => {
   }
   try {
     await deliverOrder(orderId, { mileageOut: mileage })
+    hapticFeedback(80)
     showToast({ type: 'success', message: '交车完成' })
     showDeliverPopup.value = false
     loadData()
@@ -536,6 +540,7 @@ const handleAction = async (key: string) => {
         break
       case 'qc_pass':
         await createQualityCheck(orderId, { result: 'pass' })
+        hapticFeedback()
         showToast({ type: 'success', message: '质检通过，待结算' })
         loadData()
         break
