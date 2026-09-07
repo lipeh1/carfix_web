@@ -187,6 +187,17 @@ chore: 升级 prisma 到 5.18.0
 - 状态徽章：`表面2` 底、辅助色文字、pill 圆角、内边距 2px 8px。
 - 列表（工单列表等）：行与行之间用发丝线分割，不加投影。
 
+**材质与动效（Apple 交互手感）**
+
+- 浮层栏（顶部导航栏、底部标签栏、页面底部固定操作栏）使用半透明材质：令牌 `--canvas-translucent` / `--surface-1-translucent`（`rgba` 约 0.72 透明度）+ `backdrop-filter: blur(20px) saturate(180%)`，保留 1px 发丝线边框，内容从栏下滚过时隐约可见；导航栏用 `fixed placeholder` 悬浮于内容之上，粘性 tabs 需配 `offset-top="46"`。
+- 底部弹窗（sheet）用更实材质 `--sheet-translucent`（约 0.86 透明度）+ 同参数模糊。
+- 自定义固定底栏统一挂全局类 `material-bar`（global.css 已定义背景 + 模糊）。
+- 一切固定在底部（tabbar、操作栏、FAB、页面留白）必须预留 `env(safe-area-inset-bottom)`。
+- 动效优先用弹簧（motion-v：`{ type: 'spring', bounce: 0, duration: 0.3~0.4 }` 临界阻尼）；数值滚动必须从「当前呈现值」续滚而非从 0 重滚；图表生长动画只用 `transform: scaleY/scaleX`，不用 width/height 过渡。
+- 按压反馈：自定义可点元素统一挂 `pressable` 类（按下 0.1s 内 `scale(0.97)`）；提交类按钮必须带 `:loading` 防弱网双击重复提交。
+- 路由过渡分三类：tab 平级切换 `fade`（0.12s 交叉淡入）、进入更深层级 `push`（右进）、返回 `pop`（原路退回），由路由 `meta.transition: 'push'` 标记驱动（见 App.vue）。
+- 无障碍兜底（global.css 已内置）：`prefers-reduced-motion` 时过渡退化为淡入、图表动画关闭；`prefers-reduced-transparency` 时材质回退实色并关闭模糊。
+
 **Vant 适配要点**
 
 - 根组件使用 `<van-config-provider theme="dark">` 开启暗色主题。
@@ -195,7 +206,7 @@ chore: 升级 prisma 到 5.18.0
 
 **禁止事项**
 
-- 禁止浅色页面；禁止大面积彩色背景；禁止引入第二主题色；禁止渐变与聚光装饰；禁止纯黑 `#000000` 画布。
+- 禁止浅色页面；禁止大面积彩色背景；禁止引入第二主题色；禁止渐变与聚光装饰；禁止纯黑 `#000000` 画布；禁止用投影做层级（材质模糊 + 发丝线表达层级）；禁止动画用 width/height/top/left 等布局属性。
 
 ## 常用命令
 
