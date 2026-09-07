@@ -471,8 +471,12 @@ const saveQuoteHandler = async () => {
     })
     showToast({ type: 'success', message: '报价单已生成' })
     clearDraft(DRAFT_KEY)
-    // toast 挂在 body 上，路由返回不会打断展示，无需人为等待
-    router.back()
+    // 有来路才返回;直接打开本页 URL(无历史)时落到工单详情,避免把用户退出站点
+    if (window.history.state?.back != null) {
+      router.back()
+    } else {
+      router.replace(`/orders/${orderId}`)
+    }
   } catch (e) {
     // 已拦截
   } finally {

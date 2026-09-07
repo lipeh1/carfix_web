@@ -33,7 +33,15 @@
       <!-- 接车照片 -->
       <div class="card" v-if="checkinPhotos.length > 0">
         <div class="section-title">接车照片</div>
-        <van-image-preview v-model:show="showPreview" :images="previewImages" :start-position="previewIndex" />
+        <van-image-preview v-model:show="showPreview" :images="previewImages" :start-position="previewIndex">
+          <!-- 报价单模式下提供显式保存按钮:长按保存仅在部分环境(微信等)有效,桌面/安卓浏览器不响应 -->
+          <template #cover>
+            <div v-if="previewMode === 'quote'" class="quote-save-bar">
+              <van-button type="primary" block :loading="savingImage" @click="saveQuoteImage">保存图片</van-button>
+              <div class="quote-save-hint">保存后可发送给客户确认</div>
+            </div>
+          </template>
+        </van-image-preview>
         <div class="photo-grid">
           <img
             v-for="(photo, idx) in checkinPhotos"
@@ -276,6 +284,8 @@ const settlement = ref<any>(null)
 const showPreview = ref(false)
 const previewImages = ref<string[]>([])
 const previewIndex = ref(0)
+// 预览内容模式:photos=接车照片(无保存按钮) / quote=报价单长图(带保存按钮)
+const previewMode = ref<'photos' | 'quote'>('photos')
 
 // 弹窗状态
 const showEditCheckin = ref(false)
@@ -380,7 +390,34 @@ const loadData = async () => {
 const openPreview = (idx: number) => {
   previewImages.value = checkinPhotos.value.map((p: any) => p.filePath)
   previewIndex.value = idx
+  previewMode.value = 'photos'
   showPreview.value = true
+}
+
+// 报价单保存:dataURL 转 Blob 后走 <a download> 下载;
+// 不支持 download 的环境(如微信 iOS)由提示文案兜底"长按保存"
+const savingImage = ref(false)
+const saveQuoteImage = async () => {
+  const url = previewImages.value[0]
+  if (!url || savingImage.value) return
+  savingImage.value = true
+  try {
+    const blob = await (await fetch(url)).blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = objectUrl
+    a.download = `报价单-${order.value?.orderNo || ''}.jpg`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 5000)
+    hapticFeedback(40)
+    showToast({ type: 'success', message: '已调起保存' })
+  } catch (e) {
+    showToast('当前浏览器不支持直接保存，请长按图片保存')
+  } finally {
+    savingImage.value = false
+  }
 }
 
 // ===== 编辑接车信息 =====
@@ -551,8 +588,9 @@ const handleAction = async (key: string) => {
         })
         previewImages.value = [dataUrl]
         previewIndex.value = 0
+        previewMode.value = 'quote'
         showPreview.value = true
-        showToast('长按图片可保存或转发客户')
+        showToast('点击下方按钮保存图片，或长按图片转发客户')
         break
       }
       case 'confirm_quote':
@@ -720,6 +758,16 @@ onMounted(loadData)
 }
 .retry-empty {
   cursor: pointer;
+}
+/* 报价单预览底部的保存操作条:预留安全区,浮在预览图之上 */
+.quote-save-bar {
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+}
+.quote-save-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-subtle);
+  margin-top: 8px;
 }
 /* 本页有固定底部操作栏，页面留白需盖住操作栏 + 安全区 */
 .page-container {

@@ -76,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { motion } from 'motion-v'
 import { getOrders } from '@/api'
@@ -150,8 +150,8 @@ const onRefresh = () => {
   finished.value = false
   loadOrders()
 }
-
-onMounted(loadOrders)
+// 首次加载不手动调用:van-list 挂载时 loading=false 且 finished=false,
+// 进入视口会自动触发 @load;手动再调一次会并发两个相同请求,列表被覆盖两次导致进场动画重放
 </script>
 
 <style scoped>
@@ -193,5 +193,11 @@ onMounted(loadOrders)
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   z-index: 100;
   cursor: pointer;
+}
+/* 浅色模式下投影收敛,避免脏灰感 */
+@media (prefers-color-scheme: light) {
+  .fab-button {
+    box-shadow: 0 4px 14px rgba(23, 24, 26, 0.18);
+  }
 }
 </style>

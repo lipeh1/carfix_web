@@ -1,6 +1,7 @@
 /* ============================================================
-   全局样式 - Linear 深色风格（规范见 AGENTS.md 第 6 节）
-   深色画布即留白：层级靠表面阶梯 + 1px 发丝线，禁止投影做层级
+   全局样式 - Linear 风格双主题（深色默认,浅色跟随系统,规范见 AGENTS.md 第 6 节）
+   层级靠表面阶梯 + 1px 发丝线，禁止投影做层级;
+   颜色一律走设计令牌,令牌在 prefers-color-scheme: light 下切换浅色值
    ============================================================ */
 
 /* 设计令牌：与 AGENTS.md 色彩表一一对应 */
@@ -40,6 +41,37 @@
   --font-mono: ui-monospace, 'SF Mono', Consolas, Menlo, monospace;
 }
 
+/* ===== 浅色主题令牌（跟随系统深浅色,与深色令牌一一对应） ===== */
+@media (prefers-color-scheme: light) {
+  :root {
+    --canvas: #fbfbfc;
+    --surface-1: #ffffff;
+    --surface-2: #f4f5f6;
+    --surface-3: #ececee;
+    --hairline: #e4e5e8;
+    --hairline-strong: #cdced2;
+
+    /* 浅色下正文用深墨色 */
+    --ink: #17181a;
+    --ink-muted: #3f434b;
+    --ink-subtle: #6b7078;
+    --ink-tertiary: #9b9fa7;
+
+    /* 主色不变;浅色底上的强调文字用更深的蓝保证对比度 */
+    --primary: #5e6ad2;
+    --primary-hover: #4b55b8;
+
+    /* 语义色取深色底版本的加深形态,浅底上可读 */
+    --success: #1f9e43;
+    --danger: #d93852;
+    --warning: #c96f1b;
+
+    --canvas-translucent: rgba(251, 251, 252, 0.72);
+    --surface-1-translucent: rgba(255, 255, 255, 0.72);
+    --sheet-translucent: rgba(255, 255, 255, 0.86);
+  }
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -64,8 +96,8 @@ a {
   color: inherit;
 }
 
-/* ===== Vant 暗色变量对齐规范（优先级需高于 .van-theme-dark 默认值） ===== */
-.van-theme-dark {
+/* ===== Vant 变量对齐设计令牌（挂在 :root,令牌随 prefers-color-scheme 切换,Vant 组件自动跟随双主题） ===== */
+:root {
   --van-primary-color: var(--primary);
   --van-blue: var(--primary);
   --van-background: var(--canvas);
@@ -76,7 +108,7 @@ a {
   --van-text-color-3: var(--ink-subtle);
   --van-border-color: var(--hairline);
   --van-gray-2: var(--surface-3);
-  --van-gray-3: #23252a;
+  --van-gray-3: var(--hairline);
   --van-cell-background: transparent;
   /* 顶部导航/底部标签栏/底部弹窗用半透明材质（配合下方 backdrop-filter 规则） */
   --van-nav-bar-background: var(--canvas-translucent);
@@ -143,9 +175,9 @@ a {
 /* ===== 半透明材质（Apple 风格浮层）：毛玻璃 + 发丝线，不做投影 ===== */
 
 /* 固定导航栏 / 底部标签栏 / 底部弹窗随内容滚过产生模糊透出 */
-.van-theme-dark .van-nav-bar--fixed,
-.van-theme-dark .van-tabbar,
-.van-theme-dark .van-popup--bottom {
+.van-nav-bar--fixed,
+.van-tabbar,
+.van-popup--bottom {
   -webkit-backdrop-filter: var(--material-blur);
   backdrop-filter: var(--material-blur);
 }
@@ -158,7 +190,7 @@ a {
 }
 
 /* 粘性吸顶的 tabs 悬浮时同为玻璃材质：内容从其下方滚过时透出 */
-.van-theme-dark .van-tabs {
+.van-tabs {
   background: var(--canvas-translucent);
   -webkit-backdrop-filter: var(--material-blur);
   backdrop-filter: var(--material-blur);
@@ -314,10 +346,10 @@ a {
     --surface-1-translucent: #0f1011;
     --sheet-translucent: #0f1011;
   }
-  .van-theme-dark .van-nav-bar--fixed,
-  .van-theme-dark .van-tabbar,
-  .van-theme-dark .van-tabs,
-  .van-theme-dark .van-popup--bottom,
+  .van-nav-bar--fixed,
+  .van-tabbar,
+  .van-tabs,
+  .van-popup--bottom,
   .material-bar {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;

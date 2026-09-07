@@ -331,7 +331,7 @@ onMounted(loadData)
 .rank-item:last-child {
   border-bottom: none;
 }
-/* 前三名用主色低透明度徽章，其余用中性表面（克制用色） */
+/* 前三名用主色低透明度徽章，其余用中性表面（文字用令牌,深浅色都可读） */
 .rank-num {
   width: 24px;
   height: 24px;
@@ -346,9 +346,9 @@ onMounted(loadData)
   color: var(--ink-subtle);
   flex-shrink: 0;
 }
-.rank-1 { background: rgba(94,106,210,0.28); color: #aab2ff; }
-.rank-2 { background: rgba(94,106,210,0.18); color: #9aa2e8; }
-.rank-3 { background: rgba(94,106,210,0.12); color: #8f97d6; }
+.rank-1 { background: rgba(94, 106, 210, 0.28); color: var(--primary-hover); }
+.rank-2 { background: rgba(94, 106, 210, 0.18); color: var(--primary-hover); }
+.rank-3 { background: rgba(94, 106, 210, 0.12); color: var(--primary-hover); }
 .rank-info {
   flex: 1;
 }

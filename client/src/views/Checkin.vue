@@ -611,8 +611,15 @@ const submit = async () => {
 
     showToast({ type: 'success', message: '工单创建成功' })
     clearDraft(DRAFT_KEY)
-    // toast 挂在 body 上，路由跳转不会打断展示，无需人为等待
-    router.push(`/orders/${(order as any).id}`)
+    // 重置本地表单,防止返回到本页时残留已提交的数据造成重复建单
+    selectedCustomer.value = null
+    selectedVehicle.value = null
+    photos.value = []
+    form.complaint = ''
+    form.mileage = ''
+    form.vehicleCondition = ''
+    // replace 替换历史记录:返回键回到上一页(工作台)而非已提交的表单
+    router.replace(`/orders/${(order as any).id}`)
   } catch (e) {
     // 已拦截
   } finally {

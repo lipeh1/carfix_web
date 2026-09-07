@@ -6,12 +6,14 @@
       <div class="install-title">安装到手机桌面</div>
       <div class="text-muted install-tip">{{ tip }}</div>
     </div>
-    <van-icon name="cross" class="install-close" @click="dismiss" />
+    <!-- 安卓 Chrome/Edge 捕获到原生安装事件时，提供一键安装 -->
+    <van-button v-if="canInstall" size="small" type="primary" @click="installNow">立即安装</van-button>
+    <van-icon v-else name="cross" class="install-close pressable" @click="dismiss" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 // 环境识别（微信需单独处理：iOS 微信内无法直接添加到桌面）
 const ua = navigator.userAgent
@@ -31,7 +33,20 @@ const dismissed = localStorage.getItem('pwa-guide-dismissed') === '1'
 
 const visible = ref(false)
 
-// 各环境操作指引文案
+// 浏览器原生安装事件（安卓 Chrome/Edge 支持；微信与 iOS Safari 不会触发）
+const deferredPrompt = ref<any>(null)
+const canInstall = computed(() => !!deferredPrompt.value)
+
+const onBeforeInstallPrompt = (e: Event) => {
+  e.preventDefault()
+  deferredPrompt.value = e
+}
+window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
+onUnmounted(() => {
+  window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
+})
+
+// 各环境操作指引文案（原生安装可用时被按钮替代）
 const tip = computed(() => {
   if (isWeChat && isIOS) return '微信内无法直接安装：点右上角「···」→ 在 Safari 打开，再按 Safari 步骤操作'
   if (isWeChat) return '点右上角「···」→ 添加到桌面'
@@ -44,6 +59,19 @@ onMounted(() => {
   if (isStandalone || dismissed) return
   if (isWeChat || isIOS || isAndroid) visible.value = true
 })
+
+// 调起浏览器的原生安装弹窗
+const installNow = async () => {
+  const prompt = deferredPrompt.value
+  if (!prompt) return
+  prompt.prompt()
+  const { outcome } = await prompt.userChoice
+  if (outcome === 'accepted') {
+    visible.value = false
+    localStorage.setItem('pwa-guide-dismissed', '1')
+  }
+  deferredPrompt.value = null
+}
 
 const dismiss = () => {
   visible.value = false
@@ -65,6 +93,7 @@ const dismiss = () => {
 }
 .install-info {
   flex: 1;
+  min-width: 0;
 }
 .install-title {
   font-size: 14px;
