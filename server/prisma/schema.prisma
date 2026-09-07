@@ -239,3 +239,13 @@ model Reminder {
   @@index([status])
   @@map("reminders")
 }
+
+// 系统配置表（键值对）：访问密码哈希、会话签名密钥等
+model Setting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}

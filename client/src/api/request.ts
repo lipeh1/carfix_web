@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { showToast } from 'vant'
+import router from '@/router'
 
 const request = axios.create({
   baseURL: '/api',
@@ -18,7 +19,13 @@ request.interceptors.response.use(
     return response.data
   },
   (error) => {
+    const status = error.response?.status
     const message = error.response?.data?.message || error.message || '请求失败'
+    // 会话失效:静默跳转登录页(登录接口自身的 401 除外,由登录页提示)
+    if (status === 401 && router.currentRoute.value.path !== '/login') {
+      router.replace('/login')
+      return Promise.reject(error)
+    }
     showToast({ type: 'fail', message })
     return Promise.reject(error)
   }

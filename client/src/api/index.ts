@@ -111,3 +111,11 @@ export const ocrPlate = async (file: File) => {
   const image = await fileToBase64(file)
   return request.post('/ocr/plate', { image })
 }
+
+// 访问控制
+export const getAuthStatus = () => request.get('/auth/status')
+export const getAuthMe = () => request.get('/auth/me')
+export const setupPassword = (data: { password: string }) => request.post('/auth/setup', data)
+export const loginPassword = (data: { password: string }) => request.post('/auth/login', data)
+export const logout = () => request.post('/auth/logout')
+export const changePassword = (data: { oldPassword: string; newPassword: string }) => request.post('/auth/password', data)

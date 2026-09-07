@@ -239,7 +239,7 @@ npm start
 
 ## 注意事项
 
-- 单用户系统，不做登录鉴权和角色权限。
+- 单用户系统，采用**单访问密码**鉴权（无多用户/角色体系）：密码 scrypt 哈希存 `settings` 表，会话为 HMAC 签名的 httpOnly Cookie（30 天）；除 `/api/health` 与 `/api/auth` 外，所有 `/api` 与 `/uploads` 均要求登录；登录接口带同 IP 防爆破锁定；前端 401 统一跳 `/login`。新增后端接口默认继承全局拦截，无需单独处理。
 - 图片存储在本地 `uploads/` 目录，数据库存相对路径（如 `/uploads/xxx.jpg`）。
 - 前端通过 Vite 代理访问后端 API 和图片，生产环境由 Express 静态托管前端构建产物。
 - SQLite 数据库文件 `server/prisma/dev.db` 不提交到 git。

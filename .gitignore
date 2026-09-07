@@ -44,3 +44,4 @@ npm-debug.log*
 # Temp
 *.tmp
 flowchart*.png
+server/prisma/*.bak_auth_*

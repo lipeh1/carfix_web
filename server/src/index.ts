@@ -3,6 +3,8 @@ import cors from 'cors'
 import path from 'path'
 import fs from 'fs'
 import { errorHandler } from './middleware/error'
+import { requireAuth } from './middleware/auth'
+import authRoutes from './routes/auth'
 import dashboardRoutes from './routes/dashboard'
 import customerRoutes from './routes/customers'
 import vehicleRoutes from './routes/vehicles'
@@ -20,6 +22,17 @@ const PORT = process.env.PORT || 3000
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+// 健康检查公开（仅返回存活状态,不含业务数据）
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+// 访问控制：auth 路由自带公开/受保护逻辑,先于全局拦截挂载
+app.use('/api/auth', authRoutes)
+
+// 其余 API 与上传图片（车辆照片等敏感内容）统一要求已登录会话
+app.use(['/api', '/uploads'], requireAuth)
 
 // 静态文件：上传的图片
 const uploadDir = path.resolve(__dirname, '../../uploads')
@@ -47,11 +60,7 @@ if (fs.existsSync(clientDistDir)) {
   })
 }
 
-// 健康检查
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
-})
-
+// 健康检查已随访问控制区前置挂载（公开）
 // 错误处理
 app.use(errorHandler)
 

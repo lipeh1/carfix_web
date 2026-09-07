@@ -2,6 +2,12 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 
 const routes: RouteRecordRaw[] = [
   {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/Login.vue'),
+    meta: { title: '访问验证' }
+  },
+  {
     path: '/',
     component: () => import('@/layouts/TabBarLayout.vue'),
     children: [

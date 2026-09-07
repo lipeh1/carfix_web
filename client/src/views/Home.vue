@@ -1,7 +1,11 @@
 <template>
   <div class="page-container page-frame">
     <!-- 页头固定(应用化骨架),仅下方内容滚动 -->
-    <van-nav-bar title="工作台" />
+    <van-nav-bar title="工作台">
+      <template #right>
+        <van-icon name="setting-o" size="20" class="pressable" @click="openSettings" />
+      </template>
+    </van-nav-bar>
 
     <div class="page-content scroll-area">
       <!-- 安装到桌面引导（移动端显示） -->
@@ -71,18 +75,38 @@
         </div>
       </motion.div>
     </div>
+
+    <!-- 设置动作面板:修改密码 / 退出登录 -->
+    <van-action-sheet
+      v-model:show="showActions"
+      :actions="[{ name: '修改密码' }, { name: '退出登录' }]"
+      cancel-text="取消"
+      @select="onActionSelect"
+    />
+
+    <!-- 修改密码弹窗 -->
+    <van-popup v-model:show="showChangePwd" position="bottom" round>      <div class="popup-content">
+        <h3>修改密码</h3>
+        <van-field v-model="pwdForm.old" type="password" label="原密码" placeholder="当前访问密码" :maxlength="32" />
+        <van-field v-model="pwdForm.next" type="password" label="新密码" placeholder="至少 6 位" :maxlength="32" />
+        <van-field v-model="pwdForm.confirm" type="password" label="确认新密码" placeholder="再次输入新密码" :maxlength="32" />
+        <van-button type="primary" block class="mt-16" :loading="changingPwd" @click="submitChangePwd">保存</van-button>
+      </div>
+    </van-popup>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { motion } from 'motion-v'
-import { getDashboard, getReminders } from '@/api'
+import { showToast, showConfirmDialog } from 'vant'
+import { getDashboard, getReminders, logout, changePassword } from '@/api'
 import dayjs from 'dayjs'
 import { fenToYuan } from '@/utils/money'
 import { useAnimatedYuan } from '@/utils/countup'
 import InstallGuide from '@/components/InstallGuide.vue'
+import { hapticFeedback } from '@/utils/feedback'
 
 const router = useRouter()
 
@@ -134,9 +158,57 @@ const loadData = async () => {
 }
 
 onMounted(loadData)
+
+// ===== 访问控制入口:修改密码 / 退出登录 =====
+const showActions = ref(false)
+const openSettings = () => { showActions.value = true }
+
+const onActionSelect = async (action: { name: string }) => {
+  showActions.value = false
+  if (action.name === '修改密码') {
+    pwdForm.old = ''
+    pwdForm.next = ''
+    pwdForm.confirm = ''
+    showChangePwd.value = true
+    return
+  }
+  try {
+    await showConfirmDialog({ title: '退出登录', message: '确定退出当前会话？' })
+    await logout()
+    router.replace('/login')
+  } catch { /* 取消 */ }
+}
+
+const showChangePwd = ref(false)
+const changingPwd = ref(false)
+const pwdForm = reactive({ old: '', next: '', confirm: '' })
+
+const submitChangePwd = async () => {
+  if (changingPwd.value) return
+  if (!pwdForm.old) return showToast('请输入原密码')
+  if (pwdForm.next.length < 6) return showToast('新密码至少 6 位')
+  if (pwdForm.next !== pwdForm.confirm) return showToast('两次输入的新密码不一致')
+  changingPwd.value = true
+  try {
+    await changePassword({ oldPassword: pwdForm.old, newPassword: pwdForm.next })
+    showToast({ type: 'success', message: '密码已更新' })
+    hapticFeedback()
+    showChangePwd.value = false
+  } catch (e) { /* 已拦截 */ }
+  finally {
+    changingPwd.value = false
+  }
+}
 </script>
 
 <style scoped>
+.popup-content {
+  padding: 20px 16px 32px;
+}
+.popup-content h3 {
+  text-align: center;
+  margin-bottom: 12px;
+}
 .quick-actions {
   display: flex;
   gap: 10px;
