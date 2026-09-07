@@ -1,15 +1,15 @@
 <template>
-  <div class="page-container">
-    <van-nav-bar title="提醒" fixed placeholder />
+  <div class="page-container page-frame">
+    <!-- 页头固定(应用化骨架),仅下方列表滚动 -->
+    <van-nav-bar title="提醒" />
 
-    <!-- 粘性吸顶时下移到悬浮导航栏(46px)之下 -->
-    <van-tabs v-model:active="activeTab" sticky :offset-top="46">
+    <van-tabs v-model:active="activeTab">
       <van-tab title="待提醒" name="pending" />
       <van-tab title="已提醒" name="done" />
       <van-tab title="全部" name="" />
     </van-tabs>
 
-    <div class="page-content">
+    <div class="page-content scroll-area">
       <van-cell
         v-for="item in reminders"
         :key="item.id"

@@ -1,9 +1,9 @@
 <template>
-  <div class="page-container">
-    <!-- fixed + placeholder：导航栏悬浮在内容上方（半透明毛玻璃，内容从下方滚过） -->
-    <van-nav-bar title="工作台" fixed placeholder />
+  <div class="page-container page-frame">
+    <!-- 页头固定(应用化骨架),仅下方内容滚动 -->
+    <van-nav-bar title="工作台" />
 
-    <div class="page-content">
+    <div class="page-content scroll-area">
       <!-- 安装到桌面引导（移动端显示） -->
       <InstallGuide />
 

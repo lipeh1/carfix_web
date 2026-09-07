@@ -270,6 +270,28 @@ a {
   transform: scale(0.97);
 }
 
+/* ===== 列表型页面骨架：页头固定，仅内容区独立滚动（应用化手感） ===== */
+/* 用法：页面根挂 page-frame（覆盖 page-container 的滚动行为），可滚动内容包在 scroll-area */
+.page-frame {
+  min-height: 0;
+  height: 100vh;
+  height: 100dvh; /* 动态视口，移动端地址栏收展更稳 */
+  padding-bottom: 0; /* 覆盖 .page-container 的底部留白，由 scroll-area 自身留白 */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* 页面骨架不滚动，滚动只发生在 scroll-area */
+}
+.scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* 滚动到边界不再链动到页面，避免"滑列表变成滑整页" */
+  overscroll-behavior-y: contain;
+  /* 底部留出悬浮 tabbar + 安全区 */
+  padding-bottom: calc(66px + env(safe-area-inset-bottom));
+}
+
 /* ===== 路由过渡 =====
    fade：tab 间切换（快速交叉淡入）
    push：进入更深层级（详情页从右滑入，旧页向左避让）

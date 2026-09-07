@@ -45,8 +45,7 @@ const onTabChange = (index: number) => {
 
 <style scoped>
 .tab-layout {
-  min-height: 100vh;
-  /* 容器留白随 tabbar 实际高度（50px + 底部安全区）联动 */
-  padding-bottom: calc(50px + env(safe-area-inset-bottom));
+  /* 页面自身是视口高度骨架(见 global.css .page-frame),布局不再需要为 tabbar 垫高 */
+  height: 100%;
 }
 </style>

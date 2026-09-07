@@ -1,6 +1,7 @@
 <template>
-  <div class="page-container">
-    <van-nav-bar title="客户" fixed placeholder>
+  <div class="page-container page-frame">
+    <!-- 页头固定(应用化骨架),仅下方列表滚动 -->
+    <van-nav-bar title="客户">
       <template #right>
         <van-icon name="add" size="20" @click="showAdd = true" />
       </template>
@@ -8,7 +9,7 @@
 
     <van-search v-model="keyword" placeholder="搜索姓名/电话" @search="onSearch" />
 
-    <div class="page-content">
+    <div class="page-content scroll-area">
       <!-- 列表项进场：弹簧上移淡入，逐项错开形成级联；AnimatePresence 让搜索换批时旧项平滑退场 -->
       <AnimatePresence>
         <motion.div

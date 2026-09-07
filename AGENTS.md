@@ -194,6 +194,7 @@ chore: 升级 prisma 到 5.18.0
 - 底部弹窗（sheet）用更实材质 `--sheet-translucent`（约 0.86 透明度）+ 同参数模糊。
 - 自定义固定底栏统一挂全局类 `material-bar`（global.css 已定义背景 + 模糊）。
 - 一切固定在底部（tabbar、操作栏、FAB、页面留白）必须预留 `env(safe-area-inset-bottom)`。
+- 列表型页面（tab 页）使用 `page-frame` + `scroll-area` 骨架：页头（导航/搜索/tabs）固定，仅内容区独立滚动（`overscroll-behavior-y: contain` 防滚动穿透）；详情/表单页仍为整页滚动 + 悬浮毛玻璃导航栏。
 - 动效优先用弹簧（motion-v：`{ type: 'spring', bounce: 0, duration: 0.3~0.4 }` 临界阻尼）；数值滚动必须从「当前呈现值」续滚而非从 0 重滚；图表生长动画只用 `transform: scaleY/scaleX`，不用 width/height 过渡。
 - 按压反馈：自定义可点元素统一挂 `pressable` 类（按下 0.1s 内 `scale(0.97)`）；提交类按钮必须带 `:loading` 防弱网双击重复提交。
 - 路由过渡分三类：tab 平级切换 `fade`（0.12s 交叉淡入）、进入更深层级 `push`（右进）、返回 `pop`（原路退回），由路由 `meta.transition: 'push'` 标记驱动（见 App.vue）。

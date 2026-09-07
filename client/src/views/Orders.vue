@@ -1,6 +1,7 @@
 <template>
-  <div class="page-container">
-    <van-nav-bar title="工单" fixed placeholder />
+  <div class="page-container page-frame">
+    <!-- 页头固定(应用化骨架),仅下方列表滚动 -->
+    <van-nav-bar title="工单" />
 
     <!-- 搜索框 -->
     <van-search
@@ -15,12 +16,11 @@
       </template>
     </van-search>
 
-    <!-- 粘性吸顶时下移到悬浮导航栏(46px)之下 -->
-    <van-tabs v-model:active="activeTab" sticky :offset-top="46" @change="onTabChange">
+    <van-tabs v-model:active="activeTab" @change="onTabChange">
       <van-tab v-for="tab in tabs" :key="tab.value" :title="tab.label" :name="tab.value" />
     </van-tabs>
 
-    <div class="page-content">
+    <div class="page-content scroll-area">
       <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
         <van-list
           v-model:loading="loading"
