@@ -1,6 +1,6 @@
 <template>
   <div class="page-container">
-    <van-nav-bar :title="`工单 #${order?.orderNo || ''}`" left-text="返回" left-arrow @click-left="$router.back()" />
+    <van-nav-bar :title="`工单 #${order?.orderNo || ''}`" left-text="返回" left-arrow fixed placeholder @click-left="$router.back()" />
 
     <div class="page-content" v-if="order">
       <!-- 状态卡片 -->
@@ -39,7 +39,7 @@
             v-for="(photo, idx) in checkinPhotos"
             :key="photo.id"
             :src="photo.filePath"
-            class="photo-item"
+            class="photo-item pressable"
             @click="openPreview(idx)"
           />
         </div>
@@ -125,7 +125,7 @@
       </div>
 
       <!-- 底部操作栏 -->
-      <div class="action-bar" v-if="actionButtons.length > 0">
+      <div class="action-bar material-bar" v-if="actionButtons.length > 0">
         <van-button
           v-for="btn in actionButtons"
           :key="btn.key"
@@ -187,7 +187,7 @@
         <van-field v-model="additionalForm.name" label="项目名称" placeholder="如更换刹车片" />
         <van-field v-model="additionalForm.amount" label="费用" type="number" placeholder="元" />
         <van-field v-model="additionalForm.reason" label="原因" type="textarea" rows="2" placeholder="说明新增原因" />
-        <van-button type="primary" block class="mt-16" @click="submitAdditional">提交增项</van-button>
+        <van-button type="primary" block class="mt-16" :loading="addingItem" @click="submitAdditional">提交增项</van-button>
       </div>
     </van-popup>
 
@@ -231,7 +231,7 @@
             </van-radio-group>
           </template>
         </van-field>
-        <van-button type="primary" block class="mt-16" @click="submitPayment">确认收款</van-button>
+        <van-button type="primary" block class="mt-16" :loading="paying" @click="submitPayment">确认收款</van-button>
       </div>
     </van-popup>
 
@@ -241,7 +241,7 @@
         <h3>确认交车</h3>
         <van-field v-model="deliverMileage" label="交车里程" type="digit" placeholder="公里数，可不填" />
         <div class="text-muted deliver-tip">交车后工单完成，将自动创建回访与保养提醒</div>
-        <van-button type="primary" block class="mt-16" @click="submitDeliver">确认交车</van-button>
+        <van-button type="primary" block class="mt-16" :loading="delivering" @click="submitDeliver">确认交车</van-button>
       </div>
     </van-popup>
   </div>
@@ -292,6 +292,10 @@ const logContent = ref('')
 
 // 增项表单
 const additionalForm = reactive({ name: '', amount: '', reason: '' })
+// 各提交动作的防重复提交状态
+const paying = ref(false)
+const delivering = ref(false)
+const addingItem = ref(false)
 
 // 收款表单
 const paymentForm = reactive({ amount: '', method: 'cash' })
@@ -420,12 +424,14 @@ const submitLog = async () => {
 
 // ===== 增项 =====
 const submitAdditional = async () => {
+  if (addingItem.value) return
   if (!additionalForm.name) return showToast('请输入项目名称')
   // 输入为"元"，校验有效后换算为整数分提交
   const amountYuan = Number(additionalForm.amount)
   if (!additionalForm.amount || !Number.isFinite(amountYuan) || amountYuan <= 0) {
     return showToast('请输入有效的费用金额')
   }
+  addingItem.value = true
   try {
     await addAdditionalItem(orderId, {
       name: additionalForm.name,
@@ -439,6 +445,9 @@ const submitAdditional = async () => {
     additionalForm.reason = ''
     loadData()
   } catch (e) { /* 已拦截 */ }
+  finally {
+    addingItem.value = false
+  }
 }
 
 // 确认或拒绝增项
@@ -466,17 +475,19 @@ const handleConfirmAdditional = async (item: any, confirmed: boolean) => {
 
 // ===== 收款 =====
 const submitPayment = async () => {
+  if (paying.value) return
   // 输入为"元"，校验有效后换算为整数分提交
   const amountYuan = Number(paymentForm.amount)
   if (!paymentForm.amount || !Number.isFinite(amountYuan) || amountYuan <= 0) {
     return showToast('请输入有效的收款金额')
   }
-  if (!settlement.value) {
-    // 先创建结算单，带上报价阶段登记的优惠
-    await createSettlement(orderId, { discount: Number(order.value?.discount) || 0 })
-    await loadData()
-  }
+  paying.value = true
   try {
+    if (!settlement.value) {
+      // 先创建结算单，带上报价阶段登记的优惠
+      await createSettlement(orderId, { discount: Number(order.value?.discount) || 0 })
+      await loadData()
+    }
     await addPayment(settlement.value.id, {
       amount: yuanToFen(amountYuan),
       method: paymentForm.method,
@@ -488,15 +499,20 @@ const submitPayment = async () => {
     paymentForm.amount = ''
     loadData()
   } catch (e) { /* 已拦截 */ }
+  finally {
+    paying.value = false
+  }
 }
 
 // ===== 交车 =====
 const submitDeliver = async () => {
+  if (delivering.value) return
   // 交车里程为整数，选填
   const mileage = deliverMileage.value ? Number(deliverMileage.value) : null
   if (mileage !== null && !Number.isFinite(mileage)) {
     return showToast('请输入有效的交车里程')
   }
+  delivering.value = true
   try {
     await deliverOrder(orderId, { mileageOut: mileage })
     hapticFeedback(80)
@@ -504,6 +520,9 @@ const submitDeliver = async () => {
     showDeliverPopup.value = false
     loadData()
   } catch (e) { /* 已拦截 */ }
+  finally {
+    delivering.value = false
+  }
 }
 
 // ===== 操作按钮处理 =====
@@ -658,14 +677,14 @@ onMounted(loadData)
   padding: 8px 16px 12px;
   justify-content: flex-end;
 }
-/* 底部操作栏：表面浮层 + 发丝线上边框（规范禁止投影做层级） */
+/* 底部操作栏：材质浮层（半透明毛玻璃见 global.css .material-bar）+ 发丝线上边框 */
 .action-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 12px;
-  background: var(--surface-1);
+  /* 底部预留全面屏 Home 指示条安全区 */
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--hairline);
   display: flex;
   gap: 8px;
@@ -701,5 +720,9 @@ onMounted(loadData)
 }
 .retry-empty {
   cursor: pointer;
+}
+/* 本页有固定底部操作栏，页面留白需盖住操作栏 + 安全区 */
+.page-container {
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
 }
 </style>

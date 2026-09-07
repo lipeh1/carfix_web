@@ -1,60 +1,70 @@
 <template>
   <div class="page-container">
-    <van-nav-bar title="工作台" />
+    <!-- fixed + placeholder：导航栏悬浮在内容上方（半透明毛玻璃，内容从下方滚过） -->
+    <van-nav-bar title="工作台" fixed placeholder />
 
     <div class="page-content">
       <!-- 安装到桌面引导（移动端显示） -->
       <InstallGuide />
 
-      <!-- 快捷操作 -->
-      <div class="quick-actions">
-        <van-button type="primary" icon="add" @click="$router.push('/checkin')">
-          新建接车
-        </van-button>
-        <van-button type="default" icon="chart-trending-o" @click="$router.push('/stats')">
-          统计报表
-        </van-button>
-      </div>
+      <!-- 快捷操作：包裹层带按压弹簧反馈 -->
+      <motion.div class="quick-actions" :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }" :transition="springIn(0)">
+        <motion.div class="qa-btn" :while-press="{ scale: 0.96 }" :transition="pressSpring" @click="$router.push('/checkin')">
+          <van-button type="primary" icon="add" block>新建接车</van-button>
+        </motion.div>
+        <motion.div class="qa-btn" :while-press="{ scale: 0.96 }" :transition="pressSpring" @click="$router.push('/stats')">
+          <van-button type="default" icon="chart-trending-o" block>统计报表</van-button>
+        </motion.div>
+      </motion.div>
 
-      <!-- 今日概览：点击数字直达对应状态的工单列表 -->
-      <div class="card">
-        <div class="section-title">今日概览</div>
-        <van-grid :column-num="4" :border="false">
-          <van-grid-item icon="orders-o" :text="`待检测 ${stats.pendingInspection}`" @click="goOrders('pending_inspection')" />
-          <van-grid-item icon="todo-list-o" :text="`维修中 ${stats.repairing}`" @click="goOrders('repairing')" />
-          <van-grid-item icon="balance-list-o" :text="`待结算 ${stats.pendingSettlement}`" @click="goOrders('pending_settlement')" />
-          <van-grid-item icon="checked" :text="`已完成 ${stats.completed}`" @click="goOrders('completed')" />
-        </van-grid>
-      </div>
+      <!-- 各卡片按序级联进场（每张错开 50ms 的临界阻尼弹簧） -->
+      <motion.div :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }" :transition="springIn(0.05)">
+        <!-- 今日概览：点击数字直达对应状态的工单列表 -->
+        <div class="card">
+          <div class="section-title">今日概览</div>
+          <van-grid class="quick-grid" :column-num="4" :border="false">
+            <van-grid-item icon="orders-o" :text="`待检测 ${stats.pendingInspection}`" @click="goOrders('pending_inspection')" />
+            <van-grid-item icon="todo-list-o" :text="`维修中 ${stats.repairing}`" @click="goOrders('repairing')" />
+            <van-grid-item icon="balance-list-o" :text="`待结算 ${stats.pendingSettlement}`" @click="goOrders('pending_settlement')" />
+            <van-grid-item icon="checked" :text="`已完成 ${stats.completed}`" @click="goOrders('completed')" />
+          </van-grid>
+        </div>
+      </motion.div>
 
       <!-- 挂账提醒：点击直达统计页挂账明细 -->
-      <div class="card click-card" v-if="stats.unpaidAmount > 0" @click="$router.push('/stats')">
-        <div class="flex-between">
-          <span class="text-danger">挂账未收</span>
-          <span class="amount">¥{{ fenToYuan(stats.unpaidAmount) }}</span>
+      <motion.div v-if="stats.unpaidAmount > 0" :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }" :transition="springIn(0.1)">
+        <div class="card click-card pressable" @click="$router.push('/stats')">
+          <div class="flex-between">
+            <span class="text-danger">挂账未收</span>
+            <span class="amount">¥{{ fenToYuan(stats.unpaidAmount) }}</span>
+          </div>
         </div>
-      </div>
+      </motion.div>
 
       <!-- 本月营收 -->
-      <div class="card">
-        <div class="flex-between">
-          <span class="section-title" style="margin-bottom:0">本月营收</span>
-          <span class="amount">¥{{ monthlyRevenueDisplay }}</span>
+      <motion.div :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }" :transition="springIn(0.15)">
+        <div class="card">
+          <div class="flex-between">
+            <span class="section-title" style="margin-bottom:0">本月营收</span>
+            <span class="amount">¥{{ monthlyRevenueDisplay }}</span>
+          </div>
         </div>
-      </div>
+      </motion.div>
 
       <!-- 待办提醒 -->
-      <div class="card" v-if="pendingReminders.length > 0">
-        <div class="section-title">待办提醒</div>
-        <van-cell
-          v-for="item in pendingReminders"
-          :key="item.id"
-          :title="item.content || reminderTypeLabel(item.type)"
-          :label="item.vehicle?.plateNumber + ' · ' + formatDate(item.remindDate)"
-          is-link
-          @click="$router.push('/reminders')"
-        />
-      </div>
+      <motion.div v-if="pendingReminders.length > 0" :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }" :transition="springIn(0.2)">
+        <div class="card">
+          <div class="section-title">待办提醒</div>
+          <van-cell
+            v-for="item in pendingReminders"
+            :key="item.id"
+            :title="item.content || reminderTypeLabel(item.type)"
+            :label="item.vehicle?.plateNumber + ' · ' + formatDate(item.remindDate)"
+            is-link
+            @click="$router.push('/reminders')"
+          />
+        </div>
+      </motion.div>
     </div>
   </div>
 </template>
@@ -62,6 +72,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { motion } from 'motion-v'
 import { getDashboard, getReminders } from '@/api'
 import dayjs from 'dayjs'
 import { fenToYuan } from '@/utils/money'
@@ -69,6 +80,11 @@ import { useAnimatedYuan } from '@/utils/countup'
 import InstallGuide from '@/components/InstallGuide.vue'
 
 const router = useRouter()
+
+// 级联进场弹簧：临界阻尼 + 按卡片序错开的延迟
+const springIn = (delay: number) => ({ type: 'spring', bounce: 0, duration: 0.4, delay })
+// 按压反馈弹簧：按下缩放、松开弹回
+const pressSpring = { type: 'spring', bounce: 0, duration: 0.3 }
 
 const stats = ref({
   pendingInspection: 0,
@@ -116,13 +132,23 @@ onMounted(loadData)
   gap: 10px;
   margin-bottom: 12px;
 }
-.quick-actions .van-button {
+/* 包裹层平分宽度，内部按钮撑满（按压缩放作用在包裹层上） */
+.qa-btn {
   flex: 1;
 }
 .click-card {
   cursor: pointer;
 }
 .click-card:active {
+  background: var(--surface-2);
+}
+/* 概览宫格按压反馈：按下轻微缩小 + 背景抬升 */
+.quick-grid :deep(.van-grid-item__content) {
+  transition: transform 0.12s ease-out, background-color 0.12s ease-out;
+  border-radius: 8px;
+}
+.quick-grid :deep(.van-grid-item:active .van-grid-item__content) {
+  transform: scale(0.96);
   background: var(--surface-2);
 }
 </style>

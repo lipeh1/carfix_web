@@ -1,6 +1,6 @@
 <template>
   <div class="page-container">
-    <van-nav-bar title="客户详情" left-text="返回" left-arrow @click-left="$router.back()">
+    <van-nav-bar title="客户详情" left-text="返回" left-arrow fixed placeholder @click-left="$router.back()">
       <template #right>
         <van-icon name="edit" size="18" @click="openEdit" />
       </template>
@@ -70,7 +70,7 @@
         <div
           v-for="o in customer.workOrders"
           :key="o.id"
-          class="order-item"
+          class="order-item pressable"
           @click="$router.push(`/orders/${o.id}`)"
         >
           <div class="order-header">
@@ -90,7 +90,7 @@
       </div>
 
       <!-- 底部快捷操作 -->
-      <div class="bottom-bar">
+      <div class="bottom-bar material-bar">
         <van-button type="primary" block icon="add" @click="$router.push('/checkin')">
           新建接车
         </van-button>
@@ -107,7 +107,7 @@
         <van-field v-model="editForm.name" label="姓名" placeholder="请输入姓名" />
         <van-field v-model="editForm.phone" label="电话" placeholder="请输入电话" type="tel" />
         <van-field v-model="editForm.remark" label="备注" type="textarea" rows="2" placeholder="可选" />
-        <van-button type="primary" block class="mt-16" @click="submitEdit">保存</van-button>
+        <van-button type="primary" block class="mt-16" :loading="saving" @click="submitEdit">保存</van-button>
       </div>
     </van-popup>
   </div>
@@ -126,6 +126,8 @@ const customer = ref<any>(null)
 const loadFailed = ref(false)
 const showEdit = ref(false)
 const editForm = reactive({ name: '', phone: '', remark: '' })
+// 保存中状态：防弱网双击重复提交
+const saving = ref(false)
 
 // 状态映射
 const statusMap: Record<string, { label: string; type: 'default' | 'primary' | 'success' | 'warning' | 'danger' }> = {
@@ -167,14 +169,19 @@ const openEdit = () => {
 }
 
 const submitEdit = async () => {
+  if (saving.value) return
   if (!editForm.name) return showToast('请输入姓名')
   if (!editForm.phone) return showToast('请输入电话')
+  saving.value = true
   try {
     await updateCustomer(customer.value.id, editForm)
     showToast({ type: 'success', message: '保存成功' })
     showEdit.value = false
     loadData()
   } catch (e) { /* 已拦截 */ }
+  finally {
+    saving.value = false
+  }
 }
 
 onMounted(loadData)
@@ -229,6 +236,8 @@ onMounted(loadData)
 .stat-value {
   font-size: 20px;
   font-weight: 700;
+  /* 大号数字收紧字距（AGENTS.md：20px 档 -0.4px） */
+  letter-spacing: -0.02em;
   color: var(--ink);
 }
 .stat-label {
@@ -285,14 +294,14 @@ onMounted(loadData)
   font-family: var(--font-mono);
   color: var(--danger);
 }
-/* 底部操作栏：发丝线上边框替代投影 */
+/* 底部操作栏：材质浮层（半透明毛玻璃见 global.css .material-bar）+ 发丝线上边框 */
 .bottom-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 12px;
-  background: var(--surface-1);
+  /* 底部预留全面屏 Home 指示条安全区 */
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--hairline);
 }
 .popup-content {
@@ -301,5 +310,9 @@ onMounted(loadData)
 .popup-content h3 {
   text-align: center;
   margin-bottom: 16px;
+}
+/* 本页有固定底部操作栏，页面留白需盖住操作栏 + 安全区 */
+.page-container {
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
 }
 </style>

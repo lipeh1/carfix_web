@@ -1,6 +1,6 @@
 <template>
   <div class="page-container">
-    <van-nav-bar title="统计报表" />
+    <van-nav-bar title="统计报表" left-text="返回" left-arrow fixed placeholder @click-left="$router.back()" />
 
     <div class="page-content" v-if="stats">
       <!-- 基础数据概览 -->
@@ -31,8 +31,12 @@
         <div class="section-title">近6个月营收趋势</div>
         <div class="chart-container">
           <div class="chart-bars">
-            <div v-for="m in stats.months" :key="m.month" class="chart-bar-wrapper">
-              <div class="chart-bar" :style="{ height: getBarHeight(m.revenue) + '%' }">
+            <div v-for="(m, idx) in stats.months" :key="m.month" class="chart-bar-wrapper">
+              <!-- 高度定布局、scaleY 做生长动画：只动合成器属性；交错延迟依次长出 -->
+              <div
+                class="chart-bar"
+                :style="{ height: getBarHeight(m.revenue) + '%', animationDelay: idx * 0.05 + 's' }"
+              >
                 <span class="chart-bar-value" v-if="m.revenue > 0">¥{{ formatAmount(m.revenue) }}</span>
               </div>
               <div class="chart-bar-label">{{ m.month.slice(5) }}</div>
@@ -49,12 +53,17 @@
       <div class="card">
         <div class="section-title">工单状态分布</div>
         <div class="status-list">
-          <div v-for="s in statusList" :key="s.status" class="status-row">
+          <div v-for="(s, idx) in statusList" :key="s.status" class="status-row">
             <div class="status-left">
               <van-tag :type="s.type">{{ s.label }}</van-tag>
             </div>
             <div class="status-bar">
-              <div class="status-bar-fill" :type="s.type" :style="{ width: getStatusPercent(s.status) + '%', background: s.color }"></div>
+              <!-- 宽度定布局、scaleX 做生长动画（从左展开），交错延迟依次填充 -->
+              <div
+                class="status-bar-fill"
+                :type="s.type"
+                :style="{ width: getStatusPercent(s.status) + '%', background: s.color, animationDelay: idx * 0.05 + 's' }"
+              ></div>
             </div>
             <div class="status-count">{{ getStatusCount(s.status) }}</div>
           </div>
@@ -90,7 +99,7 @@
           <div
             v-for="item in stats.unpaid.list"
             :key="item.id"
-            class="unpaid-item"
+            class="unpaid-item pressable"
             @click="$router.push(`/orders/${item.orderId}`)"
           >
             <div class="unpaid-header">
@@ -199,6 +208,8 @@ onMounted(loadData)
 .overview-value {
   font-size: 20px;
   font-weight: 700;
+  /* 大号数字收紧字距，读起来更整（AGENTS.md：20px 档 -0.4px） */
+  letter-spacing: -0.02em;
   color: var(--ink);
 }
 .overview-label {
@@ -225,6 +236,7 @@ onMounted(loadData)
   height: 100%;
   justify-content: flex-end;
 }
+/* 柱体：高度由数据定布局，进场用 scaleY 从底部生长（合成器属性）；backwards 让交错延迟期间停在 0 */
 .chart-bar {
   width: 28px;
   background: var(--primary);
@@ -233,7 +245,13 @@ onMounted(loadData)
   min-height: 2px;
   display: flex;
   justify-content: center;
-  transition: height 0.3s;
+  transform-origin: bottom center;
+  animation: bar-grow 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) backwards;
+}
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+  }
 }
 .chart-bar-value {
   position: absolute;
@@ -278,10 +296,17 @@ onMounted(loadData)
   border-radius: 6px;
   overflow: hidden;
 }
+/* 进度填充：宽度由数据定布局，进场用 scaleX 从左生长（reduced-motion 下由 global.css 关闭动画） */
 .status-bar-fill {
   height: 100%;
   border-radius: 6px;
-  transition: width 0.3s;
+  transform-origin: left center;
+  animation: fill-grow 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) backwards;
+}
+@keyframes fill-grow {
+  from {
+    transform: scaleX(0);
+  }
 }
 .status-count {
   width: 30px;

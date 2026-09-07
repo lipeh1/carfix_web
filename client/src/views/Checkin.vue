@@ -1,13 +1,13 @@
 <template>
   <div class="page-container">
-    <van-nav-bar title="接车登记" left-text="返回" left-arrow @click-left="$router.back()" />
+    <van-nav-bar title="接车登记" left-text="返回" left-arrow fixed placeholder @click-left="$router.back()" />
 
     <div class="page-content">
       <!-- 客户选择 -->
       <div class="card">
         <div class="section-title">客户信息</div>
         <!-- 扫行驶证一次建档：识别所有人/车牌/品牌型号/VIN，电话需人工补录 -->
-        <div class="scan-entry" @click="triggerLicenseScan">
+        <div class="scan-entry pressable" @click="triggerLicenseScan">
           <van-icon name="scan" size="16" />
           <span>扫行驶证建档</span>
         </div>
@@ -54,7 +54,7 @@
           <span
             v-for="t in complaintTags"
             :key="t"
-            class="complaint-tag"
+            class="complaint-tag pressable"
             :class="{ active: form.complaint.includes(t) }"
             @click="appendComplaint(t)"
           >{{ t }}</span>
@@ -79,7 +79,7 @@
             <img
               v-if="photo.status !== 'failed'"
               :src="photo.content || photo.url"
-              class="photo-thumb"
+              class="photo-thumb pressable"
               @click="previewPhoto(idx)"
             />
             <!-- 上传中遮罩 -->
@@ -104,7 +104,7 @@
           <!-- 添加按钮 -->
           <div
             v-if="photos.length < 9"
-            class="photo-add"
+            class="photo-add pressable"
             @click="triggerFileInput"
           >
             <van-icon name="photograph" size="28" />
@@ -130,7 +130,7 @@
       </div>
 
       <!-- 提交 -->
-      <van-button type="primary" block @click="submit">创建工单</van-button>
+      <van-button type="primary" block :loading="submitting" @click="submit">创建工单</van-button>
     </div>
 
     <!-- 客户选择弹窗 -->
@@ -149,7 +149,7 @@
             <div
               v-for="c in recentCustomers"
               :key="c.id"
-              class="recent-item"
+              class="recent-item pressable"
               @click="selectCustomer(c)"
             >
               <div class="recent-name">{{ c.name }}</div>
@@ -567,7 +567,11 @@ const onPreviewChange = (idx: number) => {
   previewIndex.value = idx
 }
 
+// 提交中状态：按钮转 loading，防弱网下双击重复建单
+const submitting = ref(false)
+
 const submit = async () => {
+  if (submitting.value) return
   if (!selectedCustomer.value) return showToast('请选择客户')
   if (!selectedVehicle.value) return showToast('请选择车辆')
   if (!form.complaint) return showToast('请输入客户诉求')
@@ -589,6 +593,7 @@ const submit = async () => {
     }
   }
 
+  submitting.value = true
   try {
     // 只收集上传成功的照片URL
     const photoPaths = photos.value
@@ -606,11 +611,12 @@ const submit = async () => {
 
     showToast({ type: 'success', message: '工单创建成功' })
     clearDraft(DRAFT_KEY)
-    setTimeout(() => {
-      router.push(`/orders/${(order as any).id}`)
-    }, 800)
+    // toast 挂在 body 上，路由跳转不会打断展示，无需人为等待
+    router.push(`/orders/${(order as any).id}`)
   } catch (e) {
     // 已拦截
+  } finally {
+    submitting.value = false
   }
 }
 

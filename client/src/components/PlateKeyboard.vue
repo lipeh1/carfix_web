@@ -31,7 +31,7 @@
           <button
             v-for="p in PROVINCES"
             :key="p"
-            class="key province"
+            class="key province pressable"
             type="button"
             @click="press(p)"
           >{{ p }}</button>
@@ -41,7 +41,7 @@
           <button
             v-for="k in PLATE_LETTERS"
             :key="k"
-            class="key"
+            class="key pressable"
             type="button"
             :disabled="reachedLimit"
             @click="press(k)"
@@ -52,7 +52,7 @@
           <button
             v-for="k in PLATE_ALNUM"
             :key="k"
-            class="key alnum"
+            class="key alnum pressable"
             type="button"
             :disabled="reachedLimit"
             @click="press(k)"

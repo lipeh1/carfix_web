@@ -1,8 +1,9 @@
 <template>
   <div class="page-container">
-    <van-nav-bar title="提醒" />
+    <van-nav-bar title="提醒" fixed placeholder />
 
-    <van-tabs v-model:active="activeTab" sticky>
+    <!-- 粘性吸顶时下移到悬浮导航栏(46px)之下 -->
+    <van-tabs v-model:active="activeTab" sticky :offset-top="46">
       <van-tab title="待提醒" name="pending" />
       <van-tab title="已提醒" name="done" />
       <van-tab title="全部" name="" />
@@ -55,7 +56,7 @@
             rows="2"
             placeholder="可选，记录客户回应"
           />
-          <van-button type="primary" block class="mt-16" @click="markDone">
+          <van-button type="primary" block class="mt-16" :loading="marking" @click="markDone">
             标记已提醒
           </van-button>
         </template>
@@ -76,6 +77,8 @@ const showDetailPopup = ref(false)
 const current = ref<any>(null)
 // 标记已提醒的补充信息
 const doneForm = reactive({ method: 'wechat', feedback: '' })
+// 标记中状态：防弱网双击重复提交
+const marking = ref(false)
 
 // 提醒类型标签（含挂账交车自动生成的催收提醒）
 const getTypeLabel = (t: string) =>
@@ -103,7 +106,8 @@ const showDetail = (item: any) => {
 }
 
 const markDone = async () => {
-  if (!current.value) return
+  if (!current.value || marking.value) return
+  marking.value = true
   try {
     const payload: any = {
       status: 'done',
@@ -118,6 +122,8 @@ const markDone = async () => {
     loadData()
   } catch (e) {
     // 已拦截
+  } finally {
+    marking.value = false
   }
 }
 

@@ -13,6 +13,12 @@
   --hairline: #23252a;        /* 1px 发丝线 */
   --hairline-strong: #34343a; /* 强调边框 */
 
+  /* 半透明材质：导航栏/标签栏/固定操作栏/底部弹窗，内容从下方滚过时隐约可见 */
+  --canvas-translucent: rgba(1, 1, 2, 0.72);
+  --surface-1-translucent: rgba(15, 16, 17, 0.72);
+  --sheet-translucent: rgba(15, 16, 17, 0.86);
+  --material-blur: blur(20px) saturate(180%);
+
   /* 文字 */
   --ink: #f7f8f8;
   --ink-muted: #d0d6e0;
@@ -38,12 +44,16 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  /* 移动端去掉系统点按高亮，反馈统一交给 :active 样式 */
+  -webkit-tap-highlight-color: transparent;
 }
 
 html, body, #app {
   height: 100%;
   width: 100%;
   font-family: var(--font-sans);
+  /* 正文行高放宽到 1.5，中文长句更易读（Vant 组件有自己的行高不受影响） */
+  line-height: 1.5;
   background-color: var(--canvas);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -68,17 +78,18 @@ a {
   --van-gray-2: var(--surface-3);
   --van-gray-3: #23252a;
   --van-cell-background: transparent;
-  --van-nav-bar-background: var(--canvas);
+  /* 顶部导航/底部标签栏/底部弹窗用半透明材质（配合下方 backdrop-filter 规则） */
+  --van-nav-bar-background: var(--canvas-translucent);
   --van-nav-bar-title-text-color: var(--ink);
   --van-nav-bar-text-color: var(--ink-muted);
   --van-nav-bar-icon-color: var(--ink-muted);
-  --van-tabbar-background: var(--surface-1);
+  --van-tabbar-background: var(--surface-1-translucent);
   --van-search-background: var(--canvas);
   --van-search-input-background: var(--surface-2);
   --van-tabs-background: var(--canvas);
   --van-sticky-background: inherit;
   --van-grid-item-content-background: transparent;
-  --van-popup-background: var(--surface-1);
+  --van-popup-background: var(--sheet-translucent);
   --van-field-label-color: var(--ink-subtle);
   --van-button-default-background: var(--surface-1);
   --van-button-default-border-color: var(--hairline);
@@ -123,8 +134,50 @@ a {
 .section-title {
   font-size: 14px;
   font-weight: 600;
+  /* 标题略收紧字距（AGENTS.md 字号表：标题类负字距） */
+  letter-spacing: -0.01em;
   color: var(--ink);
   margin-bottom: 12px;
+}
+
+/* ===== 半透明材质（Apple 风格浮层）：毛玻璃 + 发丝线，不做投影 ===== */
+
+/* 固定导航栏 / 底部标签栏 / 底部弹窗随内容滚过产生模糊透出 */
+.van-theme-dark .van-nav-bar--fixed,
+.van-theme-dark .van-tabbar,
+.van-theme-dark .van-popup--bottom {
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+}
+
+/* 自定义固定底栏通用材质类（页面里配合 position: fixed 使用） */
+.material-bar {
+  background: var(--surface-1-translucent);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+}
+
+/* 粘性吸顶的 tabs 悬浮时同为玻璃材质：内容从其下方滚过时透出 */
+.van-theme-dark .van-tabs {
+  background: var(--canvas-translucent);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+}
+
+/* 半透明表面上的文字需略加重以确保可读（vibrancy） */
+.van-nav-bar__title,
+.van-tabbar-item__text {
+  font-weight: 500;
+}
+
+/* Tab 激活时图标轻微弹跳（微过冲曲线，Apple 手感的点睛反馈） */
+.van-tabbar-item--active .van-icon {
+  animation: tab-icon-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes tab-icon-pop {
+  40% {
+    transform: scale(1.22);
+  }
 }
 
 /* 卡片内部 Cell 通铺时压掉卡片自带内边距的违和感 */
@@ -176,15 +229,97 @@ a {
 .mb-8 { margin-bottom: 8px; }
 .mb-12 { margin-bottom: 12px; }
 
-/* ===== 路由页面切换过渡：淡入 + 轻微上移（配合 <transition mode="out-in">） ===== */
-.page-enter-active,
-.page-leave-active {
-  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+/* ===== 按压反馈：按下(pointer-down)瞬间轻微缩小，100ms 内完成 ===== */
+.pressable {
+  cursor: pointer;
+  transition: transform 0.1s ease-out;
 }
-.page-enter-from {
-  opacity: 0;
-  transform: translateY(12px);
+.pressable:active {
+  transform: scale(0.97);
 }
-.page-leave-to {
+
+/* ===== 路由过渡 =====
+   fade：tab 间切换（快速交叉淡入）
+   push：进入更深层级（详情页从右滑入，旧页向左避让）
+   pop：返回上一层（与 push 路径对称，原路退回右侧）
+   出入沿同一路径，配合 <transition mode="out-in"> 避免固定定位元素重叠 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.12s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
+}
+
+/* 进入用 ease-out、离开用 ease-in，往返节奏镜像 */
+.push-enter-active {
+  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.25s ease-out;
+}
+.push-leave-active {
+  transition: transform 0.15s ease-in, opacity 0.15s ease-in;
+}
+.push-enter-from {
+  transform: translateX(100%);
+}
+.push-leave-to {
+  transform: translateX(-30%);
+  opacity: 0;
+}
+
+.pop-enter-active {
+  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.25s ease-out;
+}
+.pop-leave-active {
+  transition: transform 0.15s ease-in, opacity 0.15s ease-in;
+}
+.pop-enter-from {
+  transform: translateX(-30%);
+  opacity: 0;
+}
+.pop-leave-to {
+  transform: translateX(100%);
+}
+
+/* ===== 无障碍兜底 ===== */
+
+/* 减弱动态：过渡退化为纯淡入，不做位移；图表生长动画直接跳终态 */
+@media (prefers-reduced-motion: reduce) {
+  .fade-enter-active,
+  .fade-leave-active,
+  .push-enter-active,
+  .push-leave-active,
+  .pop-enter-active,
+  .pop-leave-active {
+    transition: opacity 0.15s ease;
+  }
+  .push-enter-from,
+  .push-leave-to,
+  .pop-enter-from,
+  .pop-leave-to {
+    transform: none;
+    opacity: 0;
+  }
+  .chart-bar,
+  .status-bar-fill,
+  .van-tabbar-item--active .van-icon {
+    animation: none;
+  }
+}
+
+/* 减弱透明：材质回退为实色表面并关闭模糊，保证可读性 */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --canvas-translucent: #010102;
+    --surface-1-translucent: #0f1011;
+    --sheet-translucent: #0f1011;
+  }
+  .van-theme-dark .van-nav-bar--fixed,
+  .van-theme-dark .van-tabbar,
+  .van-theme-dark .van-tabs,
+  .van-theme-dark .van-popup--bottom,
+  .material-bar {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }

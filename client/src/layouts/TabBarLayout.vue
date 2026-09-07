@@ -1,12 +1,13 @@
 <template>
   <div class="tab-layout">
-    <!-- 底部 Tab 间的页面切换也走统一的淡入过渡 -->
+    <!-- 底部 Tab 间平级切换：快速交叉淡入（方向性推入只用于层级跳转，见 App.vue） -->
     <router-view v-slot="{ Component }">
-      <transition name="page" mode="out-in">
+      <transition name="fade" mode="out-in">
         <component :is="Component" />
       </transition>
     </router-view>
-    <van-tabbar v-model="active" active-color="#828fff" @change="onTabChange">
+    <!-- safe-area-inset-bottom：全面屏底部预留 Home 指示条高度 -->
+    <van-tabbar v-model="active" safe-area-inset-bottom active-color="#828fff" @change="onTabChange">
       <van-tabbar-item icon="wap-home-o">工作台</van-tabbar-item>
       <van-tabbar-item icon="orders-o">工单</van-tabbar-item>
       <van-tabbar-item icon="contact-o">客户</van-tabbar-item>
@@ -45,6 +46,7 @@ const onTabChange = (index: number) => {
 <style scoped>
 .tab-layout {
   min-height: 100vh;
-  padding-bottom: 50px;
+  /* 容器留白随 tabbar 实际高度（50px + 底部安全区）联动 */
+  padding-bottom: calc(50px + env(safe-area-inset-bottom));
 }
 </style>

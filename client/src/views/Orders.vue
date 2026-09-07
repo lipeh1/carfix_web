@@ -1,6 +1,6 @@
 <template>
   <div class="page-container">
-    <van-nav-bar title="工单" />
+    <van-nav-bar title="工单" fixed placeholder />
 
     <!-- 搜索框 -->
     <van-search
@@ -15,7 +15,8 @@
       </template>
     </van-search>
 
-    <van-tabs v-model:active="activeTab" sticky @change="onTabChange">
+    <!-- 粘性吸顶时下移到悬浮导航栏(46px)之下 -->
+    <van-tabs v-model:active="activeTab" sticky :offset-top="46" @change="onTabChange">
       <van-tab v-for="tab in tabs" :key="tab.value" :title="tab.label" :name="tab.value" />
     </van-tabs>
 
@@ -27,40 +28,48 @@
           finished-text="没有更多了"
           @load="loadOrders"
         >
-          <!-- 列表项进场：挂载时轻微上移淡入（不用 whileInView，嵌入式 webview 的视口检测不可靠，失败会导致列表永久不可见） -->
-          <motion.div
-            v-for="order in orders"
-            :key="order.id"
-            :initial="{ opacity: 0, y: 10 }"
-            :animate="{ opacity: 1, y: 0 }"
-            :transition="{ duration: 0.25, ease: 'easeOut' }"
-          >
-            <van-cell is-link @click="$router.push(`/orders/${order.id}`)">
-              <template #title>
-                <div class="order-title">
-                  <span class="plate">{{ order.vehicle?.plateNumber || '未知车辆' }}</span>
-                  <van-tag :type="getStatusType(order.status)" >
-                    {{ getStatusLabel(order.status) }}
-                  </van-tag>
-                </div>
-              </template>
-              <template #label>
-                <div class="order-info">
-                  <span>{{ order.customer?.name || '未知客户' }}</span>
-                  <span class="text-muted">{{ order.complaint || '无诉求' }}</span>
-                </div>
-                <div class="order-amount" v-if="order.finalAmount">
-                  ¥{{ fenToYuan(order.finalAmount) }}
-                </div>
-              </template>
-            </van-cell>
-          </motion.div>
+          <!-- 列表项进场：弹簧上移淡入，逐项错开形成级联；AnimatePresence 让搜索/切 tab 换批时旧项平滑退场 -->
+          <AnimatePresence>
+            <motion.div
+              v-for="(order, idx) in orders"
+              :key="order.id"
+              :initial="{ opacity: 0, y: 10 }"
+              :animate="{ opacity: 1, y: 0 }"
+              :exit="{ opacity: 0, y: -6, transition: { duration: 0.15 } }"
+              :transition="{ type: 'spring', bounce: 0, duration: 0.35, delay: Math.min(idx * 0.03, 0.24) }"
+            >
+              <van-cell is-link @click="$router.push(`/orders/${order.id}`)">
+                <template #title>
+                  <div class="order-title">
+                    <span class="plate">{{ order.vehicle?.plateNumber || '未知车辆' }}</span>
+                    <van-tag :type="getStatusType(order.status)" >
+                      {{ getStatusLabel(order.status) }}
+                    </van-tag>
+                  </div>
+                </template>
+                <template #label>
+                  <div class="order-info">
+                    <span>{{ order.customer?.name || '未知客户' }}</span>
+                    <span class="text-muted">{{ order.complaint || '无诉求' }}</span>
+                  </div>
+                  <div class="order-amount" v-if="order.finalAmount">
+                    ¥{{ fenToYuan(order.finalAmount) }}
+                  </div>
+                </template>
+              </van-cell>
+            </motion.div>
+          </AnimatePresence>
         </van-list>
       </van-pull-refresh>
     </div>
 
     <!-- 右下角新建接车按钮：按压弹簧缩放反馈（transform 由 motion 接管） -->
-    <motion.div class="fab-button" :while-press="{ scale: 0.9 }" @click="$router.push('/checkin')">
+    <motion.div
+      class="fab-button"
+      :while-press="{ scale: 0.92 }"
+      :transition="{ type: 'spring', bounce: 0, duration: 0.3 }"
+      @click="$router.push('/checkin')"
+    >
       <van-icon name="plus" size="24" />
     </motion.div>
   </div>
@@ -168,11 +177,11 @@ onMounted(loadOrders)
   font-weight: 600;
   margin-top: 4px;
 }
-/* 右下角浮动按钮：主色圆钮，深色底用暗投影而非彩色光晕 */
+/* 右下角浮动按钮：主色圆钮，深色底用暗投影而非彩色光晕；避开 tabbar + 安全区 */
 .fab-button {
   position: fixed;
   right: 20px;
-  bottom: 80px;
+  bottom: calc(80px + env(safe-area-inset-bottom));
   width: 52px;
   height: 52px;
   border-radius: 50%;

@@ -1,6 +1,6 @@
 <template>
   <div class="page-container">
-    <van-nav-bar title="客户">
+    <van-nav-bar title="客户" fixed placeholder>
       <template #right>
         <van-icon name="add" size="20" @click="showAdd = true" />
       </template>
@@ -9,25 +9,28 @@
     <van-search v-model="keyword" placeholder="搜索姓名/电话" @search="onSearch" />
 
     <div class="page-content">
-      <!-- 列表项进场：挂载时轻微上移淡入（不用 whileInView，嵌入式 webview 的视口检测不可靠） -->
-      <motion.div
-        v-for="c in customers"
-        :key="c.id"
-        :initial="{ opacity: 0, y: 10 }"
-        :animate="{ opacity: 1, y: 0 }"
-        :transition="{ duration: 0.25, ease: 'easeOut' }"
-      >
-        <van-cell
-          :title="c.name"
-          :label="c.phone"
-          is-link
-          @click="$router.push(`/customers/${c.id}`)"
+      <!-- 列表项进场：弹簧上移淡入，逐项错开形成级联；AnimatePresence 让搜索换批时旧项平滑退场 -->
+      <AnimatePresence>
+        <motion.div
+          v-for="(c, idx) in customers"
+          :key="c.id"
+          :initial="{ opacity: 0, y: 10 }"
+          :animate="{ opacity: 1, y: 0 }"
+          :exit="{ opacity: 0, y: -6, transition: { duration: 0.15 } }"
+          :transition="{ type: 'spring', bounce: 0, duration: 0.35, delay: Math.min(idx * 0.03, 0.24) }"
         >
-          <template #right-icon>
-            <span class="text-muted">{{ c._count?.vehicles || 0 }}辆车</span>
-          </template>
-        </van-cell>
-      </motion.div>
+          <van-cell
+            :title="c.name"
+            :label="c.phone"
+            is-link
+            @click="$router.push(`/customers/${c.id}`)"
+          >
+            <template #right-icon>
+              <span class="text-muted">{{ c._count?.vehicles || 0 }}辆车</span>
+            </template>
+          </van-cell>
+        </motion.div>
+      </AnimatePresence>
 
       <van-empty v-if="customers.length === 0 && !loading" description="暂无客户" />
     </div>
@@ -39,7 +42,7 @@
         <van-field v-model="form.name" label="姓名" placeholder="请输入姓名" />
         <van-field v-model="form.phone" label="电话" placeholder="请输入电话" type="tel" />
         <van-field v-model="form.remark" label="备注" placeholder="可选" type="textarea" rows="2" />
-        <van-button type="primary" block class="mt-16" @click="submitAdd">保存</van-button>
+        <van-button type="primary" block class="mt-16" :loading="adding" @click="submitAdd">保存</van-button>
       </div>
     </van-popup>
   </div>
@@ -48,7 +51,7 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
 import { showToast } from 'vant'
-import { motion } from 'motion-v'
+import { motion, AnimatePresence } from 'motion-v'
 import { getCustomers, createCustomer } from '@/api'
 
 const customers = ref<any[]>([])
@@ -56,6 +59,8 @@ const keyword = ref('')
 const loading = ref(false)
 const showAdd = ref(false)
 const form = reactive({ name: '', phone: '', remark: '' })
+// 保存中状态：防弱网双击重复建档
+const adding = ref(false)
 
 const loadData = async () => {
   loading.value = true
@@ -72,8 +77,10 @@ const loadData = async () => {
 const onSearch = () => loadData()
 
 const submitAdd = async () => {
+  if (adding.value) return
   if (!form.name) return showToast('请输入姓名')
   if (!form.phone) return showToast('请输入电话')
+  adding.value = true
   try {
     await createCustomer(form)
     showToast({ type: 'success', message: '添加成功' })
@@ -84,6 +91,8 @@ const submitAdd = async () => {
     loadData()
   } catch (e) {
     // 已拦截
+  } finally {
+    adding.value = false
   }
 }
 

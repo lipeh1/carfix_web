@@ -1,6 +1,6 @@
 <template>
   <div class="page-container">
-    <van-nav-bar title="车辆详情" left-text="返回" left-arrow @click-left="$router.back()" />
+    <van-nav-bar title="车辆详情" left-text="返回" left-arrow fixed placeholder @click-left="$router.back()" />
 
     <div class="page-content" v-if="vehicle">
       <!-- 车辆信息卡片 -->
@@ -75,7 +75,7 @@
         <div class="timeline" v-if="vehicle.workOrders?.length">
           <div v-for="(o, idx) in vehicle.workOrders" :key="o.id" class="timeline-item">
             <div class="timeline-dot" :class="{ 'dot-completed': o.status === 'completed', 'dot-cancelled': o.status === 'cancelled' }"></div>
-            <div class="timeline-content" @click="$router.push(`/orders/${o.id}`)">
+            <div class="timeline-content pressable" @click="$router.push(`/orders/${o.id}`)">
               <div class="timeline-header">
                 <span class="timeline-date">{{ formatDate(o.createdAt) }}</span>
                 <van-tag :type="getStatusType(o.status)" size="medium">{{ getStatusLabel(o.status) }}</van-tag>
@@ -178,6 +178,8 @@ onMounted(loadData)
 .stat-value {
   font-size: 18px;
   font-weight: 700;
+  /* 大号数字收紧字距 */
+  letter-spacing: -0.02em;
   color: var(--ink);
 }
 .stat-label {

@@ -1,6 +1,6 @@
 <template>
   <div class="quote-page">
-    <van-nav-bar title="检测报价" left-text="返回" left-arrow @click-left="goBack" />
+    <van-nav-bar title="检测报价" left-text="返回" left-arrow fixed placeholder @click-left="goBack" />
 
     <div class="quote-content">
       <!-- 故障描述 -->
@@ -28,7 +28,7 @@
           </div>
         </div>
 
-        <!-- 工时项目：AnimatePresence 让增删项目时平滑进出，layout 让删除后排版平滑收拢 -->
+        <!-- 工时项目：AnimatePresence 让增删项目时平滑进出，layout 让删除后排版平滑收拢（进出/重排均走临界阻尼弹簧） -->
         <div v-if="serviceItems.length > 0" class="item-group">
           <div class="group-title">工时项目</div>
           <AnimatePresence>
@@ -39,7 +39,7 @@
               :initial="{ opacity: 0, y: -8 }"
               :animate="{ opacity: 1, y: 0 }"
               :exit="{ opacity: 0, transition: { duration: 0.15 } }"
-              :transition="{ duration: 0.2, ease: 'easeOut' }"
+              :transition="{ type: 'spring', bounce: 0, duration: 0.3 }"
               layout
             >
               <div class="item-header">
@@ -49,7 +49,15 @@
                   :border="false"
                   class="item-name"
                 />
-                <van-icon name="cross" class="item-delete" @click="removeItem(item._id)" />
+                <!-- 删除键：按下缩小、松手带回弹地弹回（微过冲） -->
+                <motion.span
+                  class="item-delete"
+                  :while-press="{ scale: 0.72 }"
+                  :transition="{ type: 'spring', bounce: 0.45, duration: 0.35 }"
+                  @click="removeItem(item._id)"
+                >
+                  <van-icon name="cross" />
+                </motion.span>
               </div>
               <div class="item-row">
                 <div class="item-field">
@@ -93,7 +101,7 @@
               :initial="{ opacity: 0, y: -8 }"
               :animate="{ opacity: 1, y: 0 }"
               :exit="{ opacity: 0, transition: { duration: 0.15 } }"
-              :transition="{ duration: 0.2, ease: 'easeOut' }"
+              :transition="{ type: 'spring', bounce: 0, duration: 0.3 }"
               layout
             >
               <div class="item-header">
@@ -103,7 +111,15 @@
                   :border="false"
                   class="item-name"
                 />
-                <van-icon name="cross" class="item-delete" @click="removeItem(item._id)" />
+                <!-- 删除键：按下缩小、松手带回弹地弹回（微过冲） -->
+                <motion.span
+                  class="item-delete"
+                  :while-press="{ scale: 0.72 }"
+                  :transition="{ type: 'spring', bounce: 0.45, duration: 0.35 }"
+                  @click="removeItem(item._id)"
+                >
+                  <van-icon name="cross" />
+                </motion.span>
               </div>
               <div class="item-row">
                 <div class="item-field">
@@ -167,7 +183,7 @@
     </div>
 
     <!-- 底部报价汇总 -->
-    <div class="quote-footer">
+    <div class="quote-footer material-bar">
       <div class="footer-summary">
         <div class="summary-row">
           <span>项目合计</span>
@@ -455,9 +471,8 @@ const saveQuoteHandler = async () => {
     })
     showToast({ type: 'success', message: '报价单已生成' })
     clearDraft(DRAFT_KEY)
-    setTimeout(() => {
-      router.back()
-    }, 800)
+    // toast 挂在 body 上，路由返回不会打断展示，无需人为等待
+    router.back()
   } catch (e) {
     // 已拦截
   } finally {
@@ -504,7 +519,8 @@ onMounted(async () => {
 .quote-page {
   min-height: 100vh;
   background: var(--canvas);
-  padding-bottom: 140px;
+  /* 盖住固定底部汇总栏 + 底部安全区 */
+  padding-bottom: calc(150px + env(safe-area-inset-bottom));
 }
 .quote-content {
   padding: 12px;
@@ -550,6 +566,10 @@ onMounted(async () => {
   font-size: 18px;
   cursor: pointer;
   padding: 4px;
+  /* motion.span 需要行内弹性布局让图标居中 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .item-row {
   display: flex;
@@ -597,15 +617,15 @@ onMounted(async () => {
 .add-buttons .van-button {
   flex: 1;
 }
-/* 底部汇总：表面浮层 + 发丝线上边框（不用投影） */
+/* 底部汇总：材质浮层（半透明毛玻璃见 global.css .material-bar）+ 发丝线上边框 */
 .quote-footer {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--surface-1);
+  /* 底部预留全面屏 Home 指示条安全区 */
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--hairline);
-  padding: 12px;
   z-index: 100;
 }
 .footer-summary {
@@ -630,6 +650,8 @@ onMounted(async () => {
   font-family: var(--font-mono);
   font-size: 20px;
   font-weight: 700;
+  /* 大号数字收紧字距（AGENTS.md：20px 档 -0.4px） */
+  letter-spacing: -0.02em;
   color: var(--danger);
 }
 .save-btn {
