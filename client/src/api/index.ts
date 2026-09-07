@@ -114,7 +114,8 @@ export const ocrPlate = async (file: File) => {
 
 // 访问控制
 export const getAuthStatus = () => request.get('/auth/status')
-export const getAuthMe = () => request.get('/auth/me')
+// 会话探测:401 属预期情况(未登录),标记 skipToast 不弹全局错误提示
+export const getAuthMe = () => request.get('/auth/me', { skipToast: true } as any)
 export const setupPassword = (data: { password: string }) => request.post('/auth/setup', data)
 export const loginPassword = (data: { password: string }) => request.post('/auth/login', data)
 export const logout = () => request.post('/auth/logout')

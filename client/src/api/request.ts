@@ -26,6 +26,10 @@ request.interceptors.response.use(
       router.replace('/login')
       return Promise.reject(error)
     }
+    // 调用方标记 skipToast 的请求(如登录页的会话探测)不弹提示
+    if (error.config?.skipToast) {
+      return Promise.reject(error)
+    }
     showToast({ type: 'fail', message })
     return Promise.reject(error)
   }
