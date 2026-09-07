@@ -515,7 +515,7 @@ const uploadPhoto = async (photoItem: any) => {
     photoItem.status = 'done'
   } catch (e) {
     photoItem.status = 'failed'
-    showToast({ type: 'fail', message: '照片上传失败，点击重试' })
+    showToast('照片上传失败，点击重试')
   }
 }
 

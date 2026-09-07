@@ -30,7 +30,8 @@ request.interceptors.response.use(
     if (error.config?.skipToast) {
       return Promise.reject(error)
     }
-    showToast({ type: 'fail', message })
+    // 错误提示用纯文字 toast(不加图标,保持克制;错误语义由文案表达)
+    showToast(message)
     return Promise.reject(error)
   }
 )
