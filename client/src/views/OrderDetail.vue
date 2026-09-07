@@ -146,7 +146,7 @@
       </div>
     </div>
 
-    <van-empty v-else-if="!loadFailed" description="加载中..." />
+    <PageSkeleton v-else-if="!loadFailed" :cards="3" />
     <van-empty v-else image="error" description="加载失败，点击重试" class="retry-empty" @click="loadData" />
 
     <!-- ===== 编辑接车信息弹窗 ===== -->

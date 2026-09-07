@@ -20,7 +20,16 @@
       <van-tab v-for="tab in tabs" :key="tab.value" :title="tab.label" :name="tab.value" />
     </van-tabs>
 
-    <div class="page-content scroll-area">
+    <div class="page-content scroll-area" :class="{ 'sk-mode': showSkeleton }">
+      <!-- 首次加载/切 tab 骨架:结构与工单行对应(车牌+徽章/客户诉求/金额) -->
+      <div v-if="showSkeleton" class="sk-cell" v-for="i in 6" :key="'sk' + i">
+        <div class="flex-between">
+          <div class="sk sk-line" style="width: 38%"></div>
+          <div class="sk sk-pill"></div>
+        </div>
+        <div class="sk sk-sm" style="width: 62%; margin-top: 10px"></div>
+        <div class="sk sk-sm" style="width: 30%; margin-top: 6px"></div>
+      </div>
       <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
         <van-list
           v-model:loading="loading"
@@ -76,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { motion } from 'motion-v'
 import { getOrders } from '@/api'
@@ -150,11 +159,23 @@ const onRefresh = () => {
   finished.value = false
   loadOrders()
 }
+
+// 骨架屏展示条件:正在加载且当前无内容(首次进入或切 tab/搜索清空后)
+const showSkeleton = computed(() => loading.value && orders.value.length === 0)
 // 首次加载不手动调用:van-list 挂载时 loading=false 且 finished=false,
 // 进入视口会自动触发 @load;手动再调一次会并发两个相同请求,列表被覆盖两次导致进场动画重放
 </script>
 
 <style scoped>
+/* 首次加载骨架行:与工单 cell 的信息结构对应 */
+.sk-cell {
+  padding: 13px 4px;
+  border-bottom: 1px solid var(--hairline);
+}
+/* 骨架展示期间隐藏 van-list 自带 loading 圈,避免双重加载指示 */
+.sk-mode :deep(.van-list__loading) {
+  display: none;
+}
 .order-title {
   display: flex;
   align-items: center;

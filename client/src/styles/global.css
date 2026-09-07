@@ -292,6 +292,20 @@ a {
   padding-bottom: calc(66px + env(safe-area-inset-bottom));
 }
 
+/* ===== 骨架屏占位:表面2 + 呼吸透明度(不用渐变),令牌随主题切换 ===== */
+.sk {
+  background: var(--surface-2);
+  border-radius: 6px;
+  animation: sk-breathe 1.4s ease-in-out infinite;
+}
+.sk-line { height: 14px; }
+.sk-sm { height: 11px; }
+.sk-pill { width: 48px; height: 20px; border-radius: 999px; }
+@keyframes sk-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
 /* ===== 路由过渡 =====
    fade：tab 间切换（快速交叉淡入）
    push：进入更深层级（详情页从右滑入，旧页向左避让）
@@ -356,7 +370,8 @@ a {
   }
   .chart-bar,
   .status-bar-fill,
-  .van-tabbar-item--active .van-icon {
+  .van-tabbar-item--active .van-icon,
+  .sk {
     animation: none;
   }
 }

@@ -10,6 +10,19 @@
     </van-tabs>
 
     <div class="page-content scroll-area">
+      <!-- 首次加载骨架:与提醒行对应(标题/车牌日期/类型徽章) -->
+      <div v-if="loading">
+        <div class="sk-cell" v-for="i in 7" :key="'sk' + i">
+          <div class="flex-between">
+            <div style="flex: 1">
+              <div class="sk sk-line" style="width: 44%"></div>
+              <div class="sk sk-sm" style="width: 56%; margin-top: 8px"></div>
+            </div>
+            <div class="sk sk-pill"></div>
+          </div>
+        </div>
+      </div>
+      <template v-if="!loading">
       <van-cell
         v-for="item in reminders"
         :key="item.id"
@@ -26,6 +39,7 @@
       </van-cell>
 
       <van-empty v-if="reminders.length === 0" description="暂无提醒" />
+      </template>
     </div>
 
     <!-- 提醒详情弹窗 -->
@@ -73,6 +87,8 @@ import dayjs from 'dayjs'
 
 const activeTab = ref('pending')
 const reminders = ref<any[]>([])
+// 首次/切 tab 加载中状态,驱动骨架屏
+const loading = ref(true)
 const showDetailPopup = ref(false)
 const current = ref<any>(null)
 // 标记已提醒的补充信息
@@ -87,6 +103,7 @@ const formatDate = (d: string) => dayjs(d).format('YYYY-MM-DD')
 const formatDateTime = (d: string) => dayjs(d).format('YYYY-MM-DD HH:mm')
 
 const loadData = async () => {
+  loading.value = true
   try {
     const params: any = {}
     if (activeTab.value) params.status = activeTab.value
@@ -94,6 +111,8 @@ const loadData = async () => {
     reminders.value = data as any[]
   } catch (e) {
     // 静默
+  } finally {
+    loading.value = false
   }
 }
 
@@ -132,6 +151,11 @@ onMounted(loadData)
 </script>
 
 <style scoped>
+/* 首次加载骨架行:与提醒 cell 的信息结构对应 */
+.sk-cell {
+  padding: 13px 4px;
+  border-bottom: 1px solid var(--hairline);
+}
 .popup-content {
   padding: 20px 16px 32px;
 }

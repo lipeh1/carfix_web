@@ -10,6 +10,18 @@
     <van-search v-model="keyword" placeholder="搜索姓名/电话" @search="onSearch" />
 
     <div class="page-content scroll-area">
+      <!-- 首次加载骨架:与客户行对应(姓名/电话/车辆数) -->
+      <div v-if="loading && customers.length === 0">
+        <div class="sk-cell" v-for="i in 7" :key="'sk' + i">
+          <div class="flex-between">
+            <div style="flex: 1">
+              <div class="sk sk-line" style="width: 26%"></div>
+              <div class="sk sk-sm" style="width: 40%; margin-top: 8px"></div>
+            </div>
+            <div class="sk sk-sm" style="width: 42px"></div>
+          </div>
+        </div>
+      </div>
       <!-- 列表项进场：弹簧上移淡入，逐项错开形成级联；AnimatePresence 让搜索换批时旧项平滑退场 -->
       <AnimatePresence>
         <motion.div
@@ -101,6 +113,11 @@ onMounted(loadData)
 </script>
 
 <style scoped>
+/* 首次加载骨架行:与客户 cell 的信息结构对应 */
+.sk-cell {
+  padding: 13px 4px;
+  border-bottom: 1px solid var(--hairline);
+}
 .popup-content {
   padding: 20px 16px 32px;
 }

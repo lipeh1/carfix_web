@@ -22,7 +22,11 @@
         <!-- 今日概览：点击数字直达对应状态的工单列表 -->
         <div class="card">
           <div class="section-title">今日概览</div>
-          <van-grid class="quick-grid" :column-num="4" :border="false">
+          <!-- 加载骨架:四格占位,数据到达后换成真实宫格 -->
+          <div v-if="loading" class="overview-sk">
+            <div v-for="i in 4" :key="i" class="sk" style="height: 44px"></div>
+          </div>
+          <van-grid v-else class="quick-grid" :column-num="4" :border="false">
             <van-grid-item icon="orders-o" :text="`待检测 ${stats.pendingInspection}`" @click="goOrders('pending_inspection')" />
             <van-grid-item icon="todo-list-o" :text="`维修中 ${stats.repairing}`" @click="goOrders('repairing')" />
             <van-grid-item icon="balance-list-o" :text="`待结算 ${stats.pendingSettlement}`" @click="goOrders('pending_settlement')" />
@@ -46,7 +50,8 @@
         <div class="card">
           <div class="flex-between">
             <span class="section-title" style="margin-bottom:0">本月营收</span>
-            <span class="amount">¥{{ monthlyRevenueDisplay }}</span>
+            <span v-if="loading" class="sk" style="width: 96px; height: 18px"></span>
+            <span v-else class="amount">¥{{ monthlyRevenueDisplay }}</span>
           </div>
         </div>
       </motion.div>
@@ -100,6 +105,8 @@ const monthlyRevenueFen = computed(() => stats.value.monthlyRevenue)
 const monthlyRevenueDisplay = useAnimatedYuan(monthlyRevenueFen)
 
 const pendingReminders = ref<any[]>([])
+// 首次加载中状态,驱动概览/营收骨架
+const loading = ref(true)
 
 const formatDate = (d: string) => dayjs(d).format('MM-DD')
 // 提醒类型标签（含催收）
@@ -111,6 +118,7 @@ const goOrders = (status: string) => {
 }
 
 const loadData = async () => {
+  loading.value = true
   try {
     const [dash, reminders] = await Promise.all([
       getDashboard(),
@@ -120,6 +128,8 @@ const loadData = async () => {
     pendingReminders.value = (reminders as any[]).slice(0, 5)
   } catch (e) {
     // 后端未启动时静默
+  } finally {
+    loading.value = false
   }
 }
 
@@ -141,6 +151,12 @@ onMounted(loadData)
 }
 .click-card:active {
   background: var(--surface-2);
+}
+/* 概览骨架:与四列宫格同布局 */
+.overview-sk {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
 }
 /* 概览宫格按压反馈：按下轻微缩小 + 背景抬升 */
 .quick-grid :deep(.van-grid-item__content) {

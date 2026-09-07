@@ -99,7 +99,7 @@
       </div>
     </div>
 
-    <van-empty v-else-if="!loadFailed" description="加载中..." />
+    <PageSkeleton v-else-if="!loadFailed" :cards="2" />
     <van-empty v-else image="error" description="加载失败，点击重试" @click="loadData" />
   </div>
 </template>
