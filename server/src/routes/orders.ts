@@ -184,10 +184,10 @@ router.post('/:id/quote', asyncHandler(async (req, res) => {
 
     if (items && items.length > 0) {
       for (const item of items) {
-        // 单价入参为"元"，入库换算为整数"分"；数量支持小数，小计四舍五入到分
-        const unitFen = Math.round(Number(item.unitPrice) * 100)
-        if (!Number.isFinite(unitFen) || unitFen < 0) {
-          throw new AppError('单价必须是不小于0的数字')
+        // 单价入参为整数"分"（接口统一分制,前端已用 yuanToFen 换算,服务端不可再乘 100,否则双重换算）
+        const unitFen = Math.round(Number(item.unitPrice))
+        if (!Number.isSafeInteger(unitFen) || unitFen < 0) {
+          throw new AppError('单价必须是不小于0的整数（单位:分）')
         }
         const subtotal = Math.round(Number(item.quantity) * unitFen)
         total += subtotal
