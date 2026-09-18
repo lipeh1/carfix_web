@@ -632,7 +632,11 @@ const submit = async () => {
 let draftTimer: ReturnType<typeof setTimeout> | null = null
 watch(form, () => {
   if (draftTimer) clearTimeout(draftTimer)
-  draftTimer = setTimeout(() => saveDraft(DRAFT_KEY, { ...form }), 400)
+  draftTimer = setTimeout(() => {
+    // 空表单不落草稿：避免进页面即写入空草稿，下次进入弹无意义的恢复确认框
+    if (!draftHasContent({ ...form })) return
+    saveDraft(DRAFT_KEY, { ...form })
+  }, 400)
 })
 
 // 重进页面时询问是否恢复未提交的草稿

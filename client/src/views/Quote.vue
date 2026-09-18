@@ -235,7 +235,7 @@ import { showToast } from 'vant'
 import { motion, AnimatePresence } from 'motion-v'
 import { getOrder, saveQuote, getLastQuote } from '@/api'
 import { fenToYuan, yuanToFen } from '@/utils/money'
-import { saveDraft, loadDraft, clearDraft, draftHasContent } from '@/utils/draft'
+import { saveDraft, loadDraft, clearDraft } from '@/utils/draft'
 
 const route = useRoute()
 const router = useRouter()
@@ -489,13 +489,21 @@ const goBack = () => {
 }
 
 // 表单变化即存草稿（项目列表一并保存，金额为页面元单位）
+// 无实质内容判定：没有项目、没有检测描述、优惠为 0——此时不落草稿，
+// 否则进页面即写入 {discount:"0.00"} 这类空草稿，下次进入弹"恢复草稿"
+// 确认框，弹窗遮罩挡住底部按钮且无提示，造成"保存无反应"的假象
+const quoteIsEmpty = (d: { inspection: string; discount: string; items: unknown[] }) =>
+  d.items.length === 0 && !d.inspection.trim() && !(Number(d.discount) > 0)
+
 let draftTimer: ReturnType<typeof setTimeout> | null = null
 watch([inspection, discount, items], () => {
   if (draftTimer) clearTimeout(draftTimer)
   draftTimer = setTimeout(() => {
     // 已载入服务端数据前不存草稿，避免用空表单覆盖有意义的草稿
     if (!loaded.value) return
-    saveDraft(DRAFT_KEY, { inspection: inspection.value, discount: discount.value, items: items.value })
+    const snapshot = { inspection: inspection.value, discount: discount.value, items: items.value }
+    if (quoteIsEmpty(snapshot)) return
+    saveDraft(DRAFT_KEY, snapshot)
   }, 400)
 }, { deep: true })
 
@@ -505,9 +513,10 @@ const loaded = ref(false)
 onMounted(async () => {
   await loadExistingQuote()
   loaded.value = true
-  // 已有报价内容时不弹草稿（服务端数据优先）；空表单时询问恢复
+  // 恢复弹窗只认"真有项目"的草稿：只有描述/优惠数字的草稿价值低，
+  // 弹确认框反而挡操作；顺手清掉这类垃圾草稿
   const d = loadDraft<{ inspection: string; discount: string; items: any[] }>(DRAFT_KEY)
-  if (d && draftHasContent(d) && items.value.length === 0) {
+  if (d && (d.items?.length || 0) > 0 && items.value.length === 0) {
     try {
       const { showConfirmDialog } = await import('vant')
       await showConfirmDialog({ title: '恢复草稿', message: '检测到未提交的报价内容，是否恢复？' })
@@ -515,6 +524,8 @@ onMounted(async () => {
       discount.value = d.discount || '0'
       items.value = (d.items || []).map((i: any) => ({ ...i }))
     } catch (e) { /* 放弃恢复 */ }
+  } else if (d && (d.items?.length || 0) === 0) {
+    clearDraft(DRAFT_KEY)
   }
 })
 </script>
