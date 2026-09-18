@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>拼长图</title>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="status">绘制中…</div>
+<script>
+// 把手册内容绘制成微信长图（JPEG），完成后 POST 给本地服务保存
+const chapters = [
+  ['01-home.png', '工作台 · 每天的驾驶舱', '打开系统第一眼：今日待检测、维修中、待结算、已完成一目了然；本月营收实时统计，挂账金额自动汇总。点任意数字直达对应工单列表。'],
+  ['02-checkin.png', '第一步 · 接车登记', '选择老客户（按最近到店排序，熟客一键带出）或现场新建；常见诉求点标签即填，车况随手拍照留证，杜绝交车纠纷。'],
+  ['03-order-pending.png', '工单档案自动建立', '接车信息、照片、车况描述自动归档为一张工单，后续所有环节都在这张工单上流转，全程留痕。'],
+  ['04-quote.png', '第二步 · 检测报价', '检测结果、工时、配件逐项开单，数量单价自动算小计；支持一键带入这辆车上次的项目、一键生成小保养模板。'],
+  ['13-quote-image.png', '报价单一键发客户', '报价自动生成带门店名的单据图片，微信直接发给客户确认——客户不用到店也能看懂每一分钱。'],
+  ['05-repairing.png', '第三步 · 维修施工', '施工过程随时文字记录；维修中发现新问题，登记为增项，客户确认后才计入费用——先确认后施工，不扯皮。'],
+  ['06-settlement.png', '第四步 · 质检结算', '质检通过后结算单自动生成：项目合计、优惠、应收金额清清楚楚，不需要手工算账。'],
+  ['07-payment.png', '第五步 · 收款', '现金、微信、支付宝、刷卡、转账五种方式；支持分次收款和挂账，实时显示待收金额，多收一分会拦截。'],
+  ['08-paid.png', '收款记录全程可查', '每一笔收款都有记录：时间、方式、金额。补款、结清状态自动更新，账目对得上。'],
+  ['09-deliver.png', '第六步 · 交车', '录入交车里程、确认交付，工单完成。从接车到交车，每一步都有据可查。'],
+  ['10-completed.png', '完整档案 · 随时回查', '完成的工单就是一辆车的维修档案：什么时候修的、换了什么、收了多少钱，客户下次到店一查便知。'],
+  ['11-reminders.png', '自动提醒 · 不漏一单生意', '交车后自动生成回访提醒（3天后）和保养提醒（3个月后）；挂账未清的，7天/30天自动催收提醒。'],
+  ['12-stats.png', '经营统计 · 心里有数', '月度营收趋势、工单状态分布、维修项目热度、挂账明细——店里干得怎么样，数据说了算。']
+]
+
+const W = 820           // 长图总宽
+const SHOT_W = 600      // 截图展示宽（390 原图放大）
+const FONT = "'PingFang SC','Microsoft YaHei',sans-serif"
+const imgs = {}
+
+function loadImg(src) {
+  return new Promise((ok, no) => {
+    const im = new Image()
+    im.onload = () => ok(im)
+    im.onerror = no
+    im.src = 'manual-shots/' + src
+  })
+}
+
+// 画圆角矩形
+function rr(ctx, x, y, w, h, r) {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.arcTo(x + w, y, x + w, y + h, r)
+  ctx.arcTo(x + w, y + h, x, y + h, r)
+  ctx.arcTo(x, y + h, x, y, r)
+  ctx.arcTo(x, y, x + w, y, r)
+  ctx.closePath()
+}
+
+// 中文换行：按最大宽度切分返回行数组
+function wrap(ctx, text, maxW) {
+  const lines = []
+  let line = ''
+  for (const ch of text) {
+    if (ctx.measureText(line + ch).width > maxW) { lines.push(line); line = ch }
+    else line += ch
+  }
+  if (line) lines.push(line)
+  return lines
+}
+
+async function main() {
+  for (const [f] of chapters) imgs[f] = await loadImg(f)
+
+  // 预计算总高
+  const PAD = 36, CARD_W = W - PAD * 2
+  let cardHeights = []
+  const c0 = document.createElement('canvas').getContext('2d')
+  c0.font = `24px ${FONT}`
+  for (const [f, t, d] of chapters) {
+    const lines = wrap(c0, d, CARD_W - 56 * 2).length
+    const shotH = Math.round(imgs[f].height * (SHOT_W / imgs[f].width))
+    cardHeights.push(120 + lines * 40 + 30 + shotH + 48)
+  }
+  const coverH = 560
+  const footH = 300
+  const H = coverH + cardHeights.reduce((a, b) => a + b + 36, 0) + footH + 40
+
+  const canvas = document.getElementById('c')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')
+
+  // 背景
+  ctx.fillStyle = '#f5f6f8'
+  ctx.fillRect(0, 0, W, H)
+
+  // 封面
+  ctx.fillStyle = '#101114'
+  ctx.fillRect(0, 0, W, coverH)
+  ctx.fillStyle = '#ffffff'
+  ctx.font = `600 54px ${FONT}`
+  ctx.textAlign = 'center'
+  ctx.fillText('汽修管理系统', W / 2, 230)
+  ctx.fillStyle = '#aeb2ba'
+  ctx.font = `400 27px ${FONT}`
+  ctx.fillText('一部手机，管好接车、报价、维修、结算、交车全流程', W / 2, 300)
+  ctx.strokeStyle = '#3a3d44'
+  rr(ctx, W / 2 - 170, 360, 340, 62, 31)
+  ctx.stroke()
+  ctx.fillStyle = '#c9cdd6'
+  ctx.font = `400 24px ${FONT}`
+  ctx.fillText('密码保护 · 数据留痕 · 自动提醒', W / 2, 400)
+  ctx.textAlign = 'left'
+
+  // 章节
+  let y = coverH + 36
+  chapters.forEach(([f, t, d], i) => {
+    const cardH = cardHeights[i]
+    // 白卡
+    ctx.fillStyle = '#ffffff'
+    rr(ctx, PAD, y, CARD_W, cardH, 24)
+    ctx.fill()
+    // 编号
+    ctx.fillStyle = '#5e6ad2'
+    rr(ctx, PAD + 40, y + 40, 52, 52, 14)
+    ctx.fill()
+    ctx.fillStyle = '#ffffff'
+    ctx.font = `600 28px ${FONT}`
+    ctx.textAlign = 'center'
+    ctx.fillText(String(i + 1), PAD + 66, y + 76)
+    ctx.textAlign = 'left'
+    // 标题
+    ctx.fillStyle = '#26282c'
+    ctx.font = `600 34px ${FONT}`
+    ctx.fillText(t, PAD + 40 + 52 + 20, y + 76)
+    // 说明（换行）
+    ctx.fillStyle = '#4b4f57'
+    ctx.font = `400 24px ${FONT}`
+    let ty = y + 140
+    for (const line of wrap(ctx, d, CARD_W - 56 * 2)) {
+      ctx.fillText(line, PAD + 56, ty)
+      ty += 40
+    }
+    // 截图（居中，带深色底框）
+    const sx = (W - SHOT_W) / 2
+    const sy = ty + 10
+    const sh = Math.round(imgs[f].height * (SHOT_W / imgs[f].width))
+    ctx.fillStyle = '#101114'
+    rr(ctx, sx - 10, sy - 10, SHOT_W + 20, sh + 20, 18)
+    ctx.fill()
+    ctx.drawImage(imgs[f], sx, sy, SHOT_W, sh)
+    y += cardH + 36
+  })
+
+  // 尾部
+  ctx.fillStyle = '#ffffff'
+  rr(ctx, PAD, y, CARD_W, 170, 24)
+  ctx.fill()
+  ctx.fillStyle = '#26282c'
+  ctx.font = `600 30px ${FONT}`
+  ctx.textAlign = 'center'
+  ctx.fillText('数据安全', W / 2, y + 62)
+  ctx.fillStyle = '#4b4f57'
+  ctx.font = `400 23px ${FONT}`
+  ctx.fillText('系统设有访问密码保护，客户信息、车辆照片与经营数据', W / 2, y + 108)
+  ctx.fillText('均存储在店主自己的设备上，不经第三方平台。', W / 2, y + 142)
+  ctx.fillStyle = '#8b8f98'
+  ctx.font = `400 20px ${FONT}`
+  ctx.fillText('以上为系统真实界面截图（演示数据）', W / 2, y + 240)
+  ctx.textAlign = 'left'
+
+  // 导出 JPEG 并上传保存
+  canvas.toBlob(async (blob) => {
+    try {
+      const r = await fetch('/save-manual', { method: 'POST', body: blob })
+      const j = await r.json()
+      document.getElementById('status').textContent =
+        '完成：' + JSON.stringify(j) + ' | 画布 ' + W + 'x' + H
+    } catch (e) {
+      document.getElementById('status').textContent = '上传失败: ' + e
+    }
+  }, 'image/jpeg', 0.92)
+}
+main().catch(e => document.getElementById('status').textContent = '绘制失败: ' + e)
+</script>
+</body>
+</html>
