@@ -35,9 +35,10 @@ router.get('/status', asyncHandler(async (_req, res) => {
 // 首次设置访问密码（仅允许一次）
 router.post('/setup', asyncHandler(async (req, res) => {
   if (await getPasswordHash()) throw new AppError('访问密码已初始化,请直接登录', 403)
-  const { password } = req.body
-  if (!password || String(password).length < 6) throw new AppError('密码至少 6 位')
-  await setPasswordHash(String(password))
+  // 去首尾空格：前端已 trim，此处双保险，避免手滑空格造成设置与登录不一致
+  const password = String(req.body.password || '').trim()
+  if (!password || password.length < 6) throw new AppError('密码至少 6 位')
+  await setPasswordHash(password)
   await attachSession(req, res)
   res.json({ success: true })
 }))
@@ -49,14 +50,15 @@ router.post('/login', asyncHandler(async (req, res) => {
   if (state && state.until > Date.now()) {
     throw new AppError('尝试过于频繁,请 1 分钟后再试', 429)
   }
-  const { password } = req.body
+  const password = String(req.body.password || '').trim()
   const hash = await getPasswordHash()
-  if (!hash || !password || !verifyPassword(String(password), hash)) {
+  if (!hash || !password || !verifyPassword(password, hash)) {
     const fails = (state?.count || 0) + 1
     failMap.set(ip, fails >= 5
       ? { count: 0, until: Date.now() + 60_000 }
       : { count: fails, until: 0 })
-    throw new AppError('密码不正确', 401)
+    // 提示携带输入注意点：大小写敏感是密码验证的常态，提前说明减少反复试错触发锁定
+    throw new AppError('密码不正确（注意大小写）', 401)
   }
   failMap.delete(ip)
   await attachSession(req, res)

@@ -15,6 +15,10 @@
             :placeholder="initialized ? '访问密码' : '设置密码（至少 6 位）'"
             :maxlength="32"
             clearable
+            autocapitalize="off"
+            autocorrect="off"
+            autocomplete="off"
+            :spellcheck="false"
           />
           <!-- 首次设置需二次确认,避免手误锁死 -->
           <van-field
@@ -24,6 +28,10 @@
             name="confirm"
             placeholder="确认密码"
             :maxlength="32"
+            autocapitalize="off"
+            autocorrect="off"
+            autocomplete="off"
+            :spellcheck="false"
           />
         </van-cell-group>
         <van-button type="primary" block class="login-btn" native-type="submit" :loading="loading">
@@ -66,13 +74,14 @@ onMounted(async () => {
 
 const submit = async () => {
   if (loading.value) return
-  const pw = password.value
+  // 密码去首尾空格后再提交，杜绝手滑空格导致的"设置时与登录时不一致"
+  const pw = password.value.trim()
   if (!pw) return showToast('请输入密码')
   loading.value = true
   try {
     if (!initialized.value) {
       if (pw.length < 6) return showToast('密码至少 6 位')
-      if (pw !== confirm.value) return showToast('两次输入的密码不一致')
+      if (pw !== confirm.value.trim()) return showToast('两次输入的密码不一致')
       await setupPassword({ password: pw })
     } else {
       await loginPassword({ password: pw })
