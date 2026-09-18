@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "test:settlement": "node tests/settlement-flow.cjs",
     "start": "node dist/index.js",
     "db:init": "prisma migrate dev --name init",
     "db:migrate": "prisma migrate dev",

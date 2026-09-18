@@ -51,6 +51,14 @@ router.post('/:id/payments', asyncHandler(async (req, res) => {
     // 同步更新工单的已收金额
     await tx.workOrder.update({ where: { id: s.workOrderId }, data: { paidAmount: paid } })
 
+    // 挂账补清后关闭尚未处理的催收，保留已有回访和保养提醒。
+    if (paid >= s.actualAmount) {
+      await tx.reminder.updateMany({
+        where: { workOrderId: s.workOrderId, type: 'collection', status: 'pending' },
+        data: { status: 'done', feedback: '款项已结清，自动关闭催收' }
+      })
+    }
+
     return created
   })
 

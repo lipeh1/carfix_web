@@ -1,3 +1,4 @@
+// 工单业务：管理报价、维修增项、质检结算与交车流程。
 import { Router } from 'express'
 import prisma from '../prisma'
 import { asyncHandler, AppError } from '../middleware/error'
@@ -83,6 +84,10 @@ router.patch('/:id/status', asyncHandler(async (req, res) => {
   }
   if (!allowedTransitions[order.status].includes(status)) {
     throw new AppError('当前状态下不允许执行该操作')
+  }
+  // 这两个状态必须走专用接口，避免跳过质检建账或交车提醒。
+  if (status === 'pending_settlement' || status === 'completed') {
+    throw new AppError('请通过质检或交车操作完成状态流转')
   }
 
   const updateData: any = { status }
@@ -270,6 +275,7 @@ router.get('/:id/additional-items', asyncHandler(async (req, res) => {
 }))
 
 router.post('/:id/additional-items', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id)
   const { name, amount, reason } = req.body
   if (!name) throw new AppError('名称不能为空')
   // 金额为整数"分"，必须是正整数
@@ -277,8 +283,15 @@ router.post('/:id/additional-items', asyncHandler(async (req, res) => {
   if (!Number.isSafeInteger(amountFen) || amountFen <= 0) {
     throw new AppError('金额必须为大于0的整数（单位:分）')
   }
-  const item = await prisma.additionalItem.create({
-    data: { workOrderId: Number(req.params.id), name, amount: amountFen, reason }
+  const item = await prisma.$transaction(async (tx) => {
+    const order = await tx.workOrder.findUnique({ where: { id }, include: { settlement: true } })
+    if (!order) throw new AppError('工单不存在', 404)
+    if (order.status !== 'repairing' || order.settlement) {
+      throw new AppError('仅维修中且未结算的工单可以新增增项')
+    }
+    return tx.additionalItem.create({
+      data: { workOrderId: id, name, amount: amountFen, reason }
+    })
   })
   res.status(201).json(item)
 }))
@@ -287,15 +300,24 @@ router.post('/:id/additional-items', asyncHandler(async (req, res) => {
 router.patch('/additional-items/:itemId/confirm', asyncHandler(async (req, res) => {
   const { confirmed } = req.body
   const itemId = Number(req.params.itemId)
-  const item = await prisma.additionalItem.findUnique({ where: { id: itemId } })
-  if (!item) throw new AppError('增项不存在', 404)
-  // 幂等保护：已处理的增项禁止再次确认/拒绝，避免重复写入项目和重复加价
-  if (item.status !== 'pending') {
-    throw new AppError('该增项已确认或拒绝，请刷新后查看最新状态')
-  }
+  if (typeof confirmed !== 'boolean') throw new AppError('请明确确认或拒绝增项')
 
-  if (confirmed) {
-    await prisma.$transaction(async (tx) => {
+  // 校验与写入同事务完成，防止确认增项与质检结算交错后漏计费用。
+  await prisma.$transaction(async (tx) => {
+    const item = await tx.additionalItem.findUnique({
+      where: { id: itemId },
+      include: { workOrder: { include: { settlement: true } } }
+    })
+    if (!item) throw new AppError('增项不存在', 404)
+    if (item.status !== 'pending') {
+      throw new AppError('该增项已确认或拒绝，请刷新后查看最新状态')
+    }
+    const order = item.workOrder
+    if (!['repairing', 'pending_quality_check'].includes(order.status) || order.settlement) {
+      throw new AppError('当前工单不可处理增项，请在质检结算前完成确认或拒绝')
+    }
+
+    if (confirmed) {
       // 标记确认，并生成对应的维修项目
       await tx.additionalItem.update({
         where: { id: itemId },
@@ -320,15 +342,15 @@ router.patch('/additional-items/:itemId/confirm', asyncHandler(async (req, res) 
       })
       await tx.workOrder.update({
         where: { id: item.workOrderId },
-        data: { finalAmount: sums._sum.subtotal ?? 0 }
+        data: { finalAmount: Math.max(0, (sums._sum.subtotal ?? 0) - order.discount) }
       })
-    })
-  } else {
-    await prisma.additionalItem.update({
-      where: { id: itemId },
-      data: { status: 'rejected' }
-    })
-  }
+    } else {
+      await tx.additionalItem.update({
+        where: { id: itemId },
+        data: { status: 'rejected' }
+      })
+    }
+  })
   res.json({ success: true })
 }))
 
@@ -337,19 +359,20 @@ router.patch('/additional-items/:itemId/confirm', asyncHandler(async (req, res) 
 router.post('/:id/quality-check', asyncHandler(async (req, res) => {
   const id = Number(req.params.id)
   const { result, checkItems, remark } = req.body
-  if (!result) throw new AppError('质检结果不能为空')
-
-  // 校验工单存在，结算金额计算也需要工单上的优惠信息
-  const order = await prisma.workOrder.findUnique({ where: { id } })
-  if (!order) throw new AppError('工单不存在', 404)
-  // 只有待质检的工单可以录入质检结果
-  if (order.status !== 'pending_quality_check') {
-    throw new AppError('工单未处于待质检状态，无法质检')
-  }
+  if (!['pass', 'fail'].includes(result)) throw new AppError('质检结果必须为通过或不通过')
 
   // 质检记录的替换、状态流转与结算单生成同事务执行，
   // 保证质检结果、工单状态、结算单三者始终一致
   const qc = await prisma.$transaction(async (tx) => {
+    const order = await tx.workOrder.findUnique({ where: { id } })
+    if (!order) throw new AppError('工单不存在', 404)
+    if (order.status !== 'pending_quality_check') {
+      throw new AppError('工单未处于待质检状态，无法质检')
+    }
+    // 待确认增项不能越过结算边界，否则后续确认会与结算单金额脱节。
+    if (result === 'pass' && await tx.additionalItem.count({ where: { workOrderId: id, status: 'pending' } })) {
+      throw new AppError('请先确认或拒绝所有待确认增项，再通过质检')
+    }
     // 删除旧质检记录
     await tx.qualityCheck.deleteMany({ where: { workOrderId: id } })
 
@@ -375,7 +398,7 @@ router.post('/:id/quality-check', asyncHandler(async (req, res) => {
             totalAmount: total,
             discount: disc,
             actualAmount: total - disc,
-            status: 'unpaid'
+            status: total === disc ? 'paid' : 'unpaid'
           }
         })
         await tx.workOrder.update({ where: { id }, data: { finalAmount: total - disc } })
@@ -404,34 +427,54 @@ router.get('/:id/settlement', asyncHandler(async (req, res) => {
 router.post('/:id/settlement', asyncHandler(async (req, res) => {
   const id = Number(req.params.id)
   const { discount, remark } = req.body
-  const items = await prisma.repairItem.findMany({ where: { workOrderId: id } })
-  const total = items.reduce((sum, i) => sum + i.subtotal, 0)
-  // 请求未携带优惠时回落到报价阶段登记的工单优惠
-  const order = await prisma.workOrder.findUnique({ where: { id } })
-  if (!order) throw new AppError('工单不存在', 404)
-  const disc = Math.min(
-    discount !== undefined ? Math.max(0, Number(discount) || 0) : Math.max(0, order.discount || 0),
-    total
-  )
-  const actual = total - disc
+  if (discount !== undefined && (!Number.isSafeInteger(Number(discount)) || Number(discount) < 0)) {
+    throw new AppError('优惠必须为不小于0的整数（单位:分）')
+  }
 
-  const today = dayjs().format('YYYYMMDD')
-  const count = await prisma.settlement.count({ where: { settlementNo: { startsWith: `SET${today}` } } })
-
-  const s = await prisma.settlement.upsert({
-    where: { workOrderId: id },
-    update: { totalAmount: total, discount: disc, actualAmount: actual, remark },
-    create: {
-      workOrderId: id,
-      settlementNo: `SET${today}${String(count + 1).padStart(3, '0')}`,
-      totalAmount: total,
-      discount: disc,
-      actualAmount: actual,
-      status: 'unpaid',
-      remark
+  const s = await prisma.$transaction(async (tx) => {
+    const order = await tx.workOrder.findUnique({ where: { id } })
+    if (!order) throw new AppError('工单不存在', 404)
+    if (!['pending_settlement', 'completed'].includes(order.status)) {
+      throw new AppError('请在质检通过后进行结算')
     }
+    if (await tx.additionalItem.count({ where: { workOrderId: id, status: 'pending' } })) {
+      throw new AppError('存在待确认增项，无法结算')
+    }
+    const items = await tx.repairItem.findMany({ where: { workOrderId: id } })
+    const total = items.reduce((sum, i) => sum + i.subtotal, 0)
+    // 请求未携带优惠时回落到报价阶段登记的工单优惠。
+    const disc = Math.min(discount !== undefined ? Number(discount) : order.discount, total)
+    const actual = total - disc
+    const existing = await tx.settlement.findUnique({ where: { workOrderId: id } })
+    const paid = existing?.paidAmount ?? 0
+    if (actual < paid) throw new AppError('结算金额不能低于已收金额')
+    // 创建与调整都按实际欠款判断状态，零元账单无需伪造收款记录。
+    const status = paid >= actual ? 'paid' : 'unpaid'
+    const today = dayjs().format('YYYYMMDD')
+    const count = await tx.settlement.count({ where: { settlementNo: { startsWith: `SET${today}` } } })
+
+    const saved = await tx.settlement.upsert({
+      where: { workOrderId: id },
+      update: { totalAmount: total, discount: disc, actualAmount: actual, status, remark },
+      create: {
+        workOrderId: id,
+        settlementNo: `SET${today}${String(count + 1).padStart(3, '0')}`,
+        totalAmount: total,
+        discount: disc,
+        actualAmount: actual,
+        status,
+        remark
+      }
+    })
+    await tx.workOrder.update({ where: { id }, data: { finalAmount: actual } })
+    if (status === 'paid') {
+      await tx.reminder.updateMany({
+        where: { workOrderId: id, type: 'collection', status: 'pending' },
+        data: { status: 'done', feedback: '款项已结清，自动关闭催收' }
+      })
+    }
+    return saved
   })
-  await prisma.workOrder.update({ where: { id }, data: { finalAmount: actual } })
   res.json(s)
 }))
 
@@ -487,7 +530,7 @@ router.post('/:id/deliver', asyncHandler(async (req, res) => {
 
   // 挂账交车：自动生成 7/30 天催收提醒，欠款不追就静默流失
   const settlement = await prisma.settlement.findUnique({ where: { workOrderId: id } })
-  if (settlement && settlement.status === 'unpaid') {
+  if (settlement && settlement.actualAmount > settlement.paidAmount) {
     const unpaidFen = settlement.actualAmount - settlement.paidAmount
     const unpaidYuan = (unpaidFen / 100).toFixed(2)
     for (const days of [7, 30]) {

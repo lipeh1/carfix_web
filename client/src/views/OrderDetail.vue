@@ -1,3 +1,4 @@
+<!-- 工单详情：展示接车、维修与结算信息，并提供状态流转和挂账补款操作。 -->
 <template>
   <div class="page-container">
     <van-nav-bar :title="`工单 #${order?.orderNo || ''}`" left-text="返回" left-arrow fixed placeholder @click-left="$router.back()" />
@@ -100,7 +101,7 @@
             </template>
           </van-cell>
           <!-- 待确认增项的操作按钮 -->
-          <div v-if="item.status === 'pending'" class="additional-actions">
+          <div v-if="item.status === 'pending' && canProcessAdditional" class="additional-actions">
             <van-button size="small" type="success" @click="handleConfirmAdditional(item, true)">确认</van-button>
             <van-button size="small" type="danger" plain @click="handleConfirmAdditional(item, false)">拒绝</van-button>
           </div>
@@ -341,6 +342,11 @@ const unpaidAmount = computed(() => {
   return Number(settlement.value.actualAmount) - Number(settlement.value.paidAmount)
 })
 
+// 增项必须在结算前处理，结算后不再改变已确认的收费明细。
+const canProcessAdditional = computed(() =>
+  ['repairing', 'pending_quality_check'].includes(order.value?.status) && !settlement.value
+)
+
 // 底部操作按钮（根据当前状态动态显示）
 const actionButtons = computed(() => {
   const s = order.value?.status
@@ -362,8 +368,12 @@ const actionButtons = computed(() => {
     btns.push({ key: 'qc_pass', label: '质检通过', type: 'success' })
     btns.push({ key: 'qc_fail', label: '质检不通过', type: 'danger' })
   }
+  // 保留历史待结算工单缺少结算单时的建账入口，已结清工单不再显示收款。
+  if ((s === 'pending_settlement' && (!settlement.value || unpaidAmount.value > 0))
+    || (s === 'completed' && unpaidAmount.value > 0)) {
+    btns.push({ key: 'receive_payment', label: s === 'completed' ? '补款' : '收款', type: 'primary' })
+  }
   if (s === 'pending_settlement') {
-    btns.push({ key: 'receive_payment', label: '收款', type: 'primary' })
     btns.push({ key: 'deliver', label: '交车', type: 'success' })
   }
   return btns
