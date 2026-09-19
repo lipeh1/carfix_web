@@ -34,15 +34,6 @@
       <!-- 接车照片 -->
       <div class="card" v-if="checkinPhotos.length > 0">
         <div class="section-title">接车照片</div>
-        <van-image-preview v-model:show="showPreview" :images="previewImages" :start-position="previewIndex">
-          <!-- 报价单模式下提供显式保存按钮:长按保存仅在部分环境(微信等)有效,桌面/安卓浏览器不响应 -->
-          <template #cover>
-            <div v-if="previewMode === 'quote'" class="quote-save-bar">
-              <van-button type="primary" block :loading="savingImage" @click="saveQuoteImage">保存图片</van-button>
-              <div class="quote-save-hint">保存后可发送给客户确认</div>
-            </div>
-          </template>
-        </van-image-preview>
         <div class="photo-grid">
           <img
             v-for="(photo, idx) in checkinPhotos"
@@ -149,6 +140,19 @@
 
     <PageSkeleton v-else-if="!loadFailed" :cards="3" />
     <van-empty v-else image="error" description="加载失败，点击重试" class="retry-empty" @click="loadData" />
+
+    <!-- 全屏图片预览：置于页面根级无条件渲染。
+         原先放在"接车照片"卡片内且受其 v-if 控制，
+         没有照片的工单（如报价图片分享）预览组件根本不存在 -->
+    <van-image-preview v-model:show="showPreview" :images="previewImages" :start-position="previewIndex">
+      <!-- 报价单模式下提供显式保存按钮:长按保存仅在部分环境(微信等)有效,桌面/安卓浏览器不响应 -->
+      <template #cover>
+        <div v-if="previewMode === 'quote'" class="quote-save-bar">
+          <van-button type="primary" block :loading="savingImage" @click="saveQuoteImage">保存图片</van-button>
+          <div class="quote-save-hint">保存后可发送给客户确认</div>
+        </div>
+      </template>
+    </van-image-preview>
 
     <!-- ===== 编辑接车信息弹窗 ===== -->
     <van-popup v-model:show="showEditCheckin" position="bottom" round>
@@ -602,7 +606,9 @@ const handleAction = async (key: string) => {
           previewImages.value = [dataUrl]
           previewIndex.value = 0
           previewMode.value = 'quote'
-          showPreview.value = true
+          // 延迟打开：避开本次触摸的事件序列，防止 iOS 上
+          // 预览遮罩刚挂载就被同一次 tap 穿透关闭
+          setTimeout(() => { showPreview.value = true }, 100)
           showToast('点击下方按钮保存图片，或长按图片转发客户')
         } catch (err: any) {
           showToast({ type: 'fail', message: '图片生成失败：' + (err?.message || '未知原因') })
