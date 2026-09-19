@@ -163,7 +163,13 @@ export function generateQuoteCard(order: QuoteCardOrder): string {
   ctx.font = `400 20px ${FONT}`
   ctx.fillText('报价如有疑问请随时联系 · 确认后我们将尽快安排施工', PAD, H - footerH + 6)
 
-  return canvas.toDataURL('image/jpeg', 0.92)
+  // 部分手机浏览器 canvas 超限/被回收时 toDataURL 返回 "data:," 而不报错，
+  // 主动校验导出结果，避免展示空白图
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
+  if (!dataUrl || dataUrl.length < 100) {
+    throw new Error('画布导出为空，请重试')
+  }
+  return dataUrl
 }
 
 // 绘制圆角矩形路径

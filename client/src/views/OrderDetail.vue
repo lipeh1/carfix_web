@@ -583,24 +583,30 @@ const handleAction = async (key: string) => {
       case 'share_quote': {
         // 生成报价单长图，预览后长按保存/微信转发给客户
         if (!order.value) break
-        const dataUrl = generateQuoteCard({
-          orderNo: order.value.orderNo,
-          plateNumber: order.value.vehicle?.plateNumber,
-          customerName: order.value.customer?.name,
-          mileageIn: order.value.mileageIn,
-          createdAt: order.value.createdAt,
-          quoteAmount: order.value.quoteAmount,
-          discount: order.value.discount,
-          repairItems: (repairItems.value || []).map((i: any) => ({
-            name: i.name, type: i.type, quantity: i.quantity,
-            unitPrice: i.unitPrice, subtotal: i.subtotal
-          }))
-        })
-        previewImages.value = [dataUrl]
-        previewIndex.value = 0
-        previewMode.value = 'quote'
-        showPreview.value = true
-        showToast('点击下方按钮保存图片，或长按图片转发客户')
+        // 独立捕获：手机浏览器 canvas 兼容问题不能静默，
+        // 否则表现为"点了没反应"无从排查
+        try {
+          const dataUrl = generateQuoteCard({
+            orderNo: order.value.orderNo,
+            plateNumber: order.value.vehicle?.plateNumber,
+            customerName: order.value.customer?.name,
+            mileageIn: order.value.mileageIn,
+            createdAt: order.value.createdAt,
+            quoteAmount: order.value.quoteAmount,
+            discount: order.value.discount,
+            repairItems: (repairItems.value || []).map((i: any) => ({
+              name: i.name, type: i.type, quantity: i.quantity,
+              unitPrice: i.unitPrice, subtotal: i.subtotal
+            }))
+          })
+          previewImages.value = [dataUrl]
+          previewIndex.value = 0
+          previewMode.value = 'quote'
+          showPreview.value = true
+          showToast('点击下方按钮保存图片，或长按图片转发客户')
+        } catch (err: any) {
+          showToast({ type: 'fail', message: '图片生成失败：' + (err?.message || '未知原因') })
+        }
         break
       }
       case 'confirm_quote':
