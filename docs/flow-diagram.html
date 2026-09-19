@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>流程图生成</title>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="status">绘制中…</div>
+<script>
+// 绘制客户版业务流程示意图：竖排主流程 + 取消/返工分支，导出 PNG 上传保存
+const W = 1200
+const FONT = "'PingFang SC','Microsoft YaHei',sans-serif"
+
+// 节点定义：[编号标题, 说明, 标签色, 角色标签]
+const steps = [
+  ['接车登记', '选择/新建客户与车辆，记录诉求与里程，拍照留存车况', '#5e6ad2', '店主操作'],
+  ['检测报价', '录入检测结果，逐项开列工时与配件，自动算价', '#5e6ad2', '店主操作'],
+  ['客户确认报价', '报价单可生成图片微信发送，客户确认后开工', '#5e6ad2', '客户确认'],
+  ['维修施工', '过程随时记录；新增增项须经客户确认才计费', '#5e6ad2', '店主操作'],
+  ['质检', '检查项勾选确认，通过后自动生成结算单', '#5e6ad2', '店主操作'],
+  ['结算收款', '现金/微信/支付宝/刷卡/转账，支持分次与挂账', '#5e6ad2', '双方'],
+  ['交车', '录入交车里程，确认交付，工单完成归档', '#27a644', '客户到场'],
+  ['自动提醒', '3天回访 · 3个月保养 · 挂账7/30天催收', '#27a644', '系统自动']
+]
+
+function rr(ctx, x, y, w, h, r) {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.arcTo(x + w, y, x + w, y + h, r)
+  ctx.arcTo(x + w, y + h, x, y + h, r)
+  ctx.arcTo(x, y + h, x, y, r)
+  ctx.arcTo(x, y, x + w, y, r)
+  ctx.closePath()
+}
+
+function arrowDown(ctx, x, y, len, color) {
+  ctx.strokeStyle = color || '#b8bcc6'
+  ctx.lineWidth = 4
+  ctx.beginPath()
+  ctx.moveTo(x, y)
+  ctx.lineTo(x, y + len - 14)
+  ctx.stroke()
+  ctx.fillStyle = color || '#b8bcc6'
+  ctx.beginPath()
+  ctx.moveTo(x - 9, y + len - 16)
+  ctx.lineTo(x + 9, y + len - 16)
+  ctx.lineTo(x, y + len)
+  ctx.closePath()
+  ctx.fill()
+}
+
+function wrap(ctx, text, maxW) {
+  const lines = []; let line = ''
+  for (const ch of text) {
+    if (ctx.measureText(line + ch).width > maxW) { lines.push(line); line = ch } else line += ch
+  }
+  if (line) lines.push(line)
+  return lines
+}
+
+function main() {
+  const nodeH = 150, gap = 70
+  const headH = 300, footH = 200
+  const H = headH + steps.length * (nodeH + gap) + 180 + footH
+  const canvas = document.getElementById('c')
+  canvas.width = W; canvas.height = H
+  const ctx = canvas.getContext('2d')
+
+  // 背景
+  ctx.fillStyle = '#f5f6f8'
+  ctx.fillRect(0, 0, W, H)
+
+  // 标题区
+  ctx.fillStyle = '#101114'
+  ctx.fillRect(0, 0, W, headH)
+  ctx.fillStyle = '#ffffff'
+  ctx.font = `600 52px ${FONT}`
+  ctx.textAlign = 'center'
+  ctx.fillText('汽修管理系统 · 业务流程', W / 2, 128)
+  ctx.fillStyle = '#aeb2ba'
+  ctx.font = `400 26px ${FONT}`
+  ctx.fillText('从接车到交车，每一步都有据可查', W / 2, 186)
+  ctx.fillStyle = '#5e6ad2'
+  rr(ctx, W / 2 - 190, 222, 380, 52, 26)
+  ctx.fill()
+  ctx.fillStyle = '#ffffff'
+  ctx.font = `400 24px ${FONT}`
+  ctx.fillText('8 个环节 · 全程留痕 · 自动提醒', W / 2, 256)
+  ctx.textAlign = 'left'
+
+  // 主流程节点
+  const cardW = 760, cardX = 170
+  let y = headH + 30
+  const centers = []
+  steps.forEach(([title, desc, color, role], i) => {
+    // 节点间箭头（画在卡片前）
+    if (i > 0) arrowDown(ctx, W / 2, y - gap + 6, gap - 8)
+    // 卡片
+    ctx.fillStyle = '#ffffff'
+    rr(ctx, cardX, y, cardW, nodeH, 22)
+    ctx.fill()
+    ctx.strokeStyle = '#e3e5ea'
+    ctx.lineWidth = 2
+    rr(ctx, cardX, y, cardW, nodeH, 22)
+    ctx.stroke()
+    // 左侧色条
+    ctx.fillStyle = color
+    rr(ctx, cardX, y + 18, 10, nodeH - 36, 5)
+    ctx.fill()
+    // 序号圆
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.arc(cardX + 64, y + nodeH / 2, 30, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = '#ffffff'
+    ctx.font = `600 32px ${FONT}`
+    ctx.textAlign = 'center'
+    ctx.fillText(String(i + 1), cardX + 64, y + nodeH / 2 + 11)
+    // 标题 + 角色标签
+    ctx.textAlign = 'left'
+    ctx.fillStyle = '#26282c'
+    ctx.font = `600 36px ${FONT}`
+    ctx.fillText(title, cardX + 118, y + 58)
+    // 角色 pill（右上）
+    ctx.font = `400 20px ${FONT}`
+    const rw = ctx.measureText(role).width + 28
+    ctx.fillStyle = '#f0f1f7'
+    rr(ctx, cardX + cardW - rw - 24, y + 28, rw, 38, 19)
+    ctx.fill()
+    ctx.fillStyle = '#6a7080'
+    ctx.fillText(role, cardX + cardW - rw - 10, y + 54)
+    // 说明（换行）
+    ctx.fillStyle = '#5a5f68'
+    ctx.font = `400 24px ${FONT}`
+    let ty = y + 100
+    for (const line of wrap(ctx, desc, cardW - 150)) {
+      ctx.fillText(line, cardX + 118, ty)
+      ty += 34
+    }
+    centers.push({ x: W / 2, y, cy: y + nodeH / 2 })
+    y += nodeH + gap
+  })
+
+  // 分支1：客户确认报价 → 取消（从节点3右侧向右虚线 + 终止块）
+  const cancelY = centers[2].cy
+  ctx.strokeStyle = '#e5534b'
+  ctx.lineWidth = 3
+  ctx.setLineDash([10, 8])
+  ctx.beginPath()
+  ctx.moveTo(cardX + cardW, cancelY)
+  ctx.lineTo(cardX + cardW + 40, cancelY)
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.fillStyle = '#fdf0f0'
+  rr(ctx, cardX + cardW + 40, cancelY - 40, 190, 80, 16)
+  ctx.fill()
+  ctx.strokeStyle = '#e5534b'
+  rr(ctx, cardX + cardW + 40, cancelY - 40, 190, 80, 16)
+  ctx.stroke()
+  ctx.fillStyle = '#cf3b3b'
+  ctx.font = `500 26px ${FONT}`
+  ctx.textAlign = 'center'
+  ctx.fillText('客户取消', cardX + cardW + 135, cancelY + 9)
+  ctx.textAlign = 'left'
+
+  // 分支2：质检不通过 → 返工（节点5左侧向左绕回节点4）
+  const qc = centers[4], rp = centers[3]
+  const lx = cardX - 56
+  ctx.strokeStyle = '#d9730d'
+  ctx.lineWidth = 3
+  ctx.setLineDash([10, 8])
+  ctx.beginPath()
+  ctx.moveTo(cardX, qc.cy)
+  ctx.lineTo(lx, qc.cy)
+  ctx.lineTo(lx, rp.cy)
+  ctx.lineTo(cardX - 12, rp.cy)
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.fillStyle = '#d9730d'
+  ctx.beginPath()
+  ctx.moveTo(cardX - 2, rp.cy - 9)
+  ctx.lineTo(cardX - 2, rp.cy + 9)
+  ctx.lineTo(cardX + 12, rp.cy)
+  ctx.closePath()
+  ctx.fill()
+  ctx.save()
+  ctx.translate(lx - 14, (qc.cy + rp.cy) / 2)
+  ctx.rotate(-Math.PI / 2)
+  ctx.textAlign = 'center'
+  ctx.fillStyle = '#d9730d'
+  ctx.font = `500 22px ${FONT}`
+  ctx.fillText('质检不通过 · 返工', 0, -8)
+  ctx.restore()
+
+  // 底部说明
+  y += 10
+  ctx.fillStyle = '#101114'
+  rr(ctx, cardX, y, cardW, 120, 22)
+  ctx.fill()
+  ctx.fillStyle = '#ffffff'
+  ctx.font = `600 30px ${FONT}`
+  ctx.textAlign = 'center'
+  ctx.fillText('数据安全：访问密码保护，数据存于店主自己的设备', W / 2, y + 52)
+  ctx.fillStyle = '#9aa0aa'
+  ctx.font = `400 22px ${FONT}`
+  ctx.fillText('实线为主流程 · 红色虚线为客户取消 · 橙色虚线为返工', W / 2, y + 92)
+  ctx.textAlign = 'left'
+
+  canvas.toBlob(async (blob) => {
+    try {
+      const r = await fetch('/save-flow', { method: 'POST', body: blob })
+      document.getElementById('status').textContent = '完成：' + JSON.stringify(await r.json()) + ' | ' + W + 'x' + H
+    } catch (e) {
+      document.getElementById('status').textContent = '上传失败: ' + e
+    }
+  }, 'image/png')
+}
+main()
+</script>
+</body>
+</html>
