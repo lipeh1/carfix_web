@@ -59,7 +59,7 @@ export function sessionCookieOptions(req: NextRequest) {
     httpOnly: true as const,
     sameSite: 'lax' as const,
     path: '/',
-    maxAge: SESSION_TTL_MS,
+    maxAge: SESSION_TTL_MS / 1000, // Next cookie maxAge 单位为秒（Express 为毫秒，移植时注意换算）
     secure: req.headers.get('x-forwarded-proto') === 'https'
   }
 }
