@@ -4,9 +4,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { AppError } from './errors'
 import { verifySessionToken, parseCookies, getSessionSecret, SESSION_COOKIE, SESSION_TTL_MS, signSession } from './auth'
 
-type RouteContext = { params: Promise<Record<string, string>> }
-
-type RouteHandler = (req: NextRequest, ctx: RouteContext) => Promise<NextResponse>
+// Next 15+ 动态路由参数为 Promise，需 await 取值
+type RouteContext<P> = { params: Promise<P> }
 
 // 校验会话 Cookie，无效抛 401（前端请求封装统一跳转登录页）
 export async function requireAuth(req: NextRequest): Promise<void> {
@@ -18,8 +17,10 @@ export async function requireAuth(req: NextRequest): Promise<void> {
 }
 
 // 业务路由统一包装：先鉴权再执行，AppError 用其状态码，其余 500
-export function withAuth(handler: RouteHandler) {
-  return async (req: NextRequest, ctx: RouteContext): Promise<NextResponse> => {
+export function withAuth<P = Record<string, never>>(
+  handler: (req: NextRequest, ctx: RouteContext<P>) => Promise<NextResponse>
+) {
+  return async (req: NextRequest, ctx: RouteContext<P>): Promise<NextResponse> => {
     try {
       await requireAuth(req)
       return await handler(req, ctx)
@@ -30,8 +31,10 @@ export function withAuth(handler: RouteHandler) {
 }
 
 // 公开路由（/api/auth 系列）包装：只做统一错误映射，不鉴权
-export function withRoute(handler: RouteHandler) {
-  return async (req: NextRequest, ctx: RouteContext): Promise<NextResponse> => {
+export function withRoute<P = Record<string, never>>(
+  handler: (req: NextRequest, ctx: RouteContext<P>) => Promise<NextResponse>
+) {
+  return async (req: NextRequest, ctx: RouteContext<P>): Promise<NextResponse> => {
     try {
       return await handler(req, ctx)
     } catch (e) {
