@@ -8,9 +8,11 @@ interface NavBarProps {
   title: string
   /** 右侧操作区（文字按钮等） */
   right?: React.ReactNode
+  /** 显示返回键（tab 页传 false） */
+  back?: boolean
 }
 
-export default function NavBar({ title, right }: NavBarProps) {
+export default function NavBar({ title, right, back = true }: NavBarProps) {
   const router = useRouter()
 
   // 内容行 46px + 顶部安全区（PWA 全面屏刘海），占位与实栏同高
@@ -24,15 +26,19 @@ export default function NavBar({ title, right }: NavBarProps) {
         className="material-bar fixed inset-x-0 top-0 z-40 flex items-center border-b border-border"
         style={{ height: barHeight, paddingTop: 'env(safe-area-inset-top)' }}
       >
-        <button
-          type="button"
-          aria-label="返回"
-          className="pressable flex h-[46px] w-11 shrink-0 items-center justify-center"
-          style={{ color: 'var(--ink-muted)' }}
-          onClick={() => router.back()}
-        >
-          <ChevronLeft size={22} />
-        </button>
+        {back ? (
+          <button
+            type="button"
+            aria-label="返回"
+            className="pressable flex h-[46px] w-11 shrink-0 items-center justify-center"
+            style={{ color: 'var(--ink-muted)' }}
+            onClick={() => router.back()}
+          >
+            <ChevronLeft size={22} />
+          </button>
+        ) : (
+          <div className="h-[46px] w-11 shrink-0" />
+        )}
         <h1
           className="min-w-0 flex-1 truncate px-2 text-center text-[16px] font-medium"
           style={{ color: 'var(--ink)', letterSpacing: '-0.2px' }}
