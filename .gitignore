@@ -3,29 +3,22 @@ node_modules/
 */node_modules/
 
 # Build outputs
-client/dist/
-server/dist/
+web/.next/
+web/out/
 
-# TS 增量构建缓存（vue-tsc -b 生成）
+# TS 增量构建缓存
 *.tsbuildinfo
 
-# vue-tsc -b 编译 vite.config.ts 的副产物
-client/vite.config.js
-client/vite.config.d.ts
-
-# Database
+# Database（本地内嵌 PostgreSQL 数据目录）
+web/.pgdata/
 *.db
 *.db-journal
-server/prisma/dev.db
 
 # Environment
 .env
 .env.local
 .env.*.local
 .env.password
-# Uploads
-uploads/*
-!uploads/.gitkeep
 
 # IDE
 .vscode/
@@ -44,4 +37,3 @@ npm-debug.log*
 # Temp
 *.tmp
 flowchart*.png
-server/prisma/*.bak_auth_*

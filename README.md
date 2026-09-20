@@ -4,33 +4,27 @@
 
 ## 技术栈
 
-- **前端**: Vue 3 + TypeScript + Vite + Vant + Vue Router
-- **后端**: Node.js + Express + TypeScript
-- **数据库**: SQLite + Prisma ORM
-- **图片存储**: 本地文件系统
+- **框架**: Next.js 16（App Router）+ React 19 + TypeScript
+- **UI**: Tailwind CSS v4 + shadcn/ui + motion（Linear 深色风格双主题）
+- **数据库**: PostgreSQL（Vercel Postgres / Neon）+ Prisma ORM
+- **图片存储**: Vercel Blob（客户端直传，公开随机 URL）
+- **PWA**: @serwist/next（添加到桌面、离线缓存）
+- **部署**: Vercel
 
 ## 项目结构
 
 ```
 carweb/
-├── client/          # 前端 Vue3 移动端
-│   ├── src/
-│   │   ├── views/       # 页面组件
-│   │   ├── layouts/     # 布局组件
-│   │   ├── router/      # 路由配置
-│   │   ├── api/         # API 接口封装
-│   │   ├── utils/       # 工具函数
-│   │   └── components/  # 公共组件
-│   └── ...
-├── server/          # 后端 Express API
-│   ├── src/
-│   │   ├── routes/      # 路由
-│   │   └── middleware/  # 中间件
-│   ├── prisma/          # Prisma schema 和迁移
-│   └── ...
-├── uploads/         # 图片上传目录
-├── DESIGN.md        # 功能与数据库设计文档
-└── package.json     # 根 workspace 配置
+├── web/                # Next.js 应用（页面 + API）
+│   ├── prisma/         # Prisma schema 与迁移
+│   ├── scripts/        # 内嵌 PG 启停 / 回归测试 / 一键 E2E
+│   └── src/
+│       ├── app/        # 页面与 Route Handlers
+│       ├── components/ # shadcn 组件 + 手写移动组件
+│       └── lib/        # prisma/auth/api 与工具函数
+├── docs/               # 业务流程图与功能手册
+├── DESIGN.md           # 功能与数据库设计文档
+└── package.json        # 根编排脚本
 ```
 
 ## 快速开始
@@ -41,27 +35,41 @@ carweb/
 npm install
 ```
 
-### 2. 初始化数据库
+### 2. 启动本地数据库（无需 Docker，内嵌 PostgreSQL）
 
 ```bash
-npm run db:init
+npm run dev:db
 ```
 
-### 3. 启动开发环境
+首次自动初始化（端口 5433，数据在 `web/.pgdata`）。然后配置环境变量：
 
 ```bash
-npm run dev  密码在.env.password
+cp web/.env.example web/.env.local
+# 编辑 web/.env.local：
+# DATABASE_URL=postgresql://postgres:carweb-dev@127.0.0.1:5433/carweb
 ```
 
-- 前端: http://localhost:8850
-- 后端: http://localhost:8851
-
-### 4. 构建生产版本
+### 3. 应用迁移并启动开发环境
 
 ```bash
-npm run build
-npm start
+npm run db:deploy
+npm run dev            # http://localhost:3000，首次访问设置访问密码
 ```
+
+### 4. 验证 / 构建
+
+```bash
+npm test               # 一键端到端：PG → 迁移 → 构建 → 服务 → 结算回归
+npm run build && npm start
+```
+
+## 部署（Vercel）
+
+1. Vercel 导入仓库，**Root Directory 设为 `web/`**。
+2. 存储：控制台创建 **Postgres（Neon）** 与 **Blob**，自动注入 `DATABASE_URL` / `BLOB_READ_WRITE_TOKEN`。
+3. 可选：配置 `BAIDU_OCR_API_KEY` / `BAIDU_OCR_SECRET_KEY` 启用行驶证/车牌识别。
+4. 首次部署后在本地执行 `npm run db:deploy`（带生产 `DATABASE_URL`）建表。
+5. 打开站点设置访问密码即可使用；手机浏览器「添加到主屏幕」获得独立应用形态。
 
 ## 功能模块
 

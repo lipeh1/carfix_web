@@ -1,6 +1,10 @@
 # 汽修管理系统 - 功能拆分与数据库设计
 
-> 单用户移动端 Web 应用，技术栈：Vue3 + TypeScript + Vant + Express + SQLite + Prisma
+> 单用户移动端 Web 应用
+>
+> **当前技术栈**（2026-09 迁移）：Next.js 16 + React 19 + Tailwind v4 + shadcn/ui + Prisma + PostgreSQL + Vercel Blob，部署于 Vercel。功能与数据库设计不变；本文其余部分的「Vue3/Vant/Express/SQLite」表述为迁移前历史设计，业务规则仍然有效。
+>
+> 迁移要点：13 张表结构原样（金额整数「分」）；接车照片 `checkin_photos.file_path` 由本地 `/uploads/` 相对路径改为 Vercel Blob 完整 URL；防爆破计数由进程内存改为 settings 表 KV。
 
 ---
 
