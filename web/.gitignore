@@ -45,3 +45,6 @@ next-env.d.ts
 
 # 本地内嵌 Postgres 数据
 /.pgdata
+
+.vercel
+.env*
