@@ -50,7 +50,7 @@ npm run db:init
 ### 3. 启动开发环境
 
 ```bash
-npm run dev
+npm run dev  密码在.env.password
 ```
 
 - 前端: http://localhost:8850

@@ -22,7 +22,7 @@ server/prisma/dev.db
 .env
 .env.local
 .env.*.local
-
+.env.password
 # Uploads
 uploads/*
 !uploads/.gitkeep
