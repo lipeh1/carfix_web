@@ -337,6 +337,23 @@
   }
 }
 
+/* ===== 图表生长动画：高度/宽度定布局，transform 做生长（只动合成器属性） =====
+   backwards 让交错延迟期间停在初始 0 态 */
+.chart-bar {
+  animation: bar-grow 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) backwards;
+  transform-origin: bottom center;
+}
+@keyframes bar-grow {
+  from { transform: scaleY(0); }
+}
+.status-bar-fill {
+  animation: fill-grow 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) backwards;
+  transform-origin: left center;
+}
+@keyframes fill-grow {
+  from { transform: scaleX(0); }
+}
+
 /* ===== 无障碍兜底 ===== */
 
 /* 减弱动态：入场动画退化为纯淡入；图表生长动画直接跳终态 */
