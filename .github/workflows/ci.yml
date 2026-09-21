@@ -1,62 +1,33 @@
-# 持续集成：前后端并行进行类型检查与构建
-# - 前端：vue-tsc 类型检查 + vite 构建
-# - 后端：prisma generate + tsc 构建
+# 持续集成：Next.js 单应用（web/）一键端到端验证
+# 流程：内嵌 PostgreSQL 起库 → prisma migrate → 生产构建 → 起服务 → 结算流程回归
+# 与本地 `npm test` 完全同一条链路，服务器端部署由 Vercel Git 集成负责
 name: CI
 
 on:
   push:
-    branches: [master, main, test]
+    branches: [master, main]
   pull_request:
     branches: [master, main]
 
 jobs:
-  client:
-    name: 前端检查与构建
+  e2e:
+    name: 构建与结算回归
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      # Node 版本与 Vercel 生产环境保持一致（项目 nodeVersion=24.x）
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
-          cache-dependency-path: client/package-lock.json
+          cache-dependency-path: web/package-lock.json
 
       - name: 安装依赖
-        working-directory: client
         run: npm ci
 
-      - name: 类型检查
-        working-directory: client
-        run: npx vue-tsc -b
-
-      - name: 构建
-        working-directory: client
-        run: npm run build
-
-  server:
-    name: 后端检查与构建
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: server/package-lock.json
-
-      - name: 安装依赖
-        working-directory: server
-        run: npm ci
-
-      - name: 生成 Prisma 客户端
-        working-directory: server
-        env:
-          # generate 不连库，但 schema 校验要求该变量存在
-          DATABASE_URL: "file:./dev.db"
-        run: npx prisma generate
-
-      - name: 构建
-        working-directory: server
-        run: npm run build
+      - name: 一键端到端（PG → 迁移 → 构建 → 服务 → 回归）
+        run: node scripts/e2e.mjs
