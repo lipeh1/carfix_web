@@ -65,11 +65,12 @@ npm run build && npm start
 
 ## 部署（Vercel）
 
-1. Vercel 导入仓库，**Root Directory 设为 `web/`**。
-2. 存储：控制台创建 **Postgres（Neon）** 与 **Blob**，自动注入 `DATABASE_URL` / `BLOB_READ_WRITE_TOKEN`。
+线上地址：**https://carweb-lipeh1s-projects.vercel.app**（备用 https://carweb-dusky.vercel.app；大陆直连 `*.vercel.app` 不通，需代理或绑定自定义域名）。
+
+1. 已通过 Git 集成自动部署：push 到 `master` 即自动构建上线（项目 Root Directory = `web/`，生产分支 `master`）。
+2. 存储由 Vercel 集成注入：Postgres（Neon）的 `DATABASE_URL` 与 Blob 直传凭证；构建时 `vercel-build` 自动执行 `prisma migrate deploy` 建表，无需手工迁移。
 3. 可选：配置 `BAIDU_OCR_API_KEY` / `BAIDU_OCR_SECRET_KEY` 启用行驶证/车牌识别。
-4. 首次部署后在本地执行 `npm run db:deploy`（带生产 `DATABASE_URL`）建表。
-5. 打开站点设置访问密码即可使用；手机浏览器「添加到主屏幕」获得独立应用形态。
+4. 打开站点设置访问密码即可使用；手机浏览器「添加到主屏幕」获得独立应用形态。
 
 ## 功能模块
 
