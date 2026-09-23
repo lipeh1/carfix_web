@@ -16,5 +16,13 @@ const run = cmd => {
 }
 
 run('npx prisma migrate deploy')
+
+// 紧急找回通道：忘记访问密码时，在 Vercel 设置 RESET_PASSWORD 环境变量并部署，
+// 构建时清空密码哈希（重新进入首次设密流程），完成后务必删掉该变量
+if (process.env.RESET_PASSWORD) {
+  console.log('\n检测到 RESET_PASSWORD：执行访问密码重置')
+  run('node scripts/reset-password.mjs')
+}
+
 run('npx prisma generate')
 run('npx next build --webpack')
