@@ -12,10 +12,11 @@ import Cell from '@/components/mobile/Cell'
 import BottomSheet from '@/components/mobile/BottomSheet'
 import Field from '@/components/mobile/Field'
 import InstallGuide from '@/components/InstallGuide'
+import RecoveryCodeSheet from '@/components/RecoveryCodeSheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useConfirm } from '@/components/mobile/ConfirmProvider'
-import { getDashboard, getReminders, logout, changePassword } from '@/lib/api'
+import { getDashboard, getReminders, logout, changePassword, regenerateRecoveryCode } from '@/lib/api'
 import { fenToYuan } from '@/lib/money'
 import { useAnimatedYuan } from '@/lib/hooks'
 import { getReminderTypeLabel, formatMonthDay } from '@/lib/format'
@@ -66,16 +67,33 @@ export default function HomePage() {
   // 概览数字直达对应状态工单列表
   const goOrders = (status: string) => router.push(`/orders?status=${status}`)
 
-  // ===== 访问控制入口：修改密码 / 退出登录 =====
+  // ===== 访问控制入口：修改密码 / 恢复码 / 退出登录 =====
   const [showSettings, setShowSettings] = useState(false)
   const [showChangePwd, setShowChangePwd] = useState(false)
   const [changingPwd, setChangingPwd] = useState(false)
   const [pwdForm, setPwdForm] = useState({ old: '', next: '', confirm: '' })
+  // 一次性恢复码展示（改密/生成后）
+  const [recoveryCode, setRecoveryCode] = useState('')
+  const [generatingCode, setGeneratingCode] = useState(false)
 
   const openChangePwd = () => {
     setShowSettings(false)
     setPwdForm({ old: '', next: '', confirm: '' })
     setShowChangePwd(true)
+  }
+
+  // 手动生成恢复码：旧的立即作废，需确认
+  const genRecoveryCode = async () => {
+    if (generatingCode) return
+    setShowSettings(false)
+    if (!(await confirm({ title: '生成新恢复码', message: '旧的恢复码将立即失效，确定生成？' }))) return
+    setGeneratingCode(true)
+    try {
+      const res = await regenerateRecoveryCode()
+      setRecoveryCode(res.recoveryCode)
+    } catch { /* 已拦截 */ } finally {
+      setGeneratingCode(false)
+    }
   }
 
   const quitLogout = async () => {
@@ -93,10 +111,11 @@ export default function HomePage() {
     if (pwdForm.next !== pwdForm.confirm) return toast('两次输入的新密码不一致')
     setChangingPwd(true)
     try {
-      await changePassword({ oldPassword: pwdForm.old, newPassword: pwdForm.next })
-      toast.success('密码已更新')
+      // 改密成功会换发新恢复码（旧的已作废），必须展示给用户保存
+      const res = await changePassword({ oldPassword: pwdForm.old, newPassword: pwdForm.next })
       hapticFeedback()
       setShowChangePwd(false)
+      setRecoveryCode(res.recoveryCode)
     } catch { /* 已拦截 */ } finally {
       setChangingPwd(false)
     }
@@ -218,10 +237,13 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* 设置面板：修改密码 / 退出登录 */}
+      {/* 设置面板：修改密码 / 恢复码 / 退出登录 */}
       <BottomSheet open={showSettings} onOpenChange={setShowSettings} title="设置">
         <div className="flex flex-col gap-2">
           <Button variant="outline" className="h-10" onClick={openChangePwd}>修改密码</Button>
+          <Button variant="outline" className="h-10" disabled={generatingCode} onClick={() => void genRecoveryCode()}>
+            找回密码恢复码
+          </Button>
           <Button variant="outline" className="h-10" onClick={quitLogout}>退出登录</Button>
         </div>
       </BottomSheet>
@@ -244,6 +266,9 @@ export default function HomePage() {
           <Button className="mt-2 h-10" disabled={changingPwd} onClick={submitChangePwd}>保存</Button>
         </div>
       </BottomSheet>
+
+      {/* 一次性恢复码展示（改密 / 手动生成后） */}
+      <RecoveryCodeSheet open={!!recoveryCode} code={recoveryCode} onDone={() => setRecoveryCode('')} />
     </div>
   )
 }

@@ -243,7 +243,8 @@ npm test
 
 ## 注意事项
 
-- 单用户系统，采用**单访问密码**鉴权（无多用户/角色体系）：密码 scrypt 哈希存 `settings` 表，会话为 HMAC 签名的 httpOnly Cookie（30 天）；除 `/api/health` 与 `/api/auth` 外，所有 `/api` 均要求登录（`withAuth` 包装，新增后端接口默认继承）；登录接口带同 IP 防爆破锁定（计数存 `settings` 表，Serverless 多实例生效）；前端 401 统一跳 `/login`。
+- 单用户系统，采用**单访问密码**鉴权（无多用户/角色体系）：密码 scrypt 哈希存 `settings` 表，会话为 HMAC 签名的 httpOnly Cookie（30 天）；除 `/api/health` 与 `/api/auth` 外，所有 `/api` 均要求登录（`withAuth` 包装，新增后端接口默认继承）；登录与恢复码接口均带同 IP 防爆破锁定（计数存 `settings` 表，Serverless 多实例生效）；前端 401 统一跳 `/login`。
+- 找回密码：设置/修改密码时自动生成一次性**恢复码**（scrypt 哈希存 `settings` 表 `auth:recovery`，仅生成时明文返回一次）；忘记密码走 `POST /api/auth/recover`（凭恢复码重设密码，旧码作废、换发新码、成功即登录）；已登录可在设置中 `POST /api/auth/recovery-code` 重新生成。最终兜底：Vercel 设 `RESET_PASSWORD` 环境变量后部署，构建期清空密码（见 `web/scripts/reset-password.mjs`）。
 - 接车照片存 Vercel Blob：浏览器经 `@vercel/blob/client` 直传（`/api/upload/token` 下发受约束凭证，限图片 10MB），数据库存完整公开 URL（路径随机不可猜测）；删除走 `DELETE /api/upload`。
 - 百度 OCR 密钥（`BAIDU_OCR_API_KEY/SECRET_KEY`）为可选配置，未配置时识别功能自动停用、前端回退手输。
 - 生产部署在 Vercel（项目 Root Directory 设为 `web/`），`DATABASE_URL` 指向 Vercel Postgres/Neon；`postinstall` 已自动执行 `prisma generate`。

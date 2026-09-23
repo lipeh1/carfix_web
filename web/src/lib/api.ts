@@ -121,3 +121,8 @@ export const loginPassword = (data: { password: string }) => http.post('/auth/lo
 export const logout = () => http.post('/auth/logout')
 export const changePassword = (data: { oldPassword: string; newPassword: string }) =>
   http.post('/auth/password', data)
+// 忘记密码：凭恢复码重设密码并直接登录（响应含新恢复码，只显示一次）
+export const recoverPassword = (data: { code: string; newPassword: string }) =>
+  http.post('/auth/recover', data)
+// 重新生成恢复码（需登录）：旧的立即作废，响应含新码
+export const regenerateRecoveryCode = () => http.post('/auth/recovery-code')

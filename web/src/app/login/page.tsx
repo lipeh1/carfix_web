@@ -1,6 +1,7 @@
 'use client'
 
 // 访问验证页：首次进入引导设置访问密码，之后凭密码登录（单用户访问控制，见 API auth 路由）
+// 设置/重设密码成功后展示一次性恢复码；忘记密码可凭恢复码自助找回
 // （自旧 client/src/views/Login.vue 移植）
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -8,7 +9,10 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2 } from 'lucide-react'
-import { getAuthStatus, getAuthMe, setupPassword, loginPassword } from '@/lib/api'
+import BottomSheet from '@/components/mobile/BottomSheet'
+import Field from '@/components/mobile/Field'
+import RecoveryCodeSheet from '@/components/RecoveryCodeSheet'
+import { getAuthStatus, getAuthMe, setupPassword, loginPassword, recoverPassword } from '@/lib/api'
 import { hapticFeedback } from '@/lib/feedback'
 
 export default function LoginPage() {
@@ -19,6 +23,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // 找回密码弹窗与一次性恢复码展示
+  const [showRecover, setShowRecover] = useState(false)
+  const [recovering, setRecovering] = useState(false)
+  const [recoverForm, setRecoverForm] = useState({ code: '', next: '', confirm: '' })
+  const [recoveryCode, setRecoveryCode] = useState('')
 
   useEffect(() => {
     ;(async () => {
@@ -54,16 +64,51 @@ export default function LoginPage() {
           toast('两次输入的密码不一致')
           return
         }
-        await setupPassword({ password: pw })
-      } else {
-        await loginPassword({ password: pw })
+        // 设置成功先展示一次性恢复码，关闭后再进入系统
+        const res = await setupPassword({ password: pw })
+        setRecoveryCode(res.recoveryCode)
+        return
       }
+      await loginPassword({ password: pw })
       hapticFeedback()
       router.replace('/')
     } catch {
       // 具体原因已由请求封装 toast（密码错误/频繁锁定等）
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 恢复码展示完毕（设置/找回两条路径共用）：进入系统
+  const recoveryDone = () => {
+    setRecoveryCode('')
+    hapticFeedback()
+    router.replace('/')
+  }
+
+  const openRecover = () => {
+    setRecoverForm({ code: '', next: '', confirm: '' })
+    setShowRecover(true)
+  }
+
+  const submitRecover = async () => {
+    if (recovering) return
+    const code = recoverForm.code.trim()
+    const next = recoverForm.next.trim()
+    if (!code) return toast('请输入恢复码')
+    if (next.length < 6) return toast('新密码至少 6 位')
+    if (next !== recoverForm.confirm.trim()) return toast('两次输入的新密码不一致')
+    setRecovering(true)
+    try {
+      const res = await recoverPassword({ code, newPassword: next })
+      hapticFeedback()
+      setShowRecover(false)
+      // 重设成功即已登录，先展示新恢复码（旧的已作废），关闭后进入系统
+      setRecoveryCode(res.recoveryCode)
+    } catch {
+      // 具体原因已由请求封装 toast（恢复码错误/频繁锁定等）
+    } finally {
+      setRecovering(false)
     }
   }
 
@@ -127,10 +172,80 @@ export default function LoginPage() {
           </Button>
         </form>
 
+        {initialized && (
+          <button
+            type="button"
+            className="pressable mt-3 text-[13px]"
+            style={{ color: 'var(--primary)' }}
+            onClick={openRecover}
+          >
+            忘记密码？
+          </button>
+        )}
+
         <div className="mt-4 text-[12px] leading-relaxed" style={{ color: 'var(--ink-tertiary)' }}>
-          {initialized ? '密码用于保护客户与经营数据' : '密码丢失需在数据库清除 settings 表后重新设置'}
+          {initialized
+            ? '密码用于保护客户与经营数据，忘记时可用恢复码找回'
+            : '设置完成后会生成找回密码的恢复码，请妥善保存'}
         </div>
       </div>
+
+      {/* 找回密码：恢复码 + 新密码 */}
+      <BottomSheet open={showRecover} onOpenChange={setShowRecover} title="找回密码">
+        <div className="flex flex-col gap-3">
+          <Field label="恢复码">
+            <Input
+              value={recoverForm.code}
+              maxLength={10}
+              placeholder="设置密码时显示的 8 位码"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              autoComplete="off"
+              spellCheck={false}
+              className="h-10 font-mono uppercase"
+              onChange={e => setRecoverForm(f => ({ ...f, code: e.target.value }))}
+            />
+          </Field>
+          <Field label="新密码">
+            <Input
+              type="password"
+              value={recoverForm.next}
+              maxLength={32}
+              placeholder="至少 6 位"
+              autoCapitalize="off"
+              autoCorrect="off"
+              autoComplete="off"
+              spellCheck={false}
+              className="h-10"
+              onChange={e => setRecoverForm(f => ({ ...f, next: e.target.value }))}
+            />
+          </Field>
+          <Field label="确认新密码">
+            <Input
+              type="password"
+              value={recoverForm.confirm}
+              maxLength={32}
+              placeholder="再次输入新密码"
+              autoCapitalize="off"
+              autoCorrect="off"
+              autoComplete="off"
+              spellCheck={false}
+              className="h-10"
+              onChange={e => setRecoverForm(f => ({ ...f, confirm: e.target.value }))}
+            />
+          </Field>
+          <Button className="mt-2 h-10" disabled={recovering} onClick={() => void submitRecover()}>
+            {recovering && <Loader2 className="animate-spin" />}
+            重设密码并进入
+          </Button>
+          <div className="text-[12px] leading-relaxed" style={{ color: 'var(--ink-tertiary)' }}>
+            没有恢复码？需正常登录一次，在「设置」中生成。
+          </div>
+        </div>
+      </BottomSheet>
+
+      {/* 一次性恢复码展示（设置密码 / 找回密码成功后） */}
+      <RecoveryCodeSheet open={!!recoveryCode} code={recoveryCode} onDone={recoveryDone} />
     </div>
   )
 }

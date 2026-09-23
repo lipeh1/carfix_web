@@ -44,6 +44,31 @@ export async function setPasswordHash(password: string): Promise<void> {
   })
 }
 
+// ===== 找回密码恢复码：仅生成时显示一次，哈希落库，使用一次即作废 =====
+
+// 32 字符表去掉易混淆的 0/O/1/I，随机 8 位（约 2^40 空间，配合失败锁定防爆破）
+const RECOVERY_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+
+export function genRecoveryCode(): string {
+  const bytes = crypto.randomBytes(8)
+  let code = ''
+  for (let i = 0; i < 8; i++) code += RECOVERY_ALPHABET[bytes[i] % 32]
+  return code
+}
+
+export async function getRecoveryHash(): Promise<string | null> {
+  return getSetting('auth:recovery')
+}
+
+export async function setRecoveryHash(code: string): Promise<void> {
+  const value = hashPassword(code)
+  await prisma.setting.upsert({
+    where: { key: 'auth:recovery' },
+    update: { value },
+    create: { key: 'auth:recovery', value }
+  })
+}
+
 // 会话签名密钥：首次生成随机值落库，实例冷启动后旧会话仍可校验
 export async function getSessionSecret(): Promise<string> {
   const existing = await getSetting('auth:secret')
@@ -92,9 +117,10 @@ export function parseCookies(header?: string): Record<string, string> {
   return out
 }
 
-// ===== 登录防爆破：同 IP 连续失败 5 次锁定 60 秒 =====
+// ===== 验证失败防爆破：同 IP 连续失败 5 次锁定 60 秒 =====
 // 原为进程内存 Map，Serverless 多实例下失效，改为 settings 表 KV 存储
 // （Serverless 下 x-forwarded-for 不可伪造，key 直接按 IP 隔离）
+// prefix 区分用途：登录计数 auth:fail / 恢复码计数 auth:rfail，互不影响
 
 const FAIL_THRESHOLD = 5
 const LOCK_MS = 60_000
@@ -104,12 +130,12 @@ interface FailState {
   until: number
 }
 
-const failKey = (ip: string) => `auth:fail:${ip}`
+const failKey = (prefix: string, ip: string) => `${prefix}:${ip}`
 
-// 读取失败计数（损坏的值视为无记录，不影响登录）
-async function getFailState(ip: string): Promise<FailState> {
+// 读取失败计数（损坏的值视为无记录，不影响验证）
+async function getFailState(prefix: string, ip: string): Promise<FailState> {
   try {
-    const raw = await getSetting(failKey(ip))
+    const raw = await getSetting(failKey(prefix, ip))
     if (!raw) return { count: 0, until: 0 }
     const parsed = JSON.parse(raw) as FailState
     if (typeof parsed.count !== 'number' || typeof parsed.until !== 'number') return { count: 0, until: 0 }
@@ -119,27 +145,36 @@ async function getFailState(ip: string): Promise<FailState> {
   }
 }
 
-// 是否处于锁定窗口（锁定期间直接拒绝，不再校验密码）
-export async function isLoginLocked(ip: string): Promise<boolean> {
-  const state = await getFailState(ip)
+// 是否处于锁定窗口（锁定期间直接拒绝，不再校验）
+async function isLocked(prefix: string, ip: string): Promise<boolean> {
+  const state = await getFailState(prefix, ip)
   return state.until > Date.now()
 }
 
 // 记录一次失败：达到阈值进入锁定窗口并清零计数，否则累加
-export async function recordLoginFail(ip: string): Promise<void> {
-  const state = await getFailState(ip)
+async function recordFail(prefix: string, ip: string): Promise<void> {
+  const state = await getFailState(prefix, ip)
   const count = state.count + 1
   const next: FailState = count >= FAIL_THRESHOLD
     ? { count: 0, until: Date.now() + LOCK_MS }
     : { count, until: 0 }
   await prisma.setting.upsert({
-    where: { key: failKey(ip) },
+    where: { key: failKey(prefix, ip) },
     update: { value: JSON.stringify(next) },
-    create: { key: failKey(ip), value: JSON.stringify(next) }
+    create: { key: failKey(prefix, ip), value: JSON.stringify(next) }
   })
 }
 
-// 登录成功后清除失败计数
-export async function clearLoginFails(ip: string): Promise<void> {
-  await prisma.setting.deleteMany({ where: { key: failKey(ip) } })
+// 清除失败计数（验证成功后调用）
+async function clearFails(prefix: string, ip: string): Promise<void> {
+  await prisma.setting.deleteMany({ where: { key: failKey(prefix, ip) } })
 }
+
+export const isLoginLocked = (ip: string) => isLocked('auth:fail', ip)
+export const recordLoginFail = (ip: string) => recordFail('auth:fail', ip)
+export const clearLoginFails = (ip: string) => clearFails('auth:fail', ip)
+
+// 恢复码验证计数与登录计数隔离：恢复码输错不消耗登录尝试次数
+export const isRecoverLocked = (ip: string) => isLocked('auth:rfail', ip)
+export const recordRecoverFail = (ip: string) => recordFail('auth:rfail', ip)
+export const clearRecoverFails = (ip: string) => clearFails('auth:rfail', ip)
