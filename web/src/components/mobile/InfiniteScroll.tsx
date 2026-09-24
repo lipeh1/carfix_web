@@ -14,10 +14,13 @@ interface InfiniteScrollProps {
 
 export default function InfiniteScroll({ hasMore, onLoadMore, isEmpty }: InfiniteScrollProps) {
   const sentinelRef = useRef<HTMLDivElement>(null)
-  // 用 ref 保存最新的加载函数，避免 observer 反复重建
+  // 用 ref 保存最新的加载函数，避免 observer 反复重建（在 effect 中同步，不在渲染期写 ref）
   const loadRef = useRef(onLoadMore)
-  loadRef.current = onLoadMore
   const busyRef = useRef(false)
+
+  useEffect(() => {
+    loadRef.current = onLoadMore
+  }, [onLoadMore])
 
   useEffect(() => {
     const el = sentinelRef.current

@@ -133,7 +133,7 @@ export default function QuotePage() {
   // 复制这辆车上次已完成工单的报价项目（接口金额为分，转为元）
   const copyLastItems = async () => {
     try {
-      const data: any = await getLastQuote(orderId)
+      const data = await getLastQuote(orderId)
       if (!data.order || !data.items || data.items.length === 0) {
         return toast('这辆车还没有已完成的历史工单')
       }
@@ -147,7 +147,7 @@ export default function QuotePage() {
           } else {
             next.push({
               _id: genId(),
-              type: it.type,
+              type: it.type as 'service' | 'part',
               name: it.name,
               quantity: String(it.quantity),
               unitPrice: fenToYuan(it.unitPrice),
@@ -182,7 +182,7 @@ export default function QuotePage() {
   // 加载已有报价数据
   const loadExistingQuote = useCallback(async () => {
     try {
-      const order: any = await getOrder(orderId)
+      const order = await getOrder(orderId)
       // 检测结果用独立的 inspection 字段回填（与客户诉求 complaint 是两回事）
       setInspection(order.inspection || '')
       // 回显报价时登记的优惠（接口返回分，输入为元）
@@ -190,10 +190,10 @@ export default function QuotePage() {
       if (order.repairItems && order.repairItems.length > 0) {
         // 只载入报价来源的项目：增项有独立的确认流程，
         // 若混入编辑列表，再次保存报价会重建出重复项目，造成双重计费
-        const quoteItems = order.repairItems.filter((i: any) => i.source === 'quote')
-        setItems(quoteItems.map((item: any) => ({
+        const quoteItems = order.repairItems.filter(i => i.source === 'quote')
+        setItems(quoteItems.map(item => ({
           _id: genId(),
-          type: item.type,
+          type: item.type as 'service' | 'part',
           name: item.name,
           quantity: String(item.quantity),
           unitPrice: fenToYuan(item.unitPrice),

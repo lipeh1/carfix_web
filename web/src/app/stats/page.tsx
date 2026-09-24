@@ -8,6 +8,7 @@ import Empty from '@/components/mobile/Empty'
 import { Badge } from '@/components/mobile/Badge'
 import PageSkeleton from '@/components/PageSkeleton'
 import { getStats } from '@/lib/api'
+import type { StatsData } from '@/lib/types'
 import { fenToYuan } from '@/lib/money'
 import { useAnimatedYuan } from '@/lib/hooks'
 import { formatDate } from '@/lib/format'
@@ -25,7 +26,7 @@ const STATUS_LIST: Array<{ status: string; label: string; tone: 'default' | 'pri
 
 export default function StatsPage() {
   const router = useRouter()
-  const [stats, setStats] = useState<any>(null)
+  const [stats, setStats] = useState<StatsData | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
 
   // 总营收数字滚动展示（分值驱动）
@@ -57,18 +58,18 @@ export default function StatsPage() {
   }
 
   // 近6个月汇总
-  const total6Months = (stats.months || []).reduce((sum: number, m: any) => sum + (m.revenue || 0), 0)
-  const total6MonthsOrders = (stats.months || []).reduce((sum: number, m: any) => sum + (m.orderCount || 0), 0)
+  const total6Months = (stats.months || []).reduce((sum, m) => sum + (m.revenue || 0), 0)
+  const total6MonthsOrders = (stats.months || []).reduce((sum, m) => sum + (m.orderCount || 0), 0)
 
   // 柱状图高度（最大营收为 100%）
-  const revenues = (stats.months || []).map((m: any) => m.revenue || 0)
+  const revenues = (stats.months || []).map((m) => m.revenue || 0)
   const maxRevenue = Math.max(...revenues, 1)
   const getBarHeight = (revenue: number) => (revenue / maxRevenue) * 100
 
   // 工单状态统计
   const dist = stats.statusDistribution || []
-  const totalOrders = dist.reduce((sum: number, s: any) => sum + (s.count || 0), 0)
-  const getStatusCount = (status: string) => dist.find((s: any) => s.status === status)?.count || 0
+  const totalOrders = dist.reduce((sum, s) => sum + (s.count || 0), 0)
+  const getStatusCount = (status: string) => dist.find((s) => s.status === status)?.count || 0
   const getStatusPercent = (status: string) => totalOrders === 0 ? 0 : (getStatusCount(status) / totalOrders) * 100
 
   return (
@@ -101,7 +102,7 @@ export default function StatsPage() {
           <div className="section-title">近6个月营收趋势</div>
           <div className="py-2.5">
             <div className="flex h-40 items-end justify-around px-2">
-              {stats.months.map((m: any, idx: number) => (
+              {stats.months.map((m, idx) => (
                 <div key={m.month} className="flex h-full flex-1 flex-col items-center justify-end">
                   {/* 柱体：单一主色实心柱（规范禁止渐变装饰） */}
                   <div
@@ -155,7 +156,7 @@ export default function StatsPage() {
           <div className="section-title">维修项目热度排行</div>
           {stats.topItems?.length ? (
             <div className="flex flex-col">
-              {stats.topItems.map((item: any, idx: number) => (
+              {stats.topItems.map((item, idx) => (
                 <div key={item.name} className="flex items-center gap-3 border-b py-2.5 last:border-b-0" style={{ borderColor: 'var(--hairline)' }}>
                   <div
                     className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-[12px] font-semibold"
@@ -188,7 +189,7 @@ export default function StatsPage() {
           </div>
           {stats.unpaid?.list?.length ? (
             <div className="flex flex-col">
-              {stats.unpaid.list.map((item: any) => (
+              {stats.unpaid.list.map((item) => (
                 <div
                   key={item.id}
                   className="pressable cursor-pointer border-b py-3 last:border-b-0"

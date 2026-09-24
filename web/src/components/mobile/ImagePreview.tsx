@@ -76,6 +76,8 @@ export default function ImagePreview({ images, index = 0, onClose, cover }: Imag
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
+        {/* 全屏 lightbox 按手势拖动渲染，dataURL/Blob URL 不走 next/image 优化（豁免 no-img-element） */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           key={current}
           src={images[current]}

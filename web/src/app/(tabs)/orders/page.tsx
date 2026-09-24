@@ -14,6 +14,7 @@ import PullToRefresh from '@/components/mobile/PullToRefresh'
 import InfiniteScroll from '@/components/mobile/InfiniteScroll'
 import { Input } from '@/components/ui/input'
 import { getOrders } from '@/lib/api'
+import type { WorkOrder } from '@/lib/types'
 import { fenToYuan } from '@/lib/money'
 
 const TABS = [
@@ -34,7 +35,7 @@ function OrdersPageInner() {
 
   const [activeTab, setActiveTab] = useState(TABS.some(t => t.value === queryStatus) ? queryStatus : '')
   const [keyword, setKeyword] = useState('')
-  const [orders, setOrders] = useState<any[]>([])
+  const [orders, setOrders] = useState<WorkOrder[]>([])
   const [loading, setLoading] = useState(false)
   const [finished, setFinished] = useState(false)
 
@@ -45,7 +46,7 @@ function OrdersPageInner() {
       if (activeTab) params.status = activeTab
       if (keyword) params.keyword = keyword
       const data = await getOrders(params)
-      setOrders(data as any[])
+      setOrders(data)
       setFinished(true)
     } catch { /* 静默 */ } finally {
       setLoading(false)

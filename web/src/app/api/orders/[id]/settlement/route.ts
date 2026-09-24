@@ -1,5 +1,5 @@
 // 结算单查询 / 创建与调整（自 Express orders.ts 移植）
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { AppError } from '@/lib/errors'
 import { withAuth } from '@/lib/api-helpers'

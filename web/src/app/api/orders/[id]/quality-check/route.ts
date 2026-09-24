@@ -1,5 +1,5 @@
 // 质检（自 Express orders.ts 移植）：通过自动建结算单，不通过打回返工
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { AppError } from '@/lib/errors'
 import { withAuth } from '@/lib/api-helpers'

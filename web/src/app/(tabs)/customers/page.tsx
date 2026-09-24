@@ -16,11 +16,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Search } from 'lucide-react'
 import { getCustomers, createCustomer } from '@/lib/api'
+import type { Customer } from '@/lib/types'
 
 export default function CustomersPage() {
   const router = useRouter()
 
-  const [customers, setCustomers] = useState<any[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
   const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
@@ -32,7 +33,7 @@ export default function CustomersPage() {
     setLoading(true)
     try {
       const data = await getCustomers({ keyword })
-      setCustomers(data as any[])
+      setCustomers(data)
     } catch { /* 静默 */ } finally {
       setLoading(false)
     }

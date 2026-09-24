@@ -1,5 +1,5 @@
 // 收款/补款（自 Express settlements.ts 移植）：支持首次收款与挂账补款
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { AppError } from '@/lib/errors'
 import { withAuth } from '@/lib/api-helpers'

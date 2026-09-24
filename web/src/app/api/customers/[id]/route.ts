@@ -1,5 +1,5 @@
 // 客户详情 / 更新 / 删除（自 Express customers.ts 移植）
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { AppError } from '@/lib/errors'
 import { withAuth } from '@/lib/api-helpers'

@@ -11,10 +11,20 @@ const getConfig = () => ({
   secretKey: process.env.BAIDU_OCR_SECRET_KEY || ''
 })
 
+// 百度开放平台响应：字段按端点各异，取宽松结构（比 any 收窄，可选字段显式标注）
+type BaiduResponse = {
+  access_token?: string
+  expires_in?: number
+  error_code?: number
+  error_msg?: string
+  words_result?: Record<string, unknown> & { number?: string }
+  [k: string]: unknown
+}
+
 async function getAccessToken(apiKey: string, secretKey: string): Promise<string> {
   if (tokenCache && Date.now() < tokenCache.expiresAt) return tokenCache.token
   const url = `https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${encodeURIComponent(apiKey)}&client_secret=${encodeURIComponent(secretKey)}`
-  let data: any
+  let data: BaiduResponse
   try {
     const res = await fetch(url, { method: 'POST' })
     data = await res.json()
@@ -26,18 +36,18 @@ async function getAccessToken(apiKey: string, secretKey: string): Promise<string
   }
   tokenCache = {
     token: data.access_token,
-    expiresAt: Date.now() + ((data.expires_in as number) - 3600) * 1000
+    expiresAt: Date.now() + ((data.expires_in ?? 0) - 3600) * 1000
   }
-  return data.access_token as string
+  return data.access_token
 }
 
-async function baiduOcr(endpoint: string, imageBase64: string): Promise<any> {
+async function baiduOcr(endpoint: string, imageBase64: string): Promise<BaiduResponse> {
   const { apiKey, secretKey } = getConfig()
   if (!apiKey || !secretKey) {
     throw new AppError('识别服务未配置：请在环境变量填入 BAIDU_OCR_API_KEY 与 BAIDU_OCR_SECRET_KEY', 503)
   }
   const token = await getAccessToken(apiKey, secretKey)
-  let data: any
+  let data: BaiduResponse
   try {
     const res = await fetch(`https://aip.baidubce.com/rest/2.0/ocr/v1/${endpoint}?access_token=${token}`, {
       method: 'POST',
@@ -61,7 +71,7 @@ export const POST = withAuth(async (req: NextRequest) => {
   const { image } = await req.json()
   if (!image) throw new AppError('缺少图片数据')
   const data = await baiduOcr('license_plate', image)
-  const number: string | null = data.words_result?.number ?? null
+  const number = data.words_result?.number ?? null
   if (!number) throw new AppError('没能识别出车牌，建议正对车牌、避免反光后重拍', 502)
   return NextResponse.json({ number })
 })

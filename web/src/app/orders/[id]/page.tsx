@@ -24,6 +24,7 @@ import {
   addAdditionalItem, confirmAdditionalItem, createQualityCheck,
   createSettlement, addPayment, deliverOrder, updateCheckin
 } from '@/lib/api'
+import type { WorkOrder, AdditionalItem } from '@/lib/types'
 import { fenToYuan, yuanToFen } from '@/lib/money'
 import { formatDateTime, getPaymentMethodLabel } from '@/lib/format'
 import { hapticFeedback } from '@/lib/feedback'
@@ -54,7 +55,7 @@ export default function OrderDetailPage() {
   const orderId = Number(id)
 
   // 工单数据
-  const [order, setOrder] = useState<any>(null)
+  const [order, setOrder] = useState<WorkOrder | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
 
   // 弹窗状态
@@ -89,11 +90,11 @@ export default function OrderDetailPage() {
   const settlement = order?.settlement || null
 
   // 维修项目合计
-  const itemsTotal = repairItems.reduce((sum: number, i: any) => sum + Number(i.subtotal), 0)
+  const itemsTotal = repairItems.reduce((sum, i) => sum + Number(i.subtotal), 0)
   // 待收金额
   const unpaidAmount = settlement ? Number(settlement.actualAmount) - Number(settlement.paidAmount) : 0
   // 增项必须在结算前处理，结算后不再改变已确认的收费明细
-  const canProcessAdditional = ['repairing', 'pending_quality_check'].includes(order?.status) && !settlement
+  const canProcessAdditional = ['repairing', 'pending_quality_check'].includes(order?.status ?? '') && !settlement
 
   const loadData = useCallback(async () => {
     setLoadFailed(false)
@@ -141,7 +142,7 @@ export default function OrderDetailPage() {
 
   // 图片预览（定位到所点击的照片，而非每次都从头看）
   const openPreview = (idx: number) => {
-    setPreviewImages(checkinPhotos.map((p: any) => p.filePath))
+    setPreviewImages(checkinPhotos.map((p) => p.filePath))
     setPreviewIndex(idx)
     setPreviewMode('photos')
     setShowPreview(true)
@@ -234,7 +235,7 @@ export default function OrderDetailPage() {
   }
 
   // 确认或拒绝增项
-  const handleConfirmAdditional = async (item: any, confirmed: boolean) => {
+  const handleConfirmAdditional = async (item: AdditionalItem, confirmed: boolean) => {
     const ok = confirmed
       ? await confirm({
           title: '确认增项',
@@ -323,7 +324,7 @@ export default function OrderDetailPage() {
               createdAt: order.createdAt,
               quoteAmount: order.quoteAmount,
               discount: order.discount,
-              repairItems: (repairItems || []).map((i: any) => ({
+              repairItems: (repairItems || []).map((i) => ({
                 name: i.name, type: i.type, quantity: i.quantity,
                 unitPrice: i.unitPrice, subtotal: i.subtotal
               }))
@@ -335,8 +336,8 @@ export default function OrderDetailPage() {
             // 预览遮罩刚挂载就被同一次 tap 穿透关闭
             setTimeout(() => setShowPreview(true), 100)
             toast('点击下方按钮保存图片，或长按图片转发客户')
-          } catch (err: any) {
-            toast.error('图片生成失败：' + (err?.message || '未知原因'))
+          } catch (err) {
+            toast.error('图片生成失败：' + ((err as Error)?.message || '未知原因'))
           }
           break
         }
@@ -398,7 +399,7 @@ export default function OrderDetailPage() {
     } catch { /* 已拦截 */ }
   }
 
-  const statusInfo = STATUS_LABELS[order?.status] || { label: order?.status, tone: 'default' as const }
+  const statusInfo = STATUS_LABELS[order?.status ?? ''] || { label: order?.status ?? '', tone: 'default' as const }
 
   return (
     <div className="page-container" style={{ paddingBottom: 'calc(84px + env(safe-area-inset-bottom))' }}>
@@ -436,7 +437,7 @@ export default function OrderDetailPage() {
             <div className="card">
               <div className="section-title">接车照片</div>
               <div className="flex flex-wrap gap-2">
-                {checkinPhotos.map((photo: any, idx: number) => (
+                {checkinPhotos.map((photo, idx) => (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     key={photo.id}
@@ -463,7 +464,7 @@ export default function OrderDetailPage() {
           {repairItems.length > 0 && (
             <div className="card">
               <div className="section-title">维修项目 / 配件</div>
-              {repairItems.map((item: any) => (
+              {repairItems.map((item) => (
                 <Cell
                   key={item.id}
                   title={item.name}
@@ -482,7 +483,7 @@ export default function OrderDetailPage() {
           {repairLogs.length > 0 && (
             <div className="card">
               <div className="section-title">维修记录</div>
-              {repairLogs.map((log: any) => (
+              {repairLogs.map((log) => (
                 <div key={log.id} className="border-b py-2 last:border-b-0" style={{ borderColor: 'var(--hairline)' }}>
                   <div className="mb-1 text-[14px]" style={{ color: 'var(--ink)' }}>{log.content}</div>
                   <div className="text-muted">{formatDateTime(log.createdAt)}</div>
@@ -495,7 +496,7 @@ export default function OrderDetailPage() {
           {additionalItems.length > 0 && (
             <div className="card">
               <div className="section-title">维修增项</div>
-              {additionalItems.map((item: any) => (
+              {additionalItems.map((item) => (
                 <div key={item.id} className="border-b last:border-b-0" style={{ borderColor: 'var(--hairline)' }}>
                   <Cell
                     title={item.name}
@@ -535,10 +536,10 @@ export default function OrderDetailPage() {
                 right={<Badge tone={settlement.status === 'paid' ? 'success' : 'warning'}>{settlement.status === 'paid' ? '已结清' : '挂账'}</Badge>}
               />
               {/* 收款记录 */}
-              {settlement.payments?.length > 0 && (
+              {settlement.payments && settlement.payments.length > 0 && (
                 <div className="mt-3">
                   <div className="text-muted mb-2">收款记录</div>
-                  {settlement.payments.map((p: any) => (
+                  {settlement.payments.map((p) => (
                     <div key={p.id} className="flex-between border-b py-1.5 font-mono text-[13px] last:border-b-0" style={{ borderColor: 'var(--hairline)' }}>
                       <span>{formatDateTime(p.createdAt)} · {getPaymentMethodLabel(p.method)}</span>
                       <span className="text-success">+¥{fenToYuan(p.amount)}</span>

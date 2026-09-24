@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { getCustomer, updateCustomer } from '@/lib/api'
+import type { Customer } from '@/lib/types'
 import { fenToYuan } from '@/lib/money'
 import { formatDateTime } from '@/lib/format'
 
@@ -23,7 +24,7 @@ export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
 
-  const [customer, setCustomer] = useState<any>(null)
+  const [customer, setCustomer] = useState<Customer | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [editForm, setEditForm] = useState({ name: '', phone: '', remark: '' })
@@ -47,12 +48,13 @@ export default function CustomerDetailPage() {
   }
 
   const openEdit = () => {
+    if (!customer) return
     setEditForm({ name: customer.name, phone: customer.phone, remark: customer.remark || '' })
     setShowEdit(true)
   }
 
   const submitEdit = async () => {
-    if (saving) return
+    if (saving || !customer) return
     if (!editForm.name) return toast('请输入姓名')
     if (!editForm.phone) return toast('请输入电话')
     setSaving(true)
@@ -139,7 +141,7 @@ export default function CustomerDetailPage() {
           {/* 名下车辆 */}
           <div className="card">
             <div className="section-title">名下车辆 ({customer.vehicles?.length || 0})</div>
-            {customer.vehicles?.map((v: any) => (
+            {customer.vehicles?.map((v) => (
               <Cell
                 key={v.id}
                 title={
@@ -158,7 +160,7 @@ export default function CustomerDetailPage() {
           {/* 历史工单 */}
           <div className="card">
             <div className="section-title">历史工单 ({customer.workOrders?.length || 0})</div>
-            {customer.workOrders?.map((o: any) => (
+            {customer.workOrders?.map(o => (
               <div key={o.id} className="pressable cursor-pointer border-b py-3 last:border-b-0" style={{ borderColor: 'var(--hairline)' }} onClick={() => router.push(`/orders/${o.id}`)}>
                 <div className="flex-between">
                   <span className="font-mono text-[14px] font-semibold">{o.orderNo}</span>

@@ -22,6 +22,7 @@ import {
   getCustomers, createCustomer, getVehicles, createVehicle,
   createCheckin, uploadImage, deleteUpload, ocrVehicleLicense, ocrPlate
 } from '@/lib/api'
+import type { Customer, Vehicle } from '@/lib/types'
 import { compressImage } from '@/lib/image'
 import { isValidPlate } from '@/lib/plate'
 import { saveDraft, loadDraft, clearDraft, draftHasContent } from '@/lib/draft'
@@ -53,10 +54,10 @@ export default function CheckinPage() {
   const router = useRouter()
   const confirm = useConfirm()
 
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
-  const [selectedVehicle, setSelectedVehicle] = useState<any>(null)
-  const [customerList, setCustomerList] = useState<any[]>([])
-  const [vehicleList, setVehicleList] = useState<any[]>([])
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
+  const [customerList, setCustomerList] = useState<Customer[]>([])
+  const [vehicleList, setVehicleList] = useState<Vehicle[]>([])
   const [customerKeyword, setCustomerKeyword] = useState('')
   const [photos, setPhotos] = useState<PhotoItem[]>([])
 
@@ -87,7 +88,7 @@ export default function CheckinPage() {
   const loadCustomers = useCallback(async () => {
     try {
       const data = await getCustomers({ keyword: customerKeyword })
-      setCustomerList(data as any[])
+      setCustomerList(data)
     } catch { /* 静默 */ }
   }, [customerKeyword])
 
@@ -95,16 +96,16 @@ export default function CheckinPage() {
     if (!selectedCustomer) return
     try {
       const data = await getVehicles({ customerId: selectedCustomer.id })
-      setVehicleList(data as any[])
+      setVehicleList(data)
     } catch { /* 静默 */ }
   }, [selectedCustomer])
 
-  const selectCustomer = async (c: any) => {
+  const selectCustomer = async (c: Customer) => {
     setSelectedCustomer(c)
     setSelectedVehicle(null)
     setShowCustomerPicker(false)
     try {
-      const list: any[] = await getVehicles({ customerId: c.id })
+      const list = await getVehicles({ customerId: c.id })
       setVehicleList(list)
       // 名下只有一辆车时自动选中，省去第二层选择弹窗
       if (list.length === 1) {
@@ -114,7 +115,7 @@ export default function CheckinPage() {
     } catch { /* 静默 */ }
   }
 
-  const selectVehicle = (v: any) => {
+  const selectVehicle = (v: Vehicle) => {
     setSelectedVehicle(v)
     setShowVehiclePicker(false)
   }
@@ -159,7 +160,7 @@ export default function CheckinPage() {
     scanningRef.current = true
     try {
       const compressed = await compressImage(file)
-      const res: any = await ocrVehicleLicense(compressed)
+      const res = await ocrVehicleLicense(compressed)
       if (!res.plateNumber && !res.owner) {
         return toast('未能识别出行驶证内容，请正对证件、避免反光后重试')
       }
@@ -168,7 +169,7 @@ export default function CheckinPage() {
       setNewVehicle(prev => ({
         ...prev,
         plateNumber: (res.plateNumber || '').toUpperCase(),
-        ...parseBrandModel(res.brandModel),
+        ...parseBrandModel(res.brandModel ?? null),
         vin: res.vin || ''
       }))
       setShowNewCustomer(true)
@@ -187,17 +188,17 @@ export default function CheckinPage() {
     scanningRef.current = true
     try {
       const compressed = await compressImage(file)
-      const res: any = await ocrPlate(compressed)
+      const res = await ocrPlate(compressed)
       const plate = String(res.number || '').toUpperCase()
       if (!plate) return toast('未识别到车牌，请重试')
       // 跨客户按车牌找车
-      const list: any[] = await getVehicles({ keyword: plate })
+      const list = await getVehicles({ keyword: plate })
       const hit = list.find(v => (v.plateNumber || '').toUpperCase() === plate)
       if (!hit) {
         toast(`车牌 ${plate} 未建档，可用「扫行驶证建档」`)
         return
       }
-      setSelectedCustomer(hit.customer)
+      setSelectedCustomer(hit.customer ?? null)
       setSelectedVehicle(hit)
       setShowVehiclePicker(false)
       void loadVehicles()
@@ -323,7 +324,7 @@ export default function CheckinPage() {
       // 只收集上传成功的照片 URL
       const photoPaths = photos.filter(p => p.status === 'done' && p.url).map(p => p.url)
 
-      const order: any = await createCheckin({
+      const order = await createCheckin({
         customerId: selectedCustomer.id,
         vehicleId: selectedVehicle.id,
         complaint: form.complaint,

@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
-import dayjs from 'dayjs'
 import { Settings, Plus, ChartLine, ClipboardList, ListChecks, Receipt, CircleCheck } from 'lucide-react'
 import NavBar from '@/components/mobile/NavBar'
 import Cell from '@/components/mobile/Cell'
@@ -22,18 +21,10 @@ import { useAnimatedYuan } from '@/lib/hooks'
 import { getReminderTypeLabel, formatMonthDay } from '@/lib/format'
 import { hapticFeedback } from '@/lib/feedback'
 import { DEFAULT_SHOP_NAME, SHOP_NAME_MAX_LEN, setShopNameCache } from '@/lib/shop'
+import type { DashboardStats, Reminder } from '@/lib/types'
 
 // 级联进场弹簧：临界阻尼 + 按卡片序错开的延迟
 const springIn = (delay: number) => ({ type: 'spring' as const, bounce: 0, duration: 0.4, delay })
-
-interface DashboardStats {
-  pendingInspection: number
-  repairing: number
-  pendingSettlement: number
-  completed: number
-  monthlyRevenue: number
-  unpaidAmount: number
-}
 
 export default function HomePage() {
   const router = useRouter()
@@ -42,7 +33,7 @@ export default function HomePage() {
   const [stats, setStats] = useState<DashboardStats>({
     pendingInspection: 0, repairing: 0, pendingSettlement: 0, completed: 0, monthlyRevenue: 0, unpaidAmount: 0
   })
-  const [pendingReminders, setPendingReminders] = useState<any[]>([])
+  const [pendingReminders, setPendingReminders] = useState<Reminder[]>([])
   // 首次加载中状态，驱动概览/营收骨架
   const [loading, setLoading] = useState(true)
 
@@ -57,7 +48,7 @@ export default function HomePage() {
         getReminders({ status: 'pending' })
       ])
       setStats(dash)
-      setPendingReminders((reminders as any[]).slice(0, 5))
+      setPendingReminders(reminders.slice(0, 5))
     } catch { /* 后端未就绪时静默 */ } finally {
       setLoading(false)
     }

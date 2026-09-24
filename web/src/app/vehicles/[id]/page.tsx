@@ -3,13 +3,14 @@
 // 车辆详情：车牌大字卡/维修统计/常见项目/所属客户/待办提醒/维修历史时间线（自旧 VehicleDetail.vue 移植）
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { CarFront, User, Wrench, MessageCircle } from 'lucide-react'
+import { User, Wrench, MessageCircle } from 'lucide-react'
 import NavBar from '@/components/mobile/NavBar'
 import Cell from '@/components/mobile/Cell'
 import Empty from '@/components/mobile/Empty'
 import { StatusBadge } from '@/components/mobile/Badge'
 import PageSkeleton from '@/components/PageSkeleton'
 import { getVehicle } from '@/lib/api'
+import type { Vehicle } from '@/lib/types'
 import { fenToYuan } from '@/lib/money'
 import { formatDateTime, getReminderTypeLabel } from '@/lib/format'
 
@@ -17,7 +18,7 @@ export default function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
 
-  const [vehicle, setVehicle] = useState<any>(null)
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
 
   const loadData = useCallback(async () => {
@@ -74,11 +75,11 @@ export default function VehicleDetailPage() {
               </div>
             </div>
             {/* 常见维修项目 */}
-            {vehicle.stats?.commonItems?.length > 0 && (
+            {vehicle.stats?.commonItems && vehicle.stats.commonItems.length > 0 && (
               <div className="mt-4 border-t pt-3" style={{ borderColor: 'var(--hairline)' }}>
                 <div className="text-muted mb-2">常见维修项目</div>
                 <div className="flex flex-wrap gap-1.5">
-                  {vehicle.stats.commonItems.map((item: any) => (
+                  {vehicle.stats.commonItems.map((item) => (
                     <span
                       key={item.name}
                       className="rounded-full px-2 py-0.5 text-[11px]"
@@ -103,17 +104,17 @@ export default function VehicleDetailPage() {
                     {vehicle.customer.name}
                   </span>
                 }
-                label={vehicle.customer.phone}
-                onClick={() => router.push(`/customers/${vehicle.customer.id}`)}
+                label={vehicle.customer?.phone ?? ''}
+                onClick={() => router.push(`/customers/${vehicle.customer?.id}`)}
               />
             </div>
           )}
 
           {/* 保养提醒 */}
-          {vehicle.reminders?.length > 0 && (
+          {vehicle.reminders && vehicle.reminders.length > 0 && (
             <div className="card">
               <div className="section-title">待办提醒 ({vehicle.reminders.length})</div>
-              {vehicle.reminders.map((r: any) => {
+              {vehicle.reminders.map((r) => {
                 const Icon = r.type === 'maintenance' ? Wrench : MessageCircle
                 return (
                   <div key={r.id} className="flex gap-3 border-b py-2.5 last:border-b-0" style={{ borderColor: 'var(--hairline)' }}>
@@ -134,7 +135,7 @@ export default function VehicleDetailPage() {
             <div className="section-title">维修历史 ({vehicle.workOrders?.length || 0})</div>
             {vehicle.workOrders?.length ? (
               <div className="relative pl-5">
-                {vehicle.workOrders.map((o: any, idx: number, arr: any[]) => (
+                {vehicle.workOrders.map((o, idx, arr) => (
                   <div key={o.id} className="relative pb-5 last:pb-0">
                     {/* 时间线连线（最后一条不画） */}
                     {idx < arr.length - 1 && (
@@ -156,9 +157,9 @@ export default function VehicleDetailPage() {
                       <div className="mt-1 font-mono text-[14px] font-semibold">{o.orderNo}</div>
                       <div className="mt-0.5 text-[13px]" style={{ color: 'var(--ink-subtle)' }}>{o.complaint || '无诉求'}</div>
                       {/* 维修项目小标签（最多展示 3 个） */}
-                      {o.repairItems?.length > 0 && (
+                      {o.repairItems && o.repairItems.length > 0 && (
                         <div className="mt-1.5 flex flex-wrap gap-1">
-                          {o.repairItems.slice(0, 3).map((item: any) => (
+                          {o.repairItems.slice(0, 3).map((item) => (
                             <span key={item.id} className="rounded-full px-2 py-0.5 text-[11px]" style={{ background: 'var(--surface-2)', color: 'var(--ink-muted)' }}>
                               {item.name}
                             </span>

@@ -29,5 +29,8 @@ jobs:
       - name: 安装依赖
         run: npm ci
 
+      - name: Lint（0 error 门禁，架构豁免项为 warning）
+        run: npm run lint
+
       - name: 一键端到端（PG → 迁移 → 构建 → 服务 → 回归）
         run: node scripts/e2e.mjs

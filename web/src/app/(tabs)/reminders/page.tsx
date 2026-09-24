@@ -15,6 +15,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { getReminders, updateReminder } from '@/lib/api'
+import type { Reminder } from '@/lib/types'
 import { getReminderTypeLabel, formatDate, formatDateTime } from '@/lib/format'
 
 const TABS = [
@@ -25,11 +26,11 @@ const TABS = [
 
 export default function RemindersPage() {
   const [activeTab, setActiveTab] = useState('pending')
-  const [reminders, setReminders] = useState<any[]>([])
+  const [reminders, setReminders] = useState<Reminder[]>([])
   // 首次/切 tab 加载中状态，驱动骨架屏
   const [loading, setLoading] = useState(true)
   const [showDetail, setShowDetail] = useState(false)
-  const [current, setCurrent] = useState<any>(null)
+  const [current, setCurrent] = useState<Reminder | null>(null)
   // 标记已提醒的补充信息
   const [doneForm, setDoneForm] = useState({ method: 'wechat', feedback: '' })
   // 标记中状态：防弱网双击重复提交
@@ -41,7 +42,7 @@ export default function RemindersPage() {
       const params: Record<string, string> = {}
       if (activeTab) params.status = activeTab
       const data = await getReminders(params)
-      setReminders(data as any[])
+      setReminders(data)
     } catch { /* 静默 */ } finally {
       setLoading(false)
     }
@@ -49,7 +50,7 @@ export default function RemindersPage() {
 
   useEffect(() => { void loadData() }, [loadData])
 
-  const openDetail = (item: any) => {
+  const openDetail = (item: Reminder) => {
     setCurrent(item)
     // 打开新条目时重置待填项，避免上一条的反馈串到下一条
     setDoneForm({ method: 'wechat', feedback: '' })
