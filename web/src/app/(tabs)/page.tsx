@@ -16,11 +16,12 @@ import RecoveryCodeSheet from '@/components/RecoveryCodeSheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useConfirm } from '@/components/mobile/ConfirmProvider'
-import { getDashboard, getReminders, logout, changePassword, regenerateRecoveryCode } from '@/lib/api'
+import { getDashboard, getReminders, logout, changePassword, regenerateRecoveryCode, getShopName, saveShopName } from '@/lib/api'
 import { fenToYuan } from '@/lib/money'
 import { useAnimatedYuan } from '@/lib/hooks'
 import { getReminderTypeLabel, formatMonthDay } from '@/lib/format'
 import { hapticFeedback } from '@/lib/feedback'
+import { DEFAULT_SHOP_NAME, SHOP_NAME_MAX_LEN, setShopNameCache } from '@/lib/shop'
 
 // 级联进场弹簧：临界阻尼 + 按卡片序错开的延迟
 const springIn = (delay: number) => ({ type: 'spring' as const, bounce: 0, duration: 0.4, delay })
@@ -67,7 +68,7 @@ export default function HomePage() {
   // 概览数字直达对应状态工单列表
   const goOrders = (status: string) => router.push(`/orders?status=${status}`)
 
-  // ===== 访问控制入口：修改密码 / 恢复码 / 退出登录 =====
+  // ===== 设置入口：店铺名称 / 修改密码 / 恢复码 / 退出登录 =====
   const [showSettings, setShowSettings] = useState(false)
   const [showChangePwd, setShowChangePwd] = useState(false)
   const [changingPwd, setChangingPwd] = useState(false)
@@ -75,6 +76,42 @@ export default function HomePage() {
   // 一次性恢复码展示（改密/生成后）
   const [recoveryCode, setRecoveryCode] = useState('')
   const [generatingCode, setGeneratingCode] = useState(false)
+  // 店铺名称：全局设置存服务端，报价单长图页眉取用
+  const [showShopName, setShowShopName] = useState(false)
+  const [shopName, setShopName] = useState('')
+  const [shopNameLoading, setShopNameLoading] = useState(false)
+  const [savingShopName, setSavingShopName] = useState(false)
+
+  // 打开时从服务端拉当前值（未设置为空串，展示走默认名占位）
+  const openShopName = async () => {
+    setShowSettings(false)
+    setShopName('')
+    setShopNameLoading(true)
+    setShowShopName(true)
+    try {
+      const res = await getShopName()
+      setShopName(res.shopName || '')
+    } catch { /* 已拦截，保留空值可重试保存 */ } finally {
+      setShopNameLoading(false)
+    }
+  }
+
+  const submitShopName = async () => {
+    if (savingShopName || shopNameLoading) return
+    const name = shopName.trim()
+    if (name.length > SHOP_NAME_MAX_LEN) return toast(`店名最多 ${SHOP_NAME_MAX_LEN} 字`)
+    setSavingShopName(true)
+    try {
+      await saveShopName(name)
+      // 保存成功刷新客户端缓存，报价单长图立即用新名
+      setShopNameCache(name)
+      hapticFeedback()
+      setShowShopName(false)
+      toast.success(name ? '店名已更新' : '已恢复默认店名')
+    } catch { /* 已拦截 */ } finally {
+      setSavingShopName(false)
+    }
+  }
 
   const openChangePwd = () => {
     setShowSettings(false)
@@ -237,14 +274,30 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* 设置面板：修改密码 / 恢复码 / 退出登录 */}
+      {/* 设置面板：店铺名称 / 修改密码 / 恢复码 / 退出登录 */}
       <BottomSheet open={showSettings} onOpenChange={setShowSettings} title="设置">
         <div className="flex flex-col gap-2">
+          <Button variant="outline" className="h-10" onClick={() => void openShopName()}>店铺名称</Button>
           <Button variant="outline" className="h-10" onClick={openChangePwd}>修改密码</Button>
           <Button variant="outline" className="h-10" disabled={generatingCode} onClick={() => void genRecoveryCode()}>
             找回密码恢复码
           </Button>
           <Button variant="outline" className="h-10" onClick={quitLogout}>退出登录</Button>
+        </div>
+      </BottomSheet>
+
+      {/* 店铺名称弹窗：写入服务端全局设置，报价单长图页眉即时生效 */}
+      <BottomSheet open={showShopName} onOpenChange={setShowShopName} title="店铺名称">
+        <div className="flex flex-col gap-3">
+          <Field label="店名">
+            <Input value={shopName} maxLength={SHOP_NAME_MAX_LEN} placeholder={DEFAULT_SHOP_NAME}
+              disabled={shopNameLoading}
+              onChange={e => setShopName(e.target.value)} />
+          </Field>
+          <p className="text-[12px]" style={{ color: 'var(--ink-muted)' }}>
+            显示在报价单长图页眉，最多 {SHOP_NAME_MAX_LEN} 字；留空则使用默认名称。所有设备共用。
+          </p>
+          <Button className="mt-2 h-10" disabled={shopNameLoading || savingShopName} onClick={() => void submitShopName()}>保存</Button>
         </div>
       </BottomSheet>
 

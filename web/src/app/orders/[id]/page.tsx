@@ -315,7 +315,7 @@ export default function OrderDetailPage() {
           // 独立捕获：手机浏览器 canvas 兼容问题不能静默，
           // 否则表现为「点了没反应」无从排查
           try {
-            const dataUrl = generateQuoteCard({
+            const dataUrl = await generateQuoteCard({
               orderNo: order.orderNo,
               plateNumber: order.vehicle?.plateNumber,
               customerName: order.customer?.name,

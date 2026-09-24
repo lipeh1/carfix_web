@@ -126,3 +126,7 @@ export const recoverPassword = (data: { code: string; newPassword: string }) =>
   http.post('/auth/recover', data)
 // 重新生成恢复码（需登录）：旧的立即作废，响应含新码
 export const regenerateRecoveryCode = () => http.post('/auth/recovery-code')
+
+// 店铺名称（全局设置，存服务端）：读取未设置返回空串，保存空串即回退默认名
+export const getShopName = () => http.get('/settings/shop-name')
+export const saveShopName = (shopName: string) => http.put('/settings/shop-name', { shopName })

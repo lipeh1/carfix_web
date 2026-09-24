@@ -4,6 +4,7 @@
 // 供微信发送客户确认；浅色纸面风格，金额沿用主色强调
 // 所有金额入参为「分」，绘制时换算为元
 // （自旧 client/src/utils/quoteCard.ts 原样移植，纯 Canvas 绘制与框架无关）
+import { resolveShopName } from '@/lib/shop'
 
 export interface QuoteCardItem {
   name: string
@@ -24,18 +25,10 @@ export interface QuoteCardOrder {
   repairItems: QuoteCardItem[]
 }
 
-// 店铺名：localStorage 可配
-const getShopName = () => {
-  try {
-    return localStorage.getItem('carweb:shopName') || '汽修服务中心'
-  } catch {
-    return '汽修服务中心'
-  }
-}
-
 const fen = (v: number | null | undefined) => ((Number(v) || 0) / 100).toFixed(2)
 
-export function generateQuoteCard(order: QuoteCardOrder): string {
+// 店名存服务端（全局设置），绘制前异步取缓存（首次自动拉取，失败回退默认名）
+export async function generateQuoteCard(order: QuoteCardOrder): Promise<string> {
   const W = 720
   const PAD = 44
   const items = order.repairItems || []
@@ -58,10 +51,11 @@ export function generateQuoteCard(order: QuoteCardOrder): string {
   ctx.fillRect(0, 0, W, H)
 
   // ===== 页眉：店名 + 单据类型 =====
+  const shopName = await resolveShopName()
   ctx.fillStyle = '#111214'
   ctx.font = `600 34px ${FONT}`
   ctx.textBaseline = 'top'
-  ctx.fillText(getShopName(), PAD, 44)
+  ctx.fillText(shopName, PAD, 44)
 
   ctx.fillStyle = '#5e6ad2'
   ctx.font = `500 26px ${FONT}`
