@@ -6,10 +6,10 @@
 
 - **框架**: Next.js 16（App Router）+ React 19 + TypeScript
 - **UI**: Tailwind CSS v4 + shadcn/ui + motion（Linear 深色风格双主题）
-- **数据库**: PostgreSQL（Vercel Postgres / Neon）+ Prisma ORM
-- **图片存储**: Vercel Blob（客户端直传，公开随机 URL）
+- **数据库**: 生产用云开发 MySQL（腾讯云 CloudBase）/ 本地开发用内嵌 PostgreSQL + Prisma ORM
+- **图片存储**: 腾讯云 COS（生产）/ 本地磁盘（开发），统一由 `web/src/lib/storage.ts` 抽象
 - **PWA**: @serwist/next（添加到桌面、离线缓存）
-- **部署**: Vercel
+- **部署**: 腾讯云 CloudBase 云托管（Docker + Next.js standalone）
 
 ## 项目结构
 
@@ -63,14 +63,18 @@ npm test               # 一键端到端：PG → 迁移 → 构建 → 服务 �
 npm run build && npm start
 ```
 
-## 部署（Vercel）
+## 部署（腾讯云 CloudBase 云托管）
 
-线上地址：**https://carweb-lipeh1s-projects.vercel.app**（备用 https://carweb-dusky.vercel.app；大陆直连 `*.vercel.app` 不通，需代理或绑定自定义域名）。
+面向中国大陆公网访问，完整步骤见 **[docs/部署-腾讯云CloudBase.md](./docs/部署-腾讯云CloudBase.md)**。
 
-1. 已通过 Git 集成自动部署：push 到 `master` 即自动构建上线（项目 Root Directory = `web/`，生产分支 `master`）。
-2. 存储由 Vercel 集成注入：Postgres（Neon）的 `DATABASE_URL` 与 Blob 直传凭证；构建时 `vercel-build` 自动执行 `prisma migrate deploy` 建表，无需手工迁移。
-3. 可选：配置 `BAIDU_OCR_API_KEY` / `BAIDU_OCR_SECRET_KEY` 启用行驶证/车牌识别。
-4. 打开站点设置访问密码即可使用；手机浏览器「添加到主屏幕」获得独立应用形态。
+一句话概览：
+
+1. 云开发环境 → 开通云开发 MySQL（拿内网连接串）→ 开通 COS 桶（公有读私有写）
+2. 云托管新建服务：代码目录 `web/`、端口 `3000`、开启私有网络选中 MySQL 所在 VPC
+3. 配环境变量 `DATABASE_URL` / `COS_*`，部署即自动建表（容器启动跑 `prisma migrate deploy`）
+4. 首次访问设置访问密码；**正式使用需绑定已备案的自定义域名**（默认域名会弹测试中间页）
+
+> 历史 Vercel 部署（`*.vercel.app`）在大陆无法直连，已停止维护；`vercel-build` 脚本仅作留档。
 
 ## 功能模块
 

@@ -10,10 +10,11 @@ export const GET = withAuth(async (req: NextRequest) => {
   const keyword = req.nextUrl.searchParams.get('keyword') ?? undefined
   const where: Prisma.CustomerWhereInput = {}
   if (keyword) {
-    // mode insensitive 对齐原 SQLite 的不区分大小写行为
+    // 不区分大小写由数据库排序规则保证（MySQL 默认 utf8mb4 为 _ci；PostgreSQL 端车牌/单号本身统一大写存储），
+    // 故不再使用 Prisma 的 mode: 'insensitive'——MySQL 驱动不支持该选项
     where.OR = [
-      { name: { contains: keyword, mode: 'insensitive' } },
-      { phone: { contains: keyword, mode: 'insensitive' } }
+      { name: { contains: keyword } },
+      { phone: { contains: keyword } }
     ]
   }
   const customers = await prisma.customer.findMany({

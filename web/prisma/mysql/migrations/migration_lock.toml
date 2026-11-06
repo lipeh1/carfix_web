@@ -1,0 +1,2 @@
+# 云开发 MySQL 迁移锁文件（Prisma 自动读取，勿手改）
+provider = "mysql"

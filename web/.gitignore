@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# 环境变量模板需要入库，供部署时对照填写
+!.env.example
 
 # vercel
 .vercel
@@ -45,6 +47,9 @@ next-env.d.ts
 
 # 本地内嵌 Postgres 数据
 /.pgdata
+
+# 本地存储驱动落盘目录（STORAGE_DRIVER=local 时产生）
+/.uploads
 
 .vercel
 .env*

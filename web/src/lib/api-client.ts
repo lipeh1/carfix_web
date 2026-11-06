@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 export interface RequestOptions {
   /** 查询参数 */
   params?: Record<string, string | number | undefined>
-  /** 请求体（自动 JSON 序列化） */
+  /** 请求体：普通对象自动 JSON 序列化；FormData 原样提交（文件上传用） */
   body?: unknown
   /** 标记后请求失败不弹全局 toast */
   skipToast?: boolean
@@ -34,11 +34,18 @@ export async function request<T = Json>(
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), opts.timeout ?? 15000)
   try {
+    // FormData 必须交给浏览器自动生成带 boundary 的 Content-Type，不能手动设头
+    const isForm = opts.body instanceof FormData
     const res = await fetch(`/api${url}${qs(opts.params)}`, {
       method,
       signal: controller.signal,
-      headers: opts.body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined
+      headers: opts.body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : undefined,
+      body:
+        opts.body === undefined
+          ? undefined
+          : isForm
+            ? (opts.body as FormData)
+            : JSON.stringify(opts.body)
     })
 
     let data: Json | null = null

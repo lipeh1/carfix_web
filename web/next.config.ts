@@ -9,6 +9,11 @@ const withSerwist = withSerwistInit({
   disable: process.env.NODE_ENV === 'development'
 })
 
-const nextConfig: NextConfig = {}
+const nextConfig: NextConfig = {
+  // 容器化部署（腾讯云 CloudBase 云托管）必须开启：
+  // 生成 .next/standalone 自包含产物，镜像里不再需要完整 node_modules
+  // 对 Vercel 无影响（Vercel 忽略该选项）
+  output: 'standalone'
+}
 
 export default withSerwist(nextConfig)

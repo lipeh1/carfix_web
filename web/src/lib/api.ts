@@ -84,22 +84,16 @@ export const getReminders = (params?: { status?: string; type?: string }) =>
 export const updateReminder = (id: number, data: FormPayload) =>
   http.patch(`/reminders/${id}`, data)
 
-// ===== 图片上传（Vercel Blob 客户端直传） =====
-// 流程：POST handleUploadUrl 由服务端下发短时 token，浏览器拿到后直传 Blob，
-// 返回公开随机 URL（路径含随机后缀，不可猜测）
-import { upload } from '@vercel/blob/client'
-
+// ===== 图片上传（服务端中转，落 COS 或本地磁盘） =====
+// 前端只负责把压缩后的文件 POST 上来，具体存储厂商由后端 lib/storage 屏蔽；
+// 超时放宽到 60s：弱网下 10MB 图片上传容易超过默认 15s
 export async function uploadImage(file: File): Promise<{ url: string }> {
-  // 保留原始扩展名，命名规则与旧版 multer 一致（时间戳-随机数），归入 checkin/ 目录便于管理
-  const ext = file.name.includes('.') ? file.name.split('.').pop() : 'jpg'
-  const pathname = `checkin/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`
-  return upload(pathname, file, {
-    access: 'public',
-    handleUploadUrl: '/api/upload/token'
-  })
+  const form = new FormData()
+  form.append('file', file, file.name)
+  return http.post<{ url: string }>('/upload', form, { timeout: 60000 })
 }
 
-// 删除已上传的图片（按上传返回的完整 Blob URL）
+// 删除已上传的图片（按上传返回的完整 URL，后端按 URL 反解存储键）
 export const deleteUpload = (url: string) => http.delete('/upload', { params: { url } })
 
 // ===== OCR 识别（后端代理百度） =====

@@ -1,0 +1,17 @@
+# 构建上下文排除项：镜像里只需要源码、依赖清单与 prisma 目录
+node_modules
+.next
+.vercel
+.git
+.gitignore
+
+# 本地环境变量与本地数据库数据目录（绝不能进镜像）
+.env.local
+.env
+.pgdata
+.uploads
+
+# 本地工具产物
+tsconfig.tsbuildinfo
+npm-debug.log*
+*.log

@@ -12,6 +12,7 @@ import { Loader2 } from 'lucide-react'
 import BottomSheet from '@/components/mobile/BottomSheet'
 import Field from '@/components/mobile/Field'
 import RecoveryCodeSheet from '@/components/RecoveryCodeSheet'
+import ComplianceFooter from '@/components/mobile/ComplianceFooter'
 import { getAuthStatus, getAuthMe, setupPassword, loginPassword, recoverPassword } from '@/lib/api'
 import { hapticFeedback } from '@/lib/feedback'
 
@@ -188,6 +189,9 @@ export default function LoginPage() {
             ? '密码用于保护客户与经营数据，忘记时可用恢复码找回'
             : '设置完成后会生成找回密码的恢复码，请妥善保存'}
         </div>
+
+        {/* 备案号：由 ICP_BEIAN / POLICE_BEIAN 环境变量注入，未配置时不渲染 */}
+        <ComplianceFooter />
       </div>
 
       {/* 找回密码：恢复码 + 新密码 */}

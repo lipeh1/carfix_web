@@ -208,7 +208,7 @@ export default function CheckinPage() {
     }
   }
 
-  // ===== 照片上传（Blob 客户端直传） =====
+  // ===== 照片上传（服务端中转存储） =====
 
   // 上传单张照片（按数组下标更新状态）
   const uploadPhoto = async (idx: number, file: File) => {

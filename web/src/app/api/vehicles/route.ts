@@ -11,7 +11,8 @@ export const GET = withAuth(async (req: NextRequest) => {
   const customerId = req.nextUrl.searchParams.get('customerId')
   const where: Prisma.VehicleWhereInput = {}
   if (keyword) {
-    where.plateNumber = { contains: keyword, mode: 'insensitive' }
+    // 车牌统一大写存储，MySQL 默认排序规则本身不区分大小写，故不加 mode: 'insensitive'
+    where.plateNumber = { contains: keyword }
   }
   if (customerId) {
     where.customerId = Number(customerId)

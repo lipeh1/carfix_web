@@ -14,10 +14,10 @@
 | 样式 | Tailwind CSS v4 + shadcn/ui（radix） | 设计令牌见 global.css，组件在 `components/ui` |
 | 动效 | motion（motion/react） | 弹簧动画，`useAnimatedYuan` 数字滚动 |
 | ORM | Prisma 5 | schema 即文档 |
-| 数据库 | PostgreSQL（Vercel Postgres / Neon） | 连接串在 `DATABASE_URL` |
-| 文件存储 | Vercel Blob | 接车照片客户端直传，公开随机 URL |
+| 数据库 | 生产：云开发 MySQL（腾讯云 CloudBase）；本地：内嵌 PostgreSQL | 均通过 `DATABASE_URL` 接入，MySQL schema 由脚本派生 |
+| 文件存储 | 腾讯云 COS（生产）/ 本地磁盘（开发） | `web/src/lib/storage.ts` 统一抽象，对象路径 `checkin/<时间戳>-<随机串>.<ext>` |
 | PWA | @serwist/next | manifest + Service Worker 离线缓存 |
-| 部署 | Vercel | Root Directory = `web` |
+| 部署 | 腾讯云 CloudBase 云托管（Docker） | 代码目录 `web`，端口 3000，详见 `docs/部署-腾讯云CloudBase.md` |
 
 ## 项目结构
 
@@ -99,7 +99,7 @@ carweb/
 - 每张表必须有 `id` 主键（自增）、`created_at`、`updated_at`（如适用）。
 - 外键关系必须在 Prisma schema 中显式定义 `@relation`。
 - 迁移通过 `prisma migrate dev` 生成，禁止手动修改数据库；部署用 `prisma migrate deploy`。
-- PostgreSQL 下文本模糊搜索（`contains`）需带 `mode: 'insensitive'` 保持大小写不敏感。
+- 文本模糊搜索（`contains`）**禁止使用 `mode: 'insensitive'`**：MySQL 驱动不支持该选项，大小写不敏感由 MySQL 默认 `utf8mb4_unicode_ci` 排序规则保证（车牌/单号统一大写存储）。
 
 ### 5. Git 提交规范
 
@@ -244,8 +244,9 @@ npm test
 ## 注意事项
 
 - 单用户系统，采用**单访问密码**鉴权（无多用户/角色体系）：密码 scrypt 哈希存 `settings` 表，会话为 HMAC 签名的 httpOnly Cookie（30 天）；除 `/api/health` 与 `/api/auth` 外，所有 `/api` 均要求登录（`withAuth` 包装，新增后端接口默认继承）；登录与恢复码接口均带同 IP 防爆破锁定（计数存 `settings` 表，Serverless 多实例生效）；前端 401 统一跳 `/login`。
-- 找回密码：设置/修改密码时自动生成一次性**恢复码**（scrypt 哈希存 `settings` 表 `auth:recovery`，仅生成时明文返回一次）；忘记密码走 `POST /api/auth/recover`（凭恢复码重设密码，旧码作废、换发新码、成功即登录）；已登录可在设置中 `POST /api/auth/recovery-code` 重新生成。最终兜底：Vercel 设 `RESET_PASSWORD` 环境变量后部署，构建期清空密码（见 `web/scripts/reset-password.mjs`）。
-- 接车照片存 Vercel Blob：浏览器经 `@vercel/blob/client` 直传（`/api/upload/token` 下发受约束凭证，限图片 10MB），数据库存完整公开 URL（路径随机不可猜测）；删除走 `DELETE /api/upload`。
+- 找回密码：设置/修改密码时自动生成一次性**恢复码**（scrypt 哈希存 `settings` 表 `auth:recovery`，仅生成时明文返回一次）；忘记密码走 `POST /api/auth/recover`（凭恢复码重设密码，旧码作废、换发新码、成功即登录）；已登录可在设置中 `POST /api/auth/recovery-code` 重新生成。最终兜底：在云托管环境变量加 `RESET_PASSWORD=1` 发一次版，容器启动时清空密码（见 `web/docker-entrypoint.sh`），完成后立即删除该变量。
+- 接车照片走**服务端中转上传**：前端 `compressImage` 压缩后 POST multipart 到 `/api/upload`，后端经 `lib/storage.ts` 写入 COS（生产）或本地磁盘（开发），数据库存完整公开 URL（路径随机不可猜测）；删除走 `DELETE /api/upload`。
 - 百度 OCR 密钥（`BAIDU_OCR_API_KEY/SECRET_KEY`）为可选配置，未配置时识别功能自动停用、前端回退手输。
-- 生产部署在 Vercel（项目 Root Directory 设为 `web/`），`DATABASE_URL` 指向 Vercel Postgres/Neon；`postinstall` 已自动执行 `prisma generate`。
+- 生产部署在腾讯云 CloudBase 云托管（Docker，端口 3000），`DATABASE_URL` 指向云开发 MySQL 内网地址，服务需开启私有网络；容器启动自动执行 `prisma migrate deploy`。完整步骤见 `docs/部署-腾讯云CloudBase.md`。
+- 双 schema 约定：`prisma/schema.prisma` 为 PostgreSQL 版（本地开发）；`prisma/mysql/schema.prisma` 由 `scripts/gen-mysql-schema.mjs` 派生（生产），**禁止手改生成文件**。改模型只改前者，再执行 `npm run db:mysql:gen`。
 - 本地开发无 Docker 时用 `npm run dev:db` 起内嵌 PostgreSQL（端口 5433，数据在 `web/.pgdata`，已 gitignore）。

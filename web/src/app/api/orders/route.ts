@@ -10,11 +10,13 @@ export const GET = withAuth(async (req: NextRequest) => {
   const where: Prisma.WorkOrderWhereInput = {}
   if (status) where.status = status
   if (keyword) {
+    // 不区分大小写由数据库排序规则保证（MySQL 默认 utf8mb4 为 _ci），
+    // 不使用 Prisma 的 mode: 'insensitive'——MySQL 驱动不支持该选项
     where.OR = [
-      { orderNo: { contains: keyword, mode: 'insensitive' } },
-      { complaint: { contains: keyword, mode: 'insensitive' } },
-      { vehicle: { plateNumber: { contains: keyword, mode: 'insensitive' } } },
-      { customer: { name: { contains: keyword, mode: 'insensitive' } } }
+      { orderNo: { contains: keyword } },
+      { complaint: { contains: keyword } },
+      { vehicle: { plateNumber: { contains: keyword } } },
+      { customer: { name: { contains: keyword } } }
     ]
   }
   const orders = await prisma.workOrder.findMany({
