@@ -3,6 +3,7 @@ import withSerwistInit from '@serwist/next'
 
 // PWA 支持：构建时生成 Service Worker，实现「添加到桌面」独立应用形态
 // 开发模式禁用（SW 缓存会干扰热更新），生产环境自动更新（skipWaiting + clientsClaim）
+// 包装器仍会注入 Webpack 配置，开发与构建命令均需显式指定 --webpack
 const withSerwist = withSerwistInit({
   swSrc: 'src/app/sw.ts',
   swDest: 'public/sw.js',
