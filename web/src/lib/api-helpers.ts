@@ -47,9 +47,9 @@ export function errorResponse(e: unknown): NextResponse {
   if (e instanceof AppError) {
     return NextResponse.json({ message: e.message }, { status: e.statusCode })
   }
-  const err = e as Error
-  console.error('[Error]', err?.message)
-  return NextResponse.json({ message: err?.message || '服务器内部错误' }, { status: 500 })
+  // 非业务错误（Prisma/驱动等）只记服务端日志，不向前端透出内部细节
+  console.error('[Error]', e)
+  return NextResponse.json({ message: '服务器内部错误' }, { status: 500 })
 }
 
 // 登录成功后下发会话 Cookie：
@@ -71,8 +71,10 @@ export async function attachSession(req: NextRequest, res: NextResponse): Promis
   return res
 }
 
-// 客户端 IP：Vercel/反代场景取 x-forwarded-for 首段
+// 客户端 IP：取 x-forwarded-for 末段
+// 首段可由客户端任意伪造（每次换一个就能绕过防爆破锁定），
+// 末段由最近一跳的可信网关（CloudBase 接入层）追加，客户端无法控制
 export function clientIp(req: NextRequest): string {
-  const fwd = req.headers.get('x-forwarded-for')
-  return fwd?.split(',')[0]?.trim() || 'unknown'
+  const parts = (req.headers.get('x-forwarded-for') ?? '').split(',').map(s => s.trim()).filter(Boolean)
+  return parts[parts.length - 1] || req.headers.get('x-real-ip')?.trim() || 'unknown'
 }

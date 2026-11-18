@@ -51,6 +51,12 @@ export const PATCH = withAuth<{ id: string }>(async (req, { params }) => {
       break
   }
 
-  const updated = await prisma.workOrder.update({ where: { id: Number(id) }, data: updateData })
+  // 条件更新：仅当状态仍是校验时读到的值才写入，防止与质检等并发操作交错后越过状态机
+  const { count } = await prisma.workOrder.updateMany({
+    where: { id: Number(id), status: order.status },
+    data: updateData as Prisma.WorkOrderUpdateManyMutationInput
+  })
+  if (count === 0) throw new AppError('工单状态已变化，请刷新后重试', 409)
+  const updated = await prisma.workOrder.findUnique({ where: { id: Number(id) } })
   return NextResponse.json(updated)
 })

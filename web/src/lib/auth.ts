@@ -42,6 +42,9 @@ export async function setPasswordHash(password: string): Promise<void> {
     update: { value },
     create: { key: 'auth:password', value }
   })
+  // 设置/修改/找回密码时轮换会话签名密钥：此前签发的所有 Cookie 立即失效，
+  // 防止泄露的旧会话在改密后仍可用 30 天（调用方随后 attachSession 会用新密钥重新签发）
+  await rotateSessionSecret()
 }
 
 // ===== 找回密码恢复码：仅生成时显示一次，哈希落库，使用一次即作废 =====
@@ -70,16 +73,39 @@ export async function setRecoveryHash(code: string): Promise<void> {
 }
 
 // 会话签名密钥：首次生成随机值落库，实例冷启动后旧会话仍可校验
+// 进程内缓存 60 秒：避免每个 API 请求都多查一次库；
+// 其他实例轮换密钥后，本实例最多 60 秒内跟进（旧会话随之失效）
+const SECRET_CACHE_MS = 60_000
+let secretCache: { value: string; at: number } | null = null
+
 export async function getSessionSecret(): Promise<string> {
+  if (secretCache && Date.now() - secretCache.at < SECRET_CACHE_MS) return secretCache.value
   const existing = await getSetting('auth:secret')
-  if (existing) return existing
+  if (existing) {
+    secretCache = { value: existing, at: Date.now() }
+    return existing
+  }
   const secret = crypto.randomBytes(48).toString('hex')
   await prisma.setting.upsert({
     where: { key: 'auth:secret' },
     update: {},
     create: { key: 'auth:secret', value: secret }
   })
-  return secret
+  // 并发首次生成时以库中最终值为准
+  const saved = (await getSetting('auth:secret')) ?? secret
+  secretCache = { value: saved, at: Date.now() }
+  return saved
+}
+
+// 轮换会话签名密钥（改密/找回后调用），使全部旧会话失效
+async function rotateSessionSecret(): Promise<void> {
+  const secret = crypto.randomBytes(48).toString('hex')
+  await prisma.setting.upsert({
+    where: { key: 'auth:secret' },
+    update: { value: secret },
+    create: { key: 'auth:secret', value: secret }
+  })
+  secretCache = { value: secret, at: Date.now() }
 }
 
 // ===== 会话令牌：base64url(payload).HMAC，无状态可校验 =====

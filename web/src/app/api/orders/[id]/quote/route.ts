@@ -33,14 +33,19 @@ export const POST = withAuth<{ id: string }>(async (req, { params }) => {
         if (!Number.isSafeInteger(unitFen) || unitFen < 0) {
           throw new AppError('单价必须是不小于0的整数（单位:分）')
         }
-        const subtotal = Math.round(Number(item.quantity) * unitFen)
+        // 数量必须为正数：负数会冲减总额（绕开优惠字段的隐性打折），非数字会得到 NaN 小计
+        const qty = Number(item.quantity)
+        if (!Number.isFinite(qty) || qty <= 0) {
+          throw new AppError('数量必须大于0')
+        }
+        const subtotal = Math.round(qty * unitFen)
         total += subtotal
         await tx.repairItem.create({
           data: {
             workOrderId: orderId,
             type: item.type,
             name: item.name,
-            quantity: Number(item.quantity),
+            quantity: qty,
             unitPrice: unitFen,
             subtotal,
             remark: item.remark,
