@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { X, Plus } from 'lucide-react'
 import NavBar from '@/components/mobile/NavBar'
 import Cell from '@/components/mobile/Cell'
@@ -76,6 +76,7 @@ export default function QuotePage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const confirm = useConfirm()
+  const reduceMotion = useReducedMotion()
   const orderId = Number(id)
 
   // 报价表单草稿键（按工单隔离）
@@ -280,65 +281,60 @@ export default function QuotePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 条目卡片渲染（工时/配件共用结构）：AnimatePresence 增删平滑进出，layout 让删除后排版收拢
+  // 仅项目增删提供短反馈；既有内容不重复进场，减弱动态时立即更新
   const renderItem = (item: QuoteItem, placeholder: string) => (
     <motion.div
       key={item._id}
-      className="mb-2 rounded-lg p-2 px-3"
-      style={{ background: 'var(--surface-2)' }}
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, transition: { duration: 0.15 } }}
-      transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
-      layout
+      className="quote-item"
+      initial={reduceMotion ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: reduceMotion ? 0 : 0.16 }}
+      layout={reduceMotion ? false : 'position'}
     >
-      <div className="flex items-center gap-2">
+      <div className="quote-item-name">
         <Input
           value={item.name}
           placeholder={placeholder}
-          className="h-9 flex-1 rounded-lg border-0 font-medium focus-visible:ring-0"
-          style={{ background: 'var(--surface-1)' }}
+          aria-label={placeholder}
           onChange={e => updateItem(item._id, { name: e.target.value })}
         />
-        {/* 删除键：按下缩小、松手带回弹地弹回（微过冲） */}
+        {/* 删除按钮保持完整触控面积，按压不使用过冲弹跳 */}
         <motion.button
           type="button"
           aria-label="删除项目"
-          className="flex items-center justify-center p-1"
-          style={{ color: 'var(--ink-tertiary)' }}
-          whileTap={{ scale: 0.72 }}
-          transition={{ type: 'spring', bounce: 0.45, duration: 0.35 }}
+          className="quote-item-remove"
+          whileTap={reduceMotion ? undefined : { scale: 0.94 }}
+          transition={{ type: 'spring', bounce: 0, duration: 0.2 }}
           onClick={() => removeItem(item._id)}
         >
           <X size={18} />
         </motion.button>
       </div>
-      <div className="mt-1 flex items-center gap-3">
-        <div className="flex flex-1 flex-col">
-          <label className="mb-0.5 text-[11px]" style={{ color: 'var(--ink-subtle)' }}>数量</label>
+      <div className="quote-item-values">
+        <div className="quote-item-field">
+          <label htmlFor={item._id + '-quantity'}>数量</label>
           <Input
+            id={item._id + '-quantity'}
             inputMode="decimal"
             value={item.quantity}
             placeholder="1"
-            className="h-8 rounded-lg border-0 text-center text-[13px] focus-visible:ring-0"
-            style={{ background: 'var(--surface-1)' }}
             onChange={e => updateItem(item._id, { quantity: e.target.value })}
           />
         </div>
-        <div className="flex flex-1 flex-col">
-          <label className="mb-0.5 text-[11px]" style={{ color: 'var(--ink-subtle)' }}>单价</label>
+        <div className="quote-item-field">
+          <label htmlFor={item._id + '-price'}>单价</label>
           <Input
+            id={item._id + '-price'}
             inputMode="decimal"
             value={item.unitPrice}
             placeholder="0.00"
-            className="h-8 rounded-lg border-0 text-center text-[13px] focus-visible:ring-0"
-            style={{ background: 'var(--surface-1)' }}
             onChange={e => updateItem(item._id, { unitPrice: e.target.value })}
           />
         </div>
-        <div className="flex w-20 flex-col text-right">
-          <span className="text-muted">小计</span>
-          <span className="font-mono text-[14px] font-semibold" style={{ color: 'var(--danger)' }}>
+        <div className="quote-item-subtotal">
+          <span>小计</span>
+          <span>
             ¥{formatAmount(item.subtotal)}
           </span>
         </div>
@@ -347,111 +343,110 @@ export default function QuotePage() {
   )
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--canvas)', paddingBottom: 'calc(150px + env(safe-area-inset-bottom))' }}>
+    <div className="quote-page">
       <NavBar title="检测报价" />
 
-      <div className="page-content">
-        {/* 故障描述 */}
-        <div className="card">
-          <div className="section-title">故障描述</div>
-          <Textarea
-            rows={3}
-            value={inspection}
-            placeholder="描述检测到的故障和问题"
-            onChange={e => setInspection(e.target.value)}
-          />
-        </div>
+      <div className="quote-layout">
+        <div className="quote-main">
+          {/* 故障描述 */}
+          <div className="card">
+            <div className="section-title">故障描述</div>
+            <Textarea
+              rows={3}
+              value={inspection}
+              placeholder="描述检测到的故障和问题"
+              onChange={e => setInspection(e.target.value)}
+            />
+          </div>
 
-        {/* 维修项目 */}
-        <div className="card">
-          <div className="flex-between mb-3">
-            <span className="text-[14px] font-semibold" style={{ color: 'var(--ink)' }}>维修项目 ({items.length})</span>
-            <div className="flex gap-1.5">
-              <Button variant="outline" size="sm" className="h-7 px-2 text-[12px]" onClick={applyMinorMaintenance}>小保养</Button>
-              <Button variant="outline" size="sm" className="h-7 px-2 text-[12px]" onClick={copyLastItems}>上次项目</Button>
-              <Button variant="outline" size="sm" className="h-7 px-2 text-[12px]" onClick={() => setShowItemPicker(true)}>
-                <Plus size={13} /> 常用项目
+          {/* 维修项目 */}
+          <div className="card quote-projects">
+            <div className="quote-projects-header">
+              <span>维修项目 ({items.length})</span>
+              <div className="quote-presets">
+                <Button variant="outline" size="sm" onClick={applyMinorMaintenance}>小保养</Button>
+                <Button variant="outline" size="sm" onClick={copyLastItems}>上次项目</Button>
+                <Button variant="outline" size="sm" onClick={() => setShowItemPicker(true)}>
+                  <Plus size={13} /> 常用项目
+                </Button>
+              </div>
+            </div>
+
+            {/* 工时项目 */}
+            {serviceItems.length > 0 && (
+              <div className="mb-4">
+                <div className="quote-group-title">工时项目</div>
+                <AnimatePresence initial={false}>
+                  {serviceItems.map(item => renderItem(item, '项目名称'))}
+                </AnimatePresence>
+              </div>
+            )}
+
+            {/* 配件项目 */}
+            {partItems.length > 0 && (
+              <div className="mb-4 last:mb-0">
+                <div className="quote-group-title">配件项目</div>
+                <AnimatePresence initial={false}>
+                  {partItems.map(item => renderItem(item, '配件名称'))}
+                </AnimatePresence>
+              </div>
+            )}
+
+            {/* 空状态 */}
+            {items.length === 0 && <Empty description="暂无维修项目，点击上方常用项目添加" />}
+
+            {/* 手动添加 */}
+            <div className="mt-3 flex gap-2.5">
+              <Button variant="outline" size="sm" className="h-8 flex-1" onClick={() => addItem('service')}>
+                <Plus size={14} /> 添加工时
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 flex-1" onClick={() => addItem('part')}>
+                <Plus size={14} /> 添加配件
               </Button>
             </div>
           </div>
 
-          {/* 工时项目 */}
-          {serviceItems.length > 0 && (
-            <div className="mb-4">
-              <div className="mb-2 pl-1 text-[13px] font-semibold" style={{ color: 'var(--ink-subtle)' }}>工时项目</div>
-              <AnimatePresence initial={false}>
-                {serviceItems.map(item => renderItem(item, '项目名称'))}
-              </AnimatePresence>
+          {/* 优惠 */}
+          <div className="card quote-discount">
+            <div className="section-title">优惠</div>
+            <div className="flex items-center gap-2">
+              <Input
+                inputMode="decimal"
+                value={discount}
+                placeholder="0.00"
+                className="h-10 font-mono"
+                onChange={e => setDiscount(e.target.value)}
+              />
+              <span className="text-muted shrink-0">元</span>
             </div>
-          )}
-
-          {/* 配件项目 */}
-          {partItems.length > 0 && (
-            <div className="mb-4 last:mb-0">
-              <div className="mb-2 pl-1 text-[13px] font-semibold" style={{ color: 'var(--ink-subtle)' }}>配件项目</div>
-              <AnimatePresence initial={false}>
-                {partItems.map(item => renderItem(item, '配件名称'))}
-              </AnimatePresence>
-            </div>
-          )}
-
-          {/* 空状态 */}
-          {items.length === 0 && <Empty description="暂无维修项目，点击上方常用项目添加" />}
-
-          {/* 手动添加 */}
-          <div className="mt-3 flex gap-2.5">
-            <Button variant="outline" size="sm" className="h-8 flex-1" onClick={() => addItem('service')}>
-              <Plus size={14} /> 添加工时
-            </Button>
-            <Button variant="outline" size="sm" className="h-8 flex-1" onClick={() => addItem('part')}>
-              <Plus size={14} /> 添加配件
-            </Button>
           </div>
         </div>
 
-        {/* 优惠 */}
-        <div className="card">
-          <div className="section-title">优惠</div>
-          <div className="flex items-center gap-2">
-            <Input
-              inputMode="decimal"
-              value={discount}
-              placeholder="0.00"
-              className="h-9"
-              onChange={e => setDiscount(e.target.value)}
-            />
-            <span className="text-muted shrink-0">元</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 底部报价汇总：材质浮层 + 安全区 */}
-      <div
-        className="material-bar fixed inset-x-0 bottom-0 z-40 border-t"
-        style={{ borderColor: 'var(--hairline)', padding: '12px 12px calc(12px + env(safe-area-inset-bottom))' }}
-      >
-        <div className="mb-2.5">
-          <div className="flex-between py-0.5 text-[13px]" style={{ color: 'var(--ink-muted)' }}>
-            <span>项目合计</span>
-            <span className="font-mono">¥{formatAmount(itemsTotal)}</span>
-          </div>
-          {Number(discount) > 0 && (
+        {/* 汇总在桌面跟随右侧阅读，在手机固定底部方便提交 */}
+        <aside className="quote-summary">
+          <div className="quote-summary-lines">
             <div className="flex-between py-0.5 text-[13px]" style={{ color: 'var(--ink-muted)' }}>
-              <span>优惠</span>
-              <span className="text-success font-mono">-¥{formatAmount(discount)}</span>
+              <span>项目合计</span>
+              <span className="font-mono">¥{formatAmount(itemsTotal)}</span>
             </div>
-          )}
-          <div className="mt-1 flex-between border-t pt-1.5 text-[14px] font-semibold" style={{ borderColor: 'var(--hairline)', color: 'var(--ink)' }}>
-            <span>应收金额</span>
-            <span className="font-mono text-[20px] font-bold" style={{ letterSpacing: '-0.02em', color: 'var(--danger)' }}>
-              ¥{formatAmount(finalAmount)}
-            </span>
+            {Number(discount) > 0 && (
+              <div className="flex-between py-0.5 text-[13px]" style={{ color: 'var(--ink-muted)' }}>
+                <span>优惠</span>
+                <span className="text-success font-mono">-¥{formatAmount(discount)}</span>
+              </div>
+            )}
+            <div className="flex-between quote-summary-total">
+              <span>应收金额</span>
+              <span>
+                ¥{formatAmount(finalAmount)}
+              </span>
+            </div>
           </div>
-        </div>
-        <Button className="h-11 w-full" disabled={saving} onClick={saveQuoteHandler}>
-          {saving && <Loader2 className="animate-spin" />}
-          生成报价单
-        </Button>
+          <Button className="h-11 w-full" disabled={saving} onClick={saveQuoteHandler}>
+            {saving && <Loader2 className="animate-spin" />}
+            生成报价单
+          </Button>
+        </aside>
       </div>
 
       {/* 常用项目选择弹窗 */}

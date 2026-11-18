@@ -406,172 +406,176 @@ export default function OrderDetailPage() {
       <NavBar title={`工单 #${order?.orderNo || ''}`} />
 
       {order ? (
-        <div className="page-content">
-          {/* 状态卡片 */}
-          <div className="card" style={{ background: 'var(--surface-2)' }}>
-            <div className="flex-between">
+        <div className={`page-content order-detail-grid${settlement ? ' has-settlement' : ''}`}>
+          {/* 车辆身份区固定在首位，状态与客户信息保持同屏 */}
+          <div className="order-identity">
+            <div className="flex-between w-full gap-3">
               <div className="min-w-0">
-                <div className="font-mono text-[20px] font-bold" style={{ letterSpacing: 1 }}>{order.vehicle?.plateNumber}</div>
+                <div className="order-plate">{order.vehicle?.plateNumber}</div>
                 <div className="text-muted mt-2">{order.customer?.name} · {order.customer?.phone}</div>
               </div>
               <Badge tone={statusInfo.tone}>{statusInfo.label}</Badge>
             </div>
           </div>
 
-          {/* 接车信息 */}
-          <div className="card">
-            <div className="flex-between">
-              <span className="section-title">接车信息</span>
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-[12px]" onClick={openEditCheckin}>
-                <Pencil size={13} /> 编辑
-              </Button>
-            </div>
-            <Cell title="客户诉求" right={<span style={{ color: 'var(--ink)' }}>{order.complaint || '-'}</span>} />
-            <Cell title="接车里程" right={<span style={{ color: 'var(--ink)' }}>{order.mileageIn ? order.mileageIn + ' km' : '-'}</span>} />
-            <Cell title="车况描述" right={<span style={{ color: 'var(--ink)' }}>{order.checkinRecord?.vehicleCondition || '-'}</span>} />
-            <Cell title="创建时间" right={<span style={{ color: 'var(--ink)' }}>{formatDateTime(order.createdAt)}</span>} />
-          </div>
-
-          {/* 接车照片 */}
-          {checkinPhotos.length > 0 && (
+          <div className="order-main">
+            {/* 接车信息 */}
             <div className="card">
-              <div className="section-title">接车照片</div>
-              <div className="flex flex-wrap gap-2">
-                {checkinPhotos.map((photo, idx) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={photo.id}
-                    src={photo.filePath}
-                    alt=""
-                    className="pressable h-20 w-20 cursor-pointer rounded-lg border object-cover"
-                    style={{ borderColor: 'var(--hairline)' }}
-                    onClick={() => openPreview(idx)}
-                  />
-                ))}
+              <div className="flex-between">
+                <span className="section-title">接车信息</span>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-[12px]" onClick={openEditCheckin}>
+                  <Pencil size={13} /> 编辑
+                </Button>
               </div>
+              <Cell title="客户诉求" right={<span style={{ color: 'var(--ink)' }}>{order.complaint || '-'}</span>} />
+              <Cell title="接车里程" right={<span style={{ color: 'var(--ink)' }}>{order.mileageIn ? order.mileageIn + ' km' : '-'}</span>} />
+              <Cell title="车况描述" right={<span style={{ color: 'var(--ink)' }}>{order.checkinRecord?.vehicleCondition || '-'}</span>} />
+              <Cell title="创建时间" right={<span style={{ color: 'var(--ink)' }}>{formatDateTime(order.createdAt)}</span>} />
             </div>
-          )}
 
-          {/* 检测结果 */}
-          {order.inspection && (
-            <div className="card">
-              <div className="section-title">检测结果</div>
-              <div className="text-[14px] leading-relaxed" style={{ color: 'var(--ink-muted)' }}>{order.inspection}</div>
-            </div>
-          )}
-
-          {/* 维修项目 */}
-          {repairItems.length > 0 && (
-            <div className="card">
-              <div className="section-title">维修项目 / 配件</div>
-              {repairItems.map((item) => (
-                <Cell
-                  key={item.id}
-                  title={item.name}
-                  label={`${item.type === 'service' ? '工时' : '配件'} × ${item.quantity}`}
-                  right={<span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(item.subtotal)}</span>}
-                />
-              ))}
-              <div className="flex-between mt-3">
-                <span>合计</span>
-                <span className="amount">¥{fenToYuan(itemsTotal)}</span>
-              </div>
-            </div>
-          )}
-
-          {/* 维修记录 */}
-          {repairLogs.length > 0 && (
-            <div className="card">
-              <div className="section-title">维修记录</div>
-              {repairLogs.map((log) => (
-                <div key={log.id} className="border-b py-2 last:border-b-0" style={{ borderColor: 'var(--hairline)' }}>
-                  <div className="mb-1 text-[14px]" style={{ color: 'var(--ink)' }}>{log.content}</div>
-                  <div className="text-muted">{formatDateTime(log.createdAt)}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* 增项 */}
-          {additionalItems.length > 0 && (
-            <div className="card">
-              <div className="section-title">维修增项</div>
-              {additionalItems.map((item) => (
-                <div key={item.id} className="border-b last:border-b-0" style={{ borderColor: 'var(--hairline)' }}>
-                  <Cell
-                    title={item.name}
-                    label={item.reason}
-                    right={
-                      <span className="flex flex-col items-end gap-1">
-                        <span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(item.amount)}</span>
-                        <Badge tone={item.status === 'confirmed' ? 'success' : item.status === 'rejected' ? 'danger' : 'warning'}>
-                          {item.status === 'confirmed' ? '已确认' : item.status === 'rejected' ? '已拒绝' : '待确认'}
-                        </Badge>
-                      </span>
-                    }
-                  />
-                  {/* 待确认增项的操作按钮 */}
-                  {item.status === 'pending' && canProcessAdditional && (
-                    <div className="flex justify-end gap-2 pb-3">
-                      <Button size="sm" className="h-8" onClick={() => handleConfirmAdditional(item, true)}>确认</Button>
-                      <Button size="sm" variant="outline" className="h-8 text-destructive" onClick={() => handleConfirmAdditional(item, false)}>拒绝</Button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* 结算信息 */}
-          {settlement && (
-            <div className="card">
-              <div className="section-title">结算信息</div>
-              <Cell title="结算单号" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>{settlement.settlementNo}</span>} />
-              <Cell title="应收金额" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(settlement.totalAmount)}</span>} />
-              <Cell title="优惠" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(settlement.discount || 0)}</span>} />
-              <Cell title="实收金额" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(settlement.actualAmount)}</span>} />
-              <Cell title="已收金额" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(settlement.paidAmount)}</span>} />
-              <Cell
-                title="状态"
-                right={<Badge tone={settlement.status === 'paid' ? 'success' : 'warning'}>{settlement.status === 'paid' ? '已结清' : '挂账'}</Badge>}
-              />
-              {/* 收款记录 */}
-              {settlement.payments && settlement.payments.length > 0 && (
-                <div className="mt-3">
-                  <div className="text-muted mb-2">收款记录</div>
-                  {settlement.payments.map((p) => (
-                    <div key={p.id} className="flex-between border-b py-1.5 font-mono text-[13px] last:border-b-0" style={{ borderColor: 'var(--hairline)' }}>
-                      <span>{formatDateTime(p.createdAt)} · {getPaymentMethodLabel(p.method)}</span>
-                      <span className="text-success">+¥{fenToYuan(p.amount)}</span>
-                    </div>
+            {/* 接车照片 */}
+            {checkinPhotos.length > 0 && (
+              <div className="card">
+                <div className="section-title">接车照片</div>
+                <div className="flex flex-wrap gap-2">
+                  {checkinPhotos.map((photo, idx) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={photo.id}
+                      src={photo.filePath}
+                      alt=""
+                      className="pressable h-20 w-20 cursor-pointer rounded-lg border object-cover"
+                      style={{ borderColor: 'var(--hairline)' }}
+                      onClick={() => openPreview(idx)}
+                    />
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* 检测结果 */}
+            {order.inspection && (
+              <div className="card">
+                <div className="section-title">检测结果</div>
+                <div className="text-[14px] leading-relaxed" style={{ color: 'var(--ink-muted)' }}>{order.inspection}</div>
+              </div>
+            )}
+
+            {/* 维修项目 */}
+            {repairItems.length > 0 && (
+              <div className="card document-panel">
+                <div className="section-title">维修项目 / 配件</div>
+                {repairItems.map((item) => (
+                  <Cell
+                    key={item.id}
+                    title={item.name}
+                    label={`${item.type === 'service' ? '工时' : '配件'} × ${item.quantity}`}
+                    right={<span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(item.subtotal)}</span>}
+                  />
+                ))}
+                <div className="flex-between mt-3">
+                  <span>合计</span>
+                  <span className="amount">¥{fenToYuan(itemsTotal)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* 维修记录 */}
+            {repairLogs.length > 0 && (
+              <div className="card record-panel">
+                <div className="section-title">维修记录</div>
+                {repairLogs.map((log) => (
+                  <div key={log.id} className="border-b py-2 last:border-b-0" style={{ borderColor: 'var(--hairline)' }}>
+                    <div className="mb-1 text-[14px]" style={{ color: 'var(--ink)' }}>{log.content}</div>
+                    <div className="text-muted">{formatDateTime(log.createdAt)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 增项 */}
+            {additionalItems.length > 0 && (
+              <div className="card document-panel">
+                <div className="section-title">维修增项</div>
+                {additionalItems.map((item) => (
+                  <div key={item.id} className="border-b last:border-b-0" style={{ borderColor: 'var(--hairline)' }}>
+                    <Cell
+                      title={item.name}
+                      label={item.reason}
+                      right={
+                        <span className="flex flex-col items-end gap-1">
+                          <span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(item.amount)}</span>
+                          <Badge tone={item.status === 'confirmed' ? 'success' : item.status === 'rejected' ? 'danger' : 'warning'}>
+                            {item.status === 'confirmed' ? '已确认' : item.status === 'rejected' ? '已拒绝' : '待确认'}
+                          </Badge>
+                        </span>
+                      }
+                    />
+                    {/* 待确认增项的操作按钮 */}
+                    {item.status === 'pending' && canProcessAdditional && (
+                      <div className="flex justify-end gap-2 pb-3">
+                        <Button size="sm" className="h-8" onClick={() => handleConfirmAdditional(item, true)}>确认</Button>
+                        <Button size="sm" variant="outline" className="h-8 text-destructive" onClick={() => handleConfirmAdditional(item, false)}>拒绝</Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+
+          {/* 结算信息在桌面独立侧栏，手机仍顺序展示 */}
+          {settlement && (
+            <aside className="order-aside">
+              <div className="card settlement-panel">
+                <div className="section-title">结算信息</div>
+                <Cell title="结算单号" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>{settlement.settlementNo}</span>} />
+                <Cell title="应收金额" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(settlement.totalAmount)}</span>} />
+                <Cell title="优惠" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(settlement.discount || 0)}</span>} />
+                <Cell className="settlement-total" title="实收金额" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(settlement.actualAmount)}</span>} />
+                <Cell title="已收金额" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(settlement.paidAmount)}</span>} />
+                <Cell
+                  title="状态"
+                  right={<Badge tone={settlement.status === 'paid' ? 'success' : 'warning'}>{settlement.status === 'paid' ? '已结清' : '挂账'}</Badge>}
+                />
+                {/* 收款记录 */}
+                {settlement.payments && settlement.payments.length > 0 && (
+                  <div className="settlement-payments">
+                    <div className="text-muted mb-2">收款记录</div>
+                    {settlement.payments.map((p) => (
+                      <div key={p.id} className="payment-record last:border-b-0">
+                        <span>{formatDateTime(p.createdAt)} · {getPaymentMethodLabel(p.method)}</span>
+                        <span className="text-success">+¥{fenToYuan(p.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </aside>
           )}
 
-          {/* 底部操作栏：材质浮层 + 安全区 */}
+          {/* 实色操作栏：桌面按钮收拢到内容右侧，手机保留等宽触达 */}
           {actionButtons.length > 0 && (
-            <div
-              className="material-bar fixed inset-x-0 bottom-0 z-30 flex gap-2 border-t"
-              style={{ borderColor: 'var(--hairline)', padding: '12px 12px calc(12px + env(safe-area-inset-bottom))' }}
-            >
-              {actionButtons.map(btn => (
-                <Button
-                  key={btn.key}
-                  variant={btn.tone === 'primary' ? 'default' : btn.tone === 'default' ? 'outline' : btn.tone === 'success' ? 'default' : 'outline'}
-                  className={
-                    btn.tone === 'success'
-                      ? 'h-10 flex-1 bg-[var(--success)] text-white hover:bg-[var(--success)]/90'
-                      : btn.tone === 'danger'
-                        ? 'h-10 flex-1 text-destructive'
-                        : 'h-10 flex-1'
-                  }
-                  onClick={() => handleAction(btn.key)}
-                >
-                  {btn.label}
-                </Button>
-              ))}
+            <div className="order-actions">
+              <div className="order-actions-inner">
+                {actionButtons.map(btn => (
+                  <Button
+                    key={btn.key}
+                    variant={btn.tone === 'primary' ? 'default' : btn.tone === 'default' ? 'outline' : btn.tone === 'success' ? 'default' : 'outline'}
+                    className={
+                      btn.tone === 'success'
+                        ? 'action-success'
+                        : btn.tone === 'danger'
+                          ? 'text-destructive'
+                          : ''
+                    }
+                    onClick={() => handleAction(btn.key)}
+                  >
+                    {btn.label}
+                  </Button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -656,7 +660,7 @@ export default function OrderDetailPage() {
       {/* ===== 收款弹窗 ===== */}
       <BottomSheet open={showPaymentPopup} onOpenChange={setShowPaymentPopup} title="收款">
         {settlement && (
-          <div className="mb-3 rounded-lg border p-3 text-[14px]" style={{ borderColor: 'var(--hairline)', background: 'var(--surface-2)' }}>
+          <div className="payment-overview">
             <div className="flex-between"><span>应收金额</span><span className="font-mono">¥{fenToYuan(settlement.totalAmount)}</span></div>
             {Number(settlement.discount) > 0 && (
               <div className="flex-between mt-2"><span className="text-success">优惠</span><span className="text-success font-mono">-¥{fenToYuan(settlement.discount)}</span></div>
@@ -667,19 +671,19 @@ export default function OrderDetailPage() {
         )}
         <div className="flex flex-col gap-3">
           <Field label="收款金额（元）">
-            <Input inputMode="decimal" value={paymentForm.amount} placeholder="元"
+            <Input className="payment-amount" inputMode="decimal" value={paymentForm.amount} placeholder="元"
               onChange={e => setPaymentForm(f => ({ ...f, amount: e.target.value }))} />
           </Field>
           <Field label="收款方式">
             <RadioGroup
               value={paymentForm.method}
               onValueChange={v => setPaymentForm(f => ({ ...f, method: v }))}
-              className="grid grid-cols-3 gap-2"
+              className="payment-methods"
             >
               {[
                 ['cash', '现金'], ['wechat', '微信'], ['alipay', '支付宝'], ['card', '刷卡'], ['transfer', '转账']
               ].map(([v, label]) => (
-                <Label key={v} className="flex items-center gap-2 text-[14px] font-normal" style={{ color: 'var(--ink)' }}>
+                <Label key={v} className="payment-method flex items-center" style={{ color: 'var(--ink)' }}>
                   <RadioGroupItem value={v} /> {label}
                 </Label>
               ))}
