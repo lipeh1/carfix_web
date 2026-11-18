@@ -6,58 +6,64 @@
 @custom-variant dark (@media (prefers-color-scheme: dark));
 
 /* ============================================================
-   汽修工作台：石墨灰表面、暖琥珀操作色与实体分隔线
-   按本次视觉要求使用本地字体、实色导航，不依赖毛玻璃或投影；
+   汽修工单簿：冷纸色、车间灰与实体分隔线
+   使用本地字体与实色面板；
    颜色一律走设计令牌，令牌在 prefers-color-scheme: light 下切换浅色值
    ============================================================ */
 
 /* 设计令牌：深色默认，浅色沿用相同的语义层级 */
 :root {
+  color-scheme: dark;
   /* 表面 */
-  --canvas: #111411;
-  --surface-1: #191d19;
-  --surface-2: #222722;
-  --surface-3: #2b312b;
-  --hairline: #303830;
-  --hairline-strong: #465046;
+  --canvas: #202427;
+  --surface-1: #272c30;
+  --surface-2: #30363b;
+  --surface-3: #3a4147;
+  --hairline: #41494f;
+  --hairline-strong: #69747d;
 
   /* 兼容既有组件令牌名称，所有面板统一为实色 */
   --canvas-translucent: var(--canvas);
   --surface-1-translucent: var(--surface-1);
   --sheet-translucent: var(--surface-1);
-  --overlay: rgb(5 8 5 / 64%);
+  --overlay: rgb(14 20 24 / 64%);
+  --overlay-ink: #f4f6f7;
+  --overlay-danger: #913e3e;
+  --preview-canvas: #182126;
+  --preview-control: #34414a;
 
   /* 文字 */
-  --ink: #edf0e9;
-  --ink-muted: #b5beb1;
-  --ink-subtle: #939d8f;
-  --ink-tertiary: #7b8876;
+  --ink: #eef1f3;
+  --ink-muted: #bec8ce;
+  --ink-subtle: #a1afb8;
+  --ink-tertiary: var(--ink-subtle);
 
-  /* 暖琥珀只强调主要操作与焦点，不铺大面积背景 */
-  --primary: #d2a65c;
-  --primary-hover: #e4b970;
-  --on-primary: #171c16;
-  --on-danger: #261512;
+  /* 操作色取自车间蓝，只用于主要按钮、焦点与文字入口 */
+  --primary: #9cc9df;
+  --primary-hover: #b9dfef;
+  --on-primary: #172d39;
+  --on-danger: #302020;
 
   /* 语义色（深色底提亮版本，仅限小面积徽章/文字） */
-  --success: #8ab59a;
-  --danger: #e3988d;
-  --warning: #d7b777;
-  --info: #9bbac5;
+  --success: #a0c9b2;
+  --danger: #eba8a4;
+  --warning: #dcc6a1;
+  --info: #a4c9dc;
 
   /* 分享单据固定使用浅色纸面，不随手机深色模式反转，便于客户保存与打印 */
-  --document-paper: #fdfdf9;
-  --document-ink: #252c22;
-  --document-muted: #4c5847;
-  --document-subtle: #5e6958;
-  --document-rule: #d9ded2;
-  --document-row: #eeefe7;
-  --document-accent: #815d20;
-  --document-success: #34714b;
+  --document-paper: #f8fafb;
+  --document-ink: #24323b;
+  --document-muted: #4e606c;
+  --document-subtle: #586a75;
+  --document-rule: #cbd5db;
+  --document-row: #eaf0f3;
+  --document-accent: #285d79;
+  --document-success: #35694f;
 
   /* 字体随应用自托管，中文与拉丁字符分别使用明确的字族 */
   --type-sans: 'IBM Plex Sans', 'Noto Sans SC Variable';
   --type-mono: 'IBM Plex Mono', 'Noto Sans SC Variable';
+  --type-heading: 'Noto Serif SC Variable', 'Noto Sans SC Variable';
   --font-sans: var(--type-sans);
   --font-mono: var(--type-mono);
   --nav-height: 56px;
@@ -67,29 +73,30 @@
 /* ===== 浅色主题令牌（跟随系统深浅色，与深色令牌一一对应） ===== */
 @media (prefers-color-scheme: light) {
   :root {
-    --canvas: #f4f4ef;
-    --surface-1: #fdfdf9;
-    --surface-2: #eeefe7;
-    --surface-3: #e5e8dd;
-    --hairline: #d9ded2;
-    --hairline-strong: #b9c1b0;
+    color-scheme: light;
+    --canvas: #edf1f3;
+    --surface-1: #f8fafb;
+    --surface-2: #e3e9ed;
+    --surface-3: #d7e0e6;
+    --hairline: #cbd5db;
+    --hairline-strong: #96a7b2;
 
     /* 浅色下正文用深墨色 */
-    --ink: #252c22;
-    --ink-muted: #4c5847;
-    --ink-subtle: #5e6958;
-    --ink-tertiary: #6b7866;
+    --ink: #24323b;
+    --ink-muted: #4e606c;
+    --ink-subtle: #586a75;
 
     /* 浅色主题区分按钮填色与链接文字，确保文字对比度 */
-    --primary: #c6994c;
-    --primary-hover: #815d20;
+    --primary: #285d79;
+    --primary-hover: #204e68;
+    --on-primary: #f8fafb;
 
     /* 语义色取深色底版本的加深形态，浅底上可读 */
-    --success: #34714b;
-    --danger: #a4473c;
-    --on-danger: #fdfdf9;
-    --warning: #87601f;
-    --info: #436c7c;
+    --success: #35694f;
+    --danger: #a03e3e;
+    --on-danger: #f8fafb;
+    --warning: #785a2c;
+    --info: #285d79;
   }
 }
 
@@ -133,7 +140,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--type-sans);
   --font-mono: var(--type-mono);
-  --font-heading: var(--type-sans);
+  --font-heading: var(--type-heading);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -189,6 +196,7 @@
     font-size: 14px;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
   }
   a {
     text-decoration: none;
@@ -222,10 +230,10 @@
 }
 
 .section-title {
-  font-size: 14px;
+  font-family: var(--type-heading);
+  font-size: 16px;
   font-weight: 600;
-  /* 标题略收紧字距（AGENTS.md 字号表：标题类负字距） */
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   color: var(--ink);
   margin-bottom: 12px;
 }
@@ -338,7 +346,7 @@
   animation: none;
 }
 .page-push {
-  animation: page-fade-in 0.12s ease-out;
+  animation: none;
 }
 
 /* ===== 图表生长动画：高度/宽度定布局，transform 做生长（只动合成器属性） =====

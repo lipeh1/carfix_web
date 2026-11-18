@@ -46,6 +46,7 @@ export async function generateQuoteCard(order: QuoteCardOrder): Promise<string> 
   const theme = getComputedStyle(document.documentElement)
   const FONT = theme.getPropertyValue('--type-sans').trim()
   const MONO = theme.getPropertyValue('--type-mono').trim()
+  const HEADING = theme.getPropertyValue('--type-heading').trim()
   const color = (name: string) => theme.getPropertyValue(`--document-${name}`).trim()
 
   // Canvas 不会触发 CSS 字体子集加载，先准备本张单据需要的字符，避免导出时回退系统字体
@@ -54,7 +55,7 @@ export async function generateQuoteCard(order: QuoteCardOrder): Promise<string> 
     ...items.map(item => item.name),
     '维修报价单未知车牌客户里程工单暂无项目项目合计优惠应收报价如有疑问请随时联系确认后我们将尽快安排施工0123456789.¥×（）：·-km'
   ].join('')
-  await Promise.all([FONT, MONO].flatMap(family => [400, 500, 600].map(weight =>
+  await Promise.all([FONT, MONO, HEADING].flatMap(family => [400, 500, 600].map(weight =>
     document.fonts.load(`${weight} 24px ${family}`, fontText)
   )))
 
@@ -64,7 +65,7 @@ export async function generateQuoteCard(order: QuoteCardOrder): Promise<string> 
 
   // ===== 页眉：店名 + 单据类型 =====
   ctx.fillStyle = color('ink')
-  ctx.font = `600 34px ${FONT}`
+  ctx.font = `600 34px ${HEADING}`
   ctx.textBaseline = 'top'
   ctx.fillText(shopName, PAD, 44)
 

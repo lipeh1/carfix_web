@@ -122,8 +122,8 @@ export default function LoginPage() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/icons/icon-192.png" alt="" className="mx-auto h-16 w-16 rounded-[14px]" />
         <div
-          className="mt-4 text-[20px] font-semibold"
-          style={{ color: 'var(--ink)', letterSpacing: '-0.4px' }}
+          className="mt-4 text-[24px] font-semibold"
+          style={{ color: 'var(--ink)', fontFamily: 'var(--type-heading)' }}
         >
           汽修管理系统
         </div>

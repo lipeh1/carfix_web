@@ -52,20 +52,20 @@ export default function ImagePreview({ images, index = 0, onClose, cover }: Imag
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'rgba(0,0,0,0.92)' }}>
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--preview-canvas)' }}>
       {/* 顶栏：序号 + 关闭 */}
       <div className="flex items-center justify-between px-4 py-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}>
-        <span className="text-[13px] tabular-nums" style={{ color: 'rgba(255,255,255,0.65)' }}>
+        <span className="font-mono text-[13px]" style={{ color: 'var(--overlay-ink)' }}>
           {multiple ? `${current + 1}/${images.length}` : ''}
         </span>
         <button
           type="button"
           aria-label="关闭"
           className="pressable flex h-9 w-9 items-center justify-center rounded-full"
-          style={{ background: 'rgba(255,255,255,0.12)' }}
+          style={{ background: 'var(--preview-control)' }}
           onClick={onClose}
         >
-          <X size={20} style={{ color: '#fff' }} />
+          <X size={20} style={{ color: 'var(--overlay-ink)' }} />
         </button>
       </div>
 

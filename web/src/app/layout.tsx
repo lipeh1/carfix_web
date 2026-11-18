@@ -10,6 +10,7 @@ import '@fontsource/ibm-plex-mono/latin-400.css'
 import '@fontsource/ibm-plex-mono/latin-500.css'
 import '@fontsource/ibm-plex-mono/latin-600.css'
 import '@fontsource-variable/noto-sans-sc'
+import '@fontsource-variable/noto-serif-sc'
 import './globals.css'
 import './workspace.css'
 
@@ -28,8 +29,8 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: dark)', color: '#111411' },
-    { media: '(prefers-color-scheme: light)', color: '#f4f4ef' }
+    { media: '(prefers-color-scheme: dark)', color: '#202427' },
+    { media: '(prefers-color-scheme: light)', color: '#edf1f3' }
   ]
 }
 
