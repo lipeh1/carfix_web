@@ -1,0 +1,82 @@
+# 单机部署：数据库不开放宿主机端口，应用仅监听回环地址，由 Caddy 提供公网 HTTPS
+name: carweb
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:18-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: carweb
+      POSTGRES_USER: carweb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请先配置数据库密码}
+    volumes:
+      # PostgreSQL 18 的数据目录位于该目录下的版本子目录
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carweb -d carweb"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    mem_limit: 1g
+    shm_size: 128m
+    logging: *logging
+
+  app:
+    image: ${APP_IMAGE:?请使用带提交编号的应用镜像}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://carweb:${POSTGRES_PASSWORD}@db:5432/carweb
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      UPLOAD_DIR: /app/.uploads
+      COS_SECRET_ID: ${COS_SECRET_ID:-}
+      COS_SECRET_KEY: ${COS_SECRET_KEY:-}
+      COS_BUCKET: ${COS_BUCKET:-}
+      COS_REGION: ${COS_REGION:-ap-shanghai}
+      COS_PUBLIC_BASE: ${COS_PUBLIC_BASE:-}
+      OCR_AGENT_BASE_URL: ${OCR_AGENT_BASE_URL:-https://api.deepseek.com}
+      OCR_AGENT_MODEL: ${OCR_AGENT_MODEL:-deepseek-flash}
+      OCR_AGENT_API_KEY: ${OCR_AGENT_API_KEY:-}
+      ICP_BEIAN: ${ICP_BEIAN:-}
+      POLICE_BEIAN: ${POLICE_BEIAN:-}
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    volumes:
+      - uploads:/app/.uploads
+    mem_limit: 1536m
+    init: true
+    logging: *logging
+
+  proxy:
+    image: caddy:2-alpine
+    profiles: [public]
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      DOMAIN: ${DOMAIN:?请配置正式域名}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    mem_limit: 256m
+    logging: *logging
+
+volumes:
+  postgres_data:
+  uploads:
+  caddy_data:
+  caddy_config:

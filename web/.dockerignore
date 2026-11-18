@@ -6,8 +6,8 @@ node_modules
 .gitignore
 
 # 本地环境变量与本地数据库数据目录（绝不能进镜像）
-.env.local
-.env
+.env*
+!.env.example
 .pgdata
 .uploads
 

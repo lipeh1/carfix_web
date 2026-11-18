@@ -1,0 +1,49 @@
+# 轻量服务器镜像：与 CI 统一使用 Node 24 和 PostgreSQL，在 CI 构建后发布到服务器
+ARG NODE_IMAGE=node:24-bookworm-slim
+FROM ${NODE_IMAGE} AS base
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+# 构建只用占位连接串，不接触正式数据库或服务端密钥
+FROM base AS builder
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    DATABASE_URL=postgresql://build:build@localhost:5432/build
+COPY package.json package-lock.json ./
+COPY prisma ./prisma
+RUN npm ci --no-audit --no-fund
+COPY . .
+RUN npm run build
+
+# 独立携带迁移工具，发布时先迁移、再替换应用；启动应用本身不执行迁移
+FROM base AS migrator
+WORKDIR /prisma-cli
+ENV PRISMA_SKIP_POSTINSTALL_GENERATE=true
+RUN npm init -y >/dev/null \
+ && npm install prisma@5.22.0 --omit=dev --no-audit --no-fund
+
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
+RUN groupadd --system --gid 1001 nodejs \
+ && useradd --system --uid 1001 --gid nodejs nextjs \
+ && mkdir /app/.uploads \
+ && chown nextjs:nodejs /app/.uploads
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
+COPY --from=builder --chown=nextjs:nodejs /app/prisma/schema.prisma ./prisma/schema.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma/migrations ./prisma/migrations
+COPY --from=migrator --chown=nextjs:nodejs /prisma-cli/node_modules ./prisma-cli/node_modules
+COPY --chown=nextjs:nodejs scripts/container-healthcheck.mjs ./container-healthcheck.mjs
+USER nextjs
+EXPOSE 3000
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
+  CMD ["node", "container-healthcheck.mjs"]
+CMD ["node", "server.js"]

@@ -1,0 +1,10 @@
+# 域名生效且 80/443 端口可达后，Caddy 自动申请和续签 HTTPS 证书
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:3000 {
+		# 只信任本机入口提供的客户端地址，防止伪造头绕过登录失败限制
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+}
