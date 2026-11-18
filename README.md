@@ -6,10 +6,10 @@
 
 - **框架**: Next.js 16（App Router）+ React 19 + TypeScript
 - **UI**: Tailwind CSS v4 + shadcn/ui + motion（Linear 深色风格双主题）
-- **数据库**: 生产用云开发 MySQL（腾讯云 CloudBase）/ 本地开发用内嵌 PostgreSQL + Prisma ORM
-- **图片存储**: 腾讯云 COS（生产）/ 本地磁盘（开发），统一由 `web/src/lib/storage.ts` 抽象
+- **数据库**: 轻量服务器与本地使用 PostgreSQL + Prisma ORM；保留 CloudBase/MySQL 部署支持
+- **图片存储**: 轻量服务器默认使用持久化卷，也支持腾讯云 COS；统一由 `web/src/lib/storage.ts` 抽象
 - **PWA**: @serwist/next（添加到桌面、离线缓存）
-- **部署**: 腾讯云 CloudBase 云托管（Docker + Next.js standalone）
+- **部署**: 腾讯云轻量应用服务器（Docker Compose + GitHub Actions）；也支持 CloudBase 云托管
 
 ## 项目结构
 
@@ -77,7 +77,13 @@ OCR_AGENT_API_KEY=填写服务端密钥
 
 缺少模型密钥或识别失败时，接车页面仍可手动录入。
 
-## 部署（腾讯云 CloudBase 云托管）
+## 部署（腾讯云轻量应用服务器）
+
+Ubuntu 24.04 / Docker 29 环境使用 Node 24 + PostgreSQL 18 + Caddy，完整配置见 **[docs/部署-腾讯云轻量服务器.md](./docs/部署-腾讯云轻量服务器.md)**。
+
+GitHub Actions 先执行基础回归并构建生产镜像，再通过 SSH 发布。默认关闭自动发布；配置 `LIGHTHOUSE_*` 凭据并启用后生效。首次只开放服务器本机访问，设置密码、完成域名备案后再开启 HTTPS。
+
+## 其他部署方式（腾讯云 CloudBase 云托管）
 
 面向中国大陆公网访问，完整步骤见 **[docs/部署-腾讯云CloudBase.md](./docs/部署-腾讯云CloudBase.md)**。
 
