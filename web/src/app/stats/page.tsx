@@ -1,11 +1,10 @@
 'use client'
 
-// 统计报表：概览宫格 / 近6月营收柱状图（scaleY 生长）/ 状态分布 / 项目排行 / 挂账明细（自旧 Stats.vue 移植）
+// 统计报表：收支汇总、挂账明细和营收主图，保留现有统计口径与数据来源
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import NavBar from '@/components/mobile/NavBar'
 import Empty from '@/components/mobile/Empty'
-import { Badge } from '@/components/mobile/Badge'
 import PageSkeleton from '@/components/PageSkeleton'
 import { getStats } from '@/lib/api'
 import type { StatsData } from '@/lib/types'
@@ -13,15 +12,15 @@ import { fenToYuan } from '@/lib/money'
 import { useAnimatedYuan } from '@/lib/hooks'
 import { formatDate } from '@/lib/format'
 
-// 状态定义（用于展示）：低饱和徽章色，小面积使用（规范允许）
-const STATUS_LIST: Array<{ status: string; label: string; tone: 'default' | 'primary' | 'success' | 'warning' | 'danger'; color: string }> = [
-  { status: 'pending_inspection', label: '待检测', tone: 'warning', color: '#ffa059' },
-  { status: 'pending_quote', label: '待报价', tone: 'primary', color: '#7a85d9' },
-  { status: 'repairing', label: '维修中', tone: 'danger', color: '#f2566a' },
-  { status: 'pending_quality_check', label: '待质检', tone: 'warning', color: '#e6c14c' },
-  { status: 'pending_settlement', label: '待结算', tone: 'primary', color: '#7a85d9' },
-  { status: 'completed', label: '已完成', tone: 'success', color: '#34b757' },
-  { status: 'cancelled', label: '已取消', tone: 'default', color: '#4a4e57' }
+// 状态名称仅用于展示，空状态以小字保留，不占独立图表行
+const STATUS_LIST = [
+  { status: 'pending_inspection', label: '待检测' },
+  { status: 'pending_quote', label: '待报价' },
+  { status: 'repairing', label: '维修中' },
+  { status: 'pending_quality_check', label: '待质检' },
+  { status: 'pending_settlement', label: '待结算' },
+  { status: 'completed', label: '已完成' },
+  { status: 'cancelled', label: '已取消' }
 ]
 
 export default function StatsPage() {
@@ -75,143 +74,70 @@ export default function StatsPage() {
   return (
     <div className="page-container">
       <NavBar title="统计报表" />
-
-      <div className="page-content">
-        {/* 基础数据概览 */}
-        <div className="card">
+      <div className="page-content report-layout">
+        <section className="report-overview">
           <div className="section-title">数据概览</div>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { value: stats.overview?.customerCount || 0, label: '客户数', danger: false },
-              { value: stats.overview?.vehicleCount || 0, label: '车辆数', danger: false },
-              { value: stats.overview?.totalOrders || 0, label: '总工单', danger: false },
-              { value: `¥${revenueDisplay}`, label: '总营收', danger: true }
-            ].map(o => (
-              <div key={o.label} className="rounded-xl border py-3 text-center" style={{ background: 'var(--surface-2)', borderColor: 'var(--hairline)' }}>
-                <div className="text-[20px] font-bold" style={{ letterSpacing: '-0.02em', color: o.danger ? 'var(--danger)' : 'var(--ink)' }}>
-                  {o.value}
-                </div>
-                <div className="mt-1 text-[12px]" style={{ color: 'var(--ink-subtle)' }}>{o.label}</div>
-              </div>
-            ))}
+          <div className="report-revenue"><span>总营收</span><span className="amount">¥{revenueDisplay}</span></div>
+          <div className="report-counts">
+            <span>总工单 <b>{stats.overview?.totalOrders || 0}</b></span>
+            <span>客户数 <b>{stats.overview?.customerCount || 0}</b></span>
+            <span>车辆数 <b>{stats.overview?.vehicleCount || 0}</b></span>
           </div>
-        </div>
+        </section>
 
-        {/* 月度营收趋势：高度定布局、scaleY 做生长动画（只动合成器属性），交错延迟依次长出 */}
-        <div className="card">
+        {/* 挂账优先呈现车牌和待收金额；桌面与主图并列 */}
+        <section className="report-section report-unpaid">
+          <div className="flex-between">
+            <span className="section-title">挂账明细</span>
+            {!!stats.unpaid?.total && <span className="amount">¥{fenToYuan(stats.unpaid.total)}</span>}
+          </div>
+          {stats.unpaid?.list?.length ? stats.unpaid.list.map(item => (
+            <button type="button" key={item.id} className="report-unpaid-row" onClick={() => router.push(`/orders/${item.orderId}`)}>
+              <div className="flex-between gap-3"><span className="order-plate">{item.plateNumber}</span><span>{item.customerName || '未知客户'}</span></div>
+              <div className="identity-meta"><span className="font-mono">{item.settlementNo}</span><time>{formatDate(item.createdAt)}</time></div>
+              <div className="flex-between mt-3"><span className="text-muted">欠</span><span className="amount">¥{fenToYuan(item.unpaidAmount)}</span></div>
+            </button>
+          )) : <Empty description="暂无挂账" />}
+        </section>
+
+        {/* 仅主图使用一次生长反馈，其他统计不逐行播放动画 */}
+        <section className="report-section report-trend">
           <div className="section-title">近6个月营收趋势</div>
-          <div className="py-2.5">
-            <div className="flex h-40 items-end justify-around px-2">
+          {total6Months > 0 ? (
+            <div className="report-chart" role="img" aria-label={stats.months.map(m => `${m.month} 营收 ${fenToYuan(m.revenue)} 元`).join('，')}>
               {stats.months.map((m, idx) => (
-                <div key={m.month} className="flex h-full flex-1 flex-col items-center justify-end">
-                  {/* 柱体：单一主色实心柱（规范禁止渐变装饰） */}
-                  <div
-                    className="chart-bar relative flex min-h-[2px] w-7 justify-center rounded-t"
-                    style={{ background: 'var(--primary)', height: `${getBarHeight(m.revenue)}%`, animationDelay: `${idx * 0.05}s` }}
-                  >
-                    {m.revenue > 0 && (
-                      <span className="absolute -top-[18px] whitespace-nowrap font-mono text-[10px]" style={{ color: 'var(--ink-subtle)' }}>
-                        ¥{fenToYuan(m.revenue)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-1.5 text-[11px]" style={{ color: 'var(--ink-subtle)' }}>{m.month.slice(5)}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="flex-between mt-3 border-t pt-2 text-[13px]" style={{ borderColor: 'var(--hairline)' }}>
-            <span>
-              6个月合计：<span className="amount text-[15px]">¥{fenToYuan(total6Months)}</span>
-            </span>
-            <span className="text-muted">工单 {total6MonthsOrders} 单</span>
-          </div>
-        </div>
-
-        {/* 工单状态分布：宽度定布局、scaleX 做生长动画（从左展开） */}
-        <div className="card">
-          <div className="section-title">工单状态分布</div>
-          <div className="flex flex-col gap-2.5">
-            {STATUS_LIST.map((s, idx) => (
-              <div key={s.status} className="flex items-center gap-2.5">
-                <div className="w-[70px] shrink-0">
-                  <Badge tone={s.tone}>{s.label}</Badge>
-                </div>
-                <div className="h-3 flex-1 overflow-hidden rounded-md" style={{ background: 'var(--surface-2)' }}>
-                  <div
-                    className="status-bar-fill h-full rounded-md"
-                    style={{ width: `${getStatusPercent(s.status)}%`, background: s.color, animationDelay: `${idx * 0.05}s` }}
-                  />
-                </div>
-                <div className="w-[30px] text-right font-mono text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>
-                  {getStatusCount(s.status)}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 维修项目排行：前三名主色低透明度徽章 */}
-        <div className="card">
-          <div className="section-title">维修项目热度排行</div>
-          {stats.topItems?.length ? (
-            <div className="flex flex-col">
-              {stats.topItems.map((item, idx) => (
-                <div key={item.name} className="flex items-center gap-3 border-b py-2.5 last:border-b-0" style={{ borderColor: 'var(--hairline)' }}>
-                  <div
-                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-[12px] font-semibold"
-                    style={idx < 3
-                      ? { background: `color-mix(in srgb, var(--primary) ${28 - idx * 8}%, transparent)`, color: 'var(--primary-hover)' }
-                      : { background: 'var(--surface-2)', color: 'var(--ink-subtle)' }}
-                  >
-                    {idx + 1}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[14px] font-medium" style={{ color: 'var(--ink)' }}>{item.name}</div>
-                    <div className="mt-0.5 text-[12px]" style={{ color: 'var(--ink-muted)' }}>
-                      {item.count}次 · 累计 ¥{fenToYuan(item.total)}
+                <div key={m.month} className="report-month">
+                  <div className="report-bar-area">
+                    <div className={`chart-bar report-bar${idx === stats.months.length - 1 ? ' is-current' : ''}`} style={{ height: `${getBarHeight(m.revenue)}%` }}>
+                      {m.revenue > 0 && <span>¥{fenToYuan(m.revenue)}</span>}
                     </div>
                   </div>
-                  <div className="font-mono text-[14px] font-semibold" style={{ color: 'var(--danger)' }}>¥{fenToYuan(item.total)}</div>
+                  <time>{m.month.slice(5)}</time>
                 </div>
               ))}
             </div>
-          ) : (
-            <Empty description="暂无数据" />
-          )}
-        </div>
+          ) : <Empty description="暂无数据" />}
+          <div className="report-chart-total"><span>6个月合计：<span className="amount">¥{fenToYuan(total6Months)}</span></span><span>工单 <span className="font-mono">{total6MonthsOrders}</span> 单</span></div>
+        </section>
 
-        {/* 挂账明细 */}
-        <div className="card">
-          <div className="flex-between mb-3">
-            <span className="text-[14px] font-semibold" style={{ color: 'var(--ink)' }}>挂账明细</span>
-            <span className="amount">¥{fenToYuan(stats.unpaid?.total)}</span>
-          </div>
-          {stats.unpaid?.list?.length ? (
-            <div className="flex flex-col">
-              {stats.unpaid.list.map((item) => (
-                <div
-                  key={item.id}
-                  className="pressable cursor-pointer border-b py-3 last:border-b-0"
-                  style={{ borderColor: 'var(--hairline)' }}
-                  onClick={() => router.push(`/orders/${item.orderId}`)}
-                >
-                  <div className="flex-between">
-                    <span className="text-[14px] font-semibold" style={{ color: 'var(--ink)' }}>{item.customerName || '未知客户'}</span>
-                    <span className="font-mono text-[13px]" style={{ color: 'var(--primary-hover)' }}>{item.plateNumber}</span>
-                  </div>
-                  <div className="mt-1 font-mono text-[12px]" style={{ color: 'var(--ink-subtle)' }}>{item.settlementNo}</div>
-                  <div className="flex-between mt-1.5">
-                    <span className="text-muted">{formatDate(item.createdAt)}</span>
-                    <span className="text-danger">欠 ¥{fenToYuan(item.unpaidAmount)}</span>
-                  </div>
-                </div>
-              ))}
+        <section className="report-section">
+          <div className="section-title">工单状态分布</div>
+          {STATUS_LIST.filter(s => getStatusCount(s.status) > 0).map(s => (
+            <div key={s.status} className="report-status-row">
+              <span>{s.label}</span><div className="report-status-track"><span style={{ width: `${getStatusPercent(s.status)}%` }} /></div><span>{getStatusCount(s.status)}</span>
             </div>
-          ) : (
-            <Empty description="暂无挂账" />
-          )}
-        </div>
+          ))}
+          <div className="report-zero-states">{STATUS_LIST.filter(s => !getStatusCount(s.status)).map(s => <span key={s.status}>{s.label} <span className="font-mono">0</span></span>)}</div>
+        </section>
+
+        <section className="report-section">
+          <div className="section-title">维修项目热度排行</div>
+          {stats.topItems?.length ? stats.topItems.map((item, idx) => (
+            <div key={item.name} className="report-ranking">
+              <span>{idx + 1}</span><div><div>{item.name}</div><div className="text-muted"><span className="font-mono">{item.count}</span>次 · 累计</div></div><span className="amount">¥{fenToYuan(item.total)}</span>
+            </div>
+          )) : <Empty description="暂无数据" />}
+        </section>
       </div>
     </div>
   )

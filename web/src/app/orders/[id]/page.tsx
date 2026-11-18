@@ -400,6 +400,9 @@ export default function OrderDetailPage() {
   }
 
   const statusInfo = STATUS_LABELS[order?.status ?? ''] || { label: order?.status ?? '', tone: 'default' as const }
+  // 仅决定视觉强调；原有动作、出现条件和处理顺序均保持不变
+  const primaryAction = actionButtons.find(btn => btn.tone === 'primary')?.key
+    ?? actionButtons.find(btn => btn.tone === 'success')?.key
 
   return (
     <div className="page-container" style={{ paddingBottom: 'calc(84px + env(safe-area-inset-bottom))' }}>
@@ -412,6 +415,7 @@ export default function OrderDetailPage() {
             <div className="flex-between w-full gap-3">
               <div className="min-w-0">
                 <div className="order-plate">{order.vehicle?.plateNumber}</div>
+                {(order.vehicle?.brand || order.vehicle?.model) && <div className="identity-meta">{order.vehicle?.brand} {order.vehicle?.model}</div>}
                 <div className="text-muted mt-2">{order.customer?.name} · {order.customer?.phone}</div>
               </div>
               <Badge tone={statusInfo.tone}>{statusInfo.label}</Badge>
@@ -514,8 +518,8 @@ export default function OrderDetailPage() {
                     {/* 待确认增项的操作按钮 */}
                     {item.status === 'pending' && canProcessAdditional && (
                       <div className="flex justify-end gap-2 pb-3">
-                        <Button size="sm" className="h-8" onClick={() => handleConfirmAdditional(item, true)}>确认</Button>
-                        <Button size="sm" variant="outline" className="h-8 text-destructive" onClick={() => handleConfirmAdditional(item, false)}>拒绝</Button>
+                        <Button size="sm" variant="link" className="h-10" onClick={() => handleConfirmAdditional(item, true)}>确认</Button>
+                        <Button size="sm" variant="ghost" className="h-10 text-destructive" onClick={() => handleConfirmAdditional(item, false)}>拒绝</Button>
                       </div>
                     )}
                   </div>
@@ -530,15 +534,15 @@ export default function OrderDetailPage() {
             <aside className="order-aside">
               <div className="card settlement-panel">
                 <div className="section-title">结算信息</div>
-                <Cell title="结算单号" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>{settlement.settlementNo}</span>} />
-                <Cell title="应收金额" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(settlement.totalAmount)}</span>} />
-                <Cell title="优惠" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(settlement.discount || 0)}</span>} />
-                <Cell className="settlement-total" title="实收金额" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(settlement.actualAmount)}</span>} />
-                <Cell title="已收金额" right={<span className="font-mono" style={{ color: 'var(--ink)' }}>¥{fenToYuan(settlement.paidAmount)}</span>} />
-                <Cell
-                  title="状态"
-                  right={<Badge tone={settlement.status === 'paid' ? 'success' : 'warning'}>{settlement.status === 'paid' ? '已结清' : '挂账'}</Badge>}
-                />
+                <div className="settlement-number"><span>结算单号</span><span className="font-mono">{settlement.settlementNo}</span></div>
+                {unpaidAmount > 0 && <div className="settlement-due"><span>待收金额</span><span className="amount">¥{fenToYuan(unpaidAmount)}</span></div>}
+                <dl className="settlement-ledger">
+                  <div><dt>应收金额</dt><dd>¥{fenToYuan(settlement.totalAmount)}</dd></div>
+                  <div className={!settlement.discount ? 'ledger-quiet' : ''}><dt>优惠</dt><dd>¥{fenToYuan(settlement.discount || 0)}</dd></div>
+                  <div className="ledger-total"><dt>实收金额</dt><dd>¥{fenToYuan(settlement.actualAmount)}</dd></div>
+                  <div className={!settlement.paidAmount ? 'ledger-quiet' : ''}><dt>已收金额</dt><dd>¥{fenToYuan(settlement.paidAmount)}</dd></div>
+                </dl>
+                <div className="settlement-state"><span>状态</span><Badge tone={settlement.status === 'paid' ? 'success' : 'warning'}>{settlement.status === 'paid' ? '已结清' : '挂账'}</Badge></div>
                 {/* 收款记录 */}
                 {settlement.payments && settlement.payments.length > 0 && (
                   <div className="settlement-payments">
@@ -555,21 +559,15 @@ export default function OrderDetailPage() {
             </aside>
           )}
 
-          {/* 实色操作栏：桌面按钮收拢到内容右侧，手机保留等宽触达 */}
+          {/* 每个状态只强调一个主操作，其他动作以文字入口保留 */}
           {actionButtons.length > 0 && (
             <div className="order-actions">
               <div className="order-actions-inner">
                 {actionButtons.map(btn => (
                   <Button
                     key={btn.key}
-                    variant={btn.tone === 'primary' ? 'default' : btn.tone === 'default' ? 'outline' : btn.tone === 'success' ? 'default' : 'outline'}
-                    className={
-                      btn.tone === 'success'
-                        ? 'action-success'
-                        : btn.tone === 'danger'
-                          ? 'text-destructive'
-                          : ''
-                    }
+                    variant={btn.key === primaryAction ? 'default' : 'link'}
+                    style={btn.tone === 'danger' ? { color: 'var(--danger)' } : undefined}
                     onClick={() => handleAction(btn.key)}
                   >
                     {btn.label}

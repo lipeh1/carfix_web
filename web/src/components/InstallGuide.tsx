@@ -74,15 +74,13 @@ export default function InstallGuide() {
   if (!visible) return null
 
   return (
-    <div className="card mb-3 flex items-center gap-3">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icons/icon-192.png" alt="" className="h-11 w-11 shrink-0 rounded-[10px]" />
+    <div className="install-note">
       <div className="min-w-0 flex-1">
         <div className="text-[14px] font-semibold" style={{ color: 'var(--ink)' }}>安装到手机桌面</div>
         <div className="text-muted mt-1 leading-normal">{tip}</div>
       </div>
       {deferredPrompt ? (
-        <Button size="sm" onClick={installNow}>立即安装</Button>
+        <Button variant="link" size="sm" onClick={installNow}>立即安装</Button>
       ) : (
         <button
           type="button"

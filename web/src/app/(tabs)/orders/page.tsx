@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { getOrders } from '@/lib/api'
 import type { WorkOrder } from '@/lib/types'
 import { fenToYuan } from '@/lib/money'
+import { formatDateTime } from '@/lib/format'
 
 const TABS = [
   { label: '全部', value: '' },
@@ -120,6 +121,11 @@ function OrdersPageInner() {
               <span className="order-row-amount">
                 {!!order.finalAmount && <span>¥{fenToYuan(order.finalAmount)}</span>}
                 <ChevronRight size={16} strokeWidth={1.7} aria-hidden="true" />
+              </span>
+              <span className="order-row-meta">
+                {(order.vehicle?.brand || order.vehicle?.model) && <span>{order.vehicle.brand} {order.vehicle.model}</span>}
+                <time>进厂 {formatDateTime(order.createdAt)}</time>
+                <span className="font-mono">{order.orderNo}</span>
               </span>
             </button>
           ))}

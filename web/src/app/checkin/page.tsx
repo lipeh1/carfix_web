@@ -374,17 +374,18 @@ export default function CheckinPage() {
   const recentCustomers = customerList.filter(c => c.lastVisitAt).slice(0, 3)
 
   return (
-    <div className="page-container">
+    <div className="page-container checkin-page">
       <NavBar title="接车登记" />
 
       <div className="page-content">
+        <div className="checkin-context">
         {/* 客户选择 */}
         <div className="card">
           <div className="section-title">客户信息</div>
           {/* 扫行驶证一次建档：识别所有人/车牌/品牌型号/VIN，电话需人工补录 */}
           <button
             type="button"
-            className="pressable mb-2.5 inline-flex items-center gap-1 rounded-full px-3 py-0.5 text-[12px]"
+            className="pressable scan-link mb-2 inline-flex items-center gap-2 text-[13px]"
             style={{ color: 'var(--primary-hover)', border: '1px dashed var(--primary)' }}
             onClick={() => licenseInputRef.current?.click()}
           >
@@ -396,7 +397,7 @@ export default function CheckinPage() {
           ) : (
             <Cell title="选择客户" right={<span>请选择</span>} onClick={() => setShowCustomerPicker(true)} />
           )}
-          <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowNewCustomer(true)}>
+          <Button variant="link" size="sm" className="mt-2 px-0" onClick={() => setShowNewCustomer(true)}>
             + 新建客户
           </Button>
         </div>
@@ -414,12 +415,14 @@ export default function CheckinPage() {
             ) : (
               <Cell title="选择车辆" right={<span>请选择</span>} onClick={() => setShowVehiclePicker(true)} />
             )}
-            <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowNewVehicle(true)}>
+            <Button variant="link" size="sm" className="mt-2 px-0" onClick={() => setShowNewVehicle(true)}>
               + 新建车辆
             </Button>
           </div>
         )}
 
+        </div>
+        <div className="checkin-job">
         {/* 接车信息 */}
         <div className="card">
           <div className="section-title">接车信息</div>
@@ -431,7 +434,7 @@ export default function CheckinPage() {
                 <button
                   key={t}
                   type="button"
-                  className="pressable rounded-full border px-2.5 py-0.5 text-[12px]"
+                  className="pressable min-h-10 rounded-sm border px-3 py-1 text-[12px]"
                   style={active
                     ? { color: 'var(--on-primary)', background: 'var(--primary)', borderColor: 'var(--primary)' }
                     : { color: 'var(--ink-subtle)', background: 'var(--surface-2)', borderColor: 'var(--hairline)' }}
@@ -478,17 +481,17 @@ export default function CheckinPage() {
                 )}
                 {/* 上传中遮罩 */}
                 {photo.status === 'uploading' && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1" style={{ background: 'rgba(0,0,0,0.6)' }}>
-                    <Loader2 size={24} className="animate-spin" color="#fff" />
-                    <span className="text-[11px] text-white">上传中</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1" style={{ background: 'var(--overlay)' }}>
+                    <Loader2 size={24} className="animate-spin" color="var(--overlay-ink)" />
+                    <span className="text-[11px] text-[var(--overlay-ink)]">上传中</span>
                   </div>
                 )}
                 {/* 上传失败遮罩（含重试入口） */}
                 {photo.status === 'failed' && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1" style={{ background: 'rgba(242,86,106,0.75)' }}>
-                    <TriangleAlert size={24} color="#fff" />
-                    <span className="text-[11px] text-white">上传失败</span>
-                    <button type="button" className="text-[12px] text-white underline" onClick={() => retryUpload(idx)}>重试</button>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1" style={{ background: 'var(--overlay-danger)' }}>
+                    <TriangleAlert size={24} color="var(--overlay-ink)" />
+                    <span className="text-[11px] text-[var(--overlay-ink)]">上传失败</span>
+                    <button type="button" className="text-[12px] text-[var(--overlay-ink)] underline" onClick={() => retryUpload(idx)}>重试</button>
                   </div>
                 )}
                 {/* 删除按钮 */}
@@ -497,7 +500,7 @@ export default function CheckinPage() {
                     type="button"
                     aria-label="删除照片"
                     className="absolute right-0.5 top-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-full"
-                    style={{ background: 'rgba(0,0,0,0.6)', color: '#fff' }}
+                    style={{ background: 'var(--overlay)', color: 'var(--overlay-ink)' }}
                     onClick={() => deletePhoto(idx)}
                   >
                     <X size={12} />
@@ -538,6 +541,7 @@ export default function CheckinPage() {
           {submitting && <Loader2 className="animate-spin" />}
           创建工单
         </Button>
+        </div>
       </div>
 
       {/* 客户选择弹窗 */}
@@ -562,12 +566,12 @@ export default function CheckinPage() {
         {recentCustomers.length > 0 && (
           <div className="mb-2 border-b pb-3" style={{ borderColor: 'var(--hairline)' }}>
             <div className="mb-1.5 text-[12px]" style={{ color: 'var(--ink-subtle)' }}>最近到店</div>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-0">
               {recentCustomers.map(c => (
                 <button
                   key={c.id}
                   type="button"
-                  className="pressable flex-1 rounded-lg border px-2.5 py-2 text-left"
+                  className="pressable min-h-11 border-b py-3 text-left"
                   style={{ background: 'var(--surface-2)', borderColor: 'var(--hairline)' }}
                   onClick={() => selectCustomer(c)}
                 >
@@ -591,7 +595,7 @@ export default function CheckinPage() {
         {/* 拍车牌快速定位已建档车辆（跨客户） */}
         <button
           type="button"
-          className="pressable mb-2.5 inline-flex items-center gap-1 rounded-full px-3 py-0.5 text-[12px]"
+          className="pressable scan-link mb-2 inline-flex items-center gap-2 text-[13px]"
           style={{ color: 'var(--primary-hover)', border: '1px dashed var(--primary)' }}
           onClick={() => plateInputRef.current?.click()}
         >

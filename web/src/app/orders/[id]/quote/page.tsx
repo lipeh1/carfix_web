@@ -364,9 +364,9 @@ export default function QuotePage() {
             <div className="quote-projects-header">
               <span>维修项目 ({items.length})</span>
               <div className="quote-presets">
-                <Button variant="outline" size="sm" onClick={applyMinorMaintenance}>小保养</Button>
-                <Button variant="outline" size="sm" onClick={copyLastItems}>上次项目</Button>
-                <Button variant="outline" size="sm" onClick={() => setShowItemPicker(true)}>
+                <Button variant="link" size="sm" onClick={applyMinorMaintenance}>小保养</Button>
+                <Button variant="link" size="sm" onClick={copyLastItems}>上次项目</Button>
+                <Button variant="link" size="sm" onClick={() => setShowItemPicker(true)}>
                   <Plus size={13} /> 常用项目
                 </Button>
               </div>
@@ -396,11 +396,11 @@ export default function QuotePage() {
             {items.length === 0 && <Empty description="暂无维修项目，点击上方常用项目添加" />}
 
             {/* 手动添加 */}
-            <div className="mt-3 flex gap-2.5">
-              <Button variant="outline" size="sm" className="h-8 flex-1" onClick={() => addItem('service')}>
+            <div className="quote-add-actions">
+              <Button variant="link" size="sm" onClick={() => addItem('service')}>
                 <Plus size={14} /> 添加工时
               </Button>
-              <Button variant="outline" size="sm" className="h-8 flex-1" onClick={() => addItem('part')}>
+              <Button variant="link" size="sm" onClick={() => addItem('part')}>
                 <Plus size={14} /> 添加配件
               </Button>
             </div>

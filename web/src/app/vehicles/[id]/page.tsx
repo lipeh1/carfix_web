@@ -34,45 +34,28 @@ export default function VehicleDetailPage() {
   useEffect(() => { void loadData() }, [loadData])
 
   return (
-    <div className="page-container">
+    <div className="page-container record-page">
       <NavBar title="车辆详情" />
 
       {vehicle ? (
         <div className="page-content">
-          {/* 车辆信息卡片：表面2浮层，车牌放大等宽展示 */}
-          <div className="card text-center" style={{ background: 'var(--surface-2)' }}>
-            <div className="font-mono text-[24px] font-bold" style={{ letterSpacing: 2 }}>{vehicle.plateNumber}</div>
-            <div className="mt-1.5 text-[15px]" style={{ color: 'var(--ink-muted)' }}>
-              {vehicle.brand || ''} {vehicle.model || ''}
-            </div>
-            <div className="mt-1 font-mono text-[12px]" style={{ color: 'var(--ink-subtle)' }}>
-              {vehicle.year ? <span>{vehicle.year}款</span> : null}
-              {vehicle.color ? <span> · {vehicle.color}</span> : null}
-              {vehicle.vin ? <span> · VIN: {vehicle.vin}</span> : null}
+          {/* 车辆档案：车牌、车型和 VIN 按识别顺序排列 */}
+          <div className="card record-identity">
+            <div className="min-w-0">
+              <div className="order-plate">{vehicle.plateNumber}</div>
+              <div className="mt-2 text-[15px]" style={{ color: 'var(--ink-muted)' }}>{vehicle.brand || ''} {vehicle.model || ''}</div>
+              <div className="identity-meta">
+                {vehicle.year ? <span>{vehicle.year}款</span> : null}
+                {vehicle.color ? <span>{vehicle.color}</span> : null}
+                {vehicle.vin ? <span className="font-mono break-all">VIN: {vehicle.vin}</span> : null}
+              </div>
             </div>
           </div>
-
-          {/* 维修统计 */}
           <div className="card">
-            <div className="flex justify-around">
-              <div className="flex-1 text-center">
-                <div className="text-[18px] font-bold" style={{ letterSpacing: '-0.02em', color: 'var(--ink)' }}>
-                  {vehicle.stats?.totalRepairs || 0}
-                </div>
-                <div className="mt-1 text-[12px]" style={{ color: 'var(--ink-subtle)' }}>维修次数</div>
-              </div>
-              <div className="flex-1 text-center">
-                <div className="text-danger text-[18px] font-bold" style={{ letterSpacing: '-0.02em' }}>
-                  ¥{fenToYuan(vehicle.stats?.totalSpent)}
-                </div>
-                <div className="mt-1 text-[12px]" style={{ color: 'var(--ink-subtle)' }}>累计消费</div>
-              </div>
-              <div className="flex-1 text-center">
-                <div className="text-[14px] font-bold" style={{ color: 'var(--ink-muted)', lineHeight: '25px' }}>
-                  {vehicle.stats?.lastRepair ? formatDateTime(vehicle.stats.lastRepair) : '暂无'}
-                </div>
-                <div className="mt-1 text-[12px]" style={{ color: 'var(--ink-subtle)' }}>最近维修</div>
-              </div>
+            <div className="record-summary">
+              <span>维修次数 <span className="font-mono">{vehicle.stats?.totalRepairs || 0}</span></span>
+              <span>累计消费 <span className={vehicle.stats?.totalSpent ? 'amount' : 'font-mono'}>¥{fenToYuan(vehicle.stats?.totalSpent)}</span></span>
+              <span className="meta-line">最近维修 <time className="font-mono">{vehicle.stats?.lastRepair ? formatDateTime(vehicle.stats.lastRepair) : '暂无'}</time></span>
             </div>
             {/* 常见维修项目 */}
             {vehicle.stats?.commonItems && vehicle.stats.commonItems.length > 0 && (
@@ -82,8 +65,8 @@ export default function VehicleDetailPage() {
                   {vehicle.stats.commonItems.map((item) => (
                     <span
                       key={item.name}
-                      className="rounded-full px-2 py-0.5 text-[11px]"
-                      style={{ border: '1px solid var(--primary)', color: 'var(--primary-hover)' }}
+                      className="rounded-sm px-2 py-1 text-[12px]"
+                      style={{ color: 'var(--ink-muted)' }}
                     >
                       {item.name} ({item.count})
                     </span>
@@ -145,8 +128,7 @@ export default function VehicleDetailPage() {
                     <span
                       className="absolute -left-5 top-1 h-2.5 w-2.5 rounded-full"
                       style={{
-                        background: o.status === 'completed' ? 'var(--success)' : o.status === 'cancelled' ? 'var(--ink-tertiary)' : 'var(--primary)',
-                        boxShadow: `0 0 0 2px ${o.status === 'completed' ? 'var(--success)' : o.status === 'cancelled' ? 'var(--ink-tertiary)' : 'var(--primary)'}`
+                        background: o.status === 'completed' ? 'var(--success)' : o.status === 'cancelled' ? 'var(--ink-tertiary)' : 'var(--primary)'
                       }}
                     />
                     <div className="pressable cursor-pointer py-1" onClick={() => router.push(`/orders/${o.id}`)}>
@@ -160,19 +142,19 @@ export default function VehicleDetailPage() {
                       {o.repairItems && o.repairItems.length > 0 && (
                         <div className="mt-1.5 flex flex-wrap gap-1">
                           {o.repairItems.slice(0, 3).map((item) => (
-                            <span key={item.id} className="rounded-full px-2 py-0.5 text-[11px]" style={{ background: 'var(--surface-2)', color: 'var(--ink-muted)' }}>
+                            <span key={item.id} className="rounded-sm px-2 py-1 text-[12px]" style={{ background: 'var(--surface-2)', color: 'var(--ink-muted)' }}>
                               {item.name}
                             </span>
                           ))}
                           {o.repairItems.length > 3 && (
-                            <span className="rounded-full px-2 py-0.5 text-[11px]" style={{ background: 'var(--surface-2)', color: 'var(--ink-muted)' }}>
+                            <span className="rounded-sm px-2 py-1 text-[12px]" style={{ background: 'var(--surface-2)', color: 'var(--ink-muted)' }}>
                               +{o.repairItems.length - 3}
                             </span>
                           )}
                         </div>
                       )}
                       {!!o.settlement?.actualAmount && (
-                        <div className="mt-1.5 font-mono text-[14px] font-semibold" style={{ color: 'var(--danger)' }}>
+                        <div className="mt-1.5 font-mono text-[14px] font-semibold" style={{ color: 'var(--ink)' }}>
                           消费 ¥{fenToYuan(o.settlement.actualAmount)}
                         </div>
                       )}

@@ -102,12 +102,11 @@ export default function RemindersPage() {
             {reminders.map(item => (
               <Cell
                 key={item.id}
-                title={item.content || getReminderTypeLabel(item.type)}
-                label={`${item.vehicle?.plateNumber ?? ''} · 建议 ${formatDate(item.remindDate)}`}
+                className="reminder-work-row"
+                title={<><span className="order-plate">{item.vehicle?.plateNumber || getReminderTypeLabel(item.type)}</span><Badge tone={item.type === 'maintenance' ? 'warning' : 'primary'}>{getReminderTypeLabel(item.type)}</Badge></>}
+                label={<>{item.content || getReminderTypeLabel(item.type)}{(item.vehicle?.brand || item.vehicle?.model) && <span className="block">{item.vehicle?.brand} {item.vehicle?.model}</span>}</>}
                 right={
-                  <Badge tone={item.type === 'maintenance' ? 'warning' : 'primary'}>
-                    {getReminderTypeLabel(item.type)}
-                  </Badge>
+                  <span className="reminder-date">建议 <time className="font-mono block">{formatDate(item.remindDate)}</time></span>
                 }
                 onClick={() => openDetail(item)}
               />

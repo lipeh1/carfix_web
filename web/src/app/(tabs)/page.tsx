@@ -1,10 +1,10 @@
 'use client'
 
-// 工作台：快捷入口 + 今日概览 + 挂账/营收 + 待办提醒（自旧 Home.vue 移植）
+// 工作台：先呈现待处理状态与车辆提醒，再呈现收支汇总；数据与操作沿用既有接口
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Settings, Plus, ChartLine, ClipboardList, ListChecks, Receipt, CircleCheck } from 'lucide-react'
+import { Settings, Plus, ChevronRight } from 'lucide-react'
 import NavBar from '@/components/mobile/NavBar'
 import Cell from '@/components/mobile/Cell'
 import BottomSheet from '@/components/mobile/BottomSheet'
@@ -146,10 +146,9 @@ export default function HomePage() {
   }
 
   const overview = [
-    { icon: ClipboardList, label: '待检测', value: stats.pendingInspection, status: 'pending_inspection' },
-    { icon: ListChecks, label: '维修中', value: stats.repairing, status: 'repairing' },
-    { icon: Receipt, label: '待结算', value: stats.pendingSettlement, status: 'pending_settlement' },
-    { icon: CircleCheck, label: '已完成', value: stats.completed, status: 'completed' }
+    { label: '待检测', value: stats.pendingInspection, status: 'pending_inspection' },
+    { label: '维修中', value: stats.repairing, status: 'repairing' },
+    { label: '待结算', value: stats.pendingSettlement, status: 'pending_settlement' }
   ]
 
   return (
@@ -164,61 +163,54 @@ export default function HomePage() {
         }
       />
 
-      <div className="page-content scroll-area">
-        {/* 安装到桌面引导（移动端显示） */}
-        <InstallGuide />
-
+      <div className="page-content scroll-area dashboard-content">
         {/* 快捷操作直接由按钮触发，避免视觉包装层干扰键盘操作 */}
         <div className="dashboard-toolbar">
           <Button onClick={() => router.push('/checkin')}><Plus size={16} /> 新建接车</Button>
-          <Button variant="outline" onClick={() => router.push('/stats')}><ChartLine size={16} /> 统计报表</Button>
+          <Button variant="link" onClick={() => router.push('/stats')}>统计报表 <ChevronRight size={16} /></Button>
         </div>
 
         <div className="dashboard-grid">
-          {/* 数量独立排版，点击仍直达对应状态的工单列表 */}
+          {/* 非零待办展开为作业行，空状态收成文字入口，保留原有跳转 */}
           <section className="overview-panel">
             <div className="section-title">今日概览</div>
             {loading ? (
               <div className="overview-metrics" aria-busy="true">
-                {Array.from({ length: 4 }, (_, i) => <div key={i} className="overview-metric"><div className="sk w-full" style={{ height: 88 }} /></div>)}
+                {Array.from({ length: 3 }, (_, i) => <div key={i} className="sk" style={{ height: 56 }} />)}
               </div>
             ) : (
-              <div className="overview-metrics">
-                {overview.map(o => {
-                  const Icon = o.icon
-                  return (
-                    <button
-                      key={o.status}
-                      type="button"
-                      className="pressable overview-metric"
-                      onClick={() => goOrders(o.status)}
-                    >
-                      <Icon size={18} strokeWidth={1.7} aria-hidden="true" />
+              <>
+                <div className="overview-metrics">
+                  {overview.filter(o => o.value > 0).map(o => (
+                    <button key={o.status} type="button" className="overview-metric" onClick={() => goOrders(o.status)}>
                       <span className="overview-metric-label">{o.label}</span>
                       <span className="overview-metric-value">{o.value}</span>
+                      <ChevronRight size={18} strokeWidth={1.7} aria-hidden="true" />
                     </button>
-                  )
-                })}
-              </div>
+                  ))}
+                </div>
+                <div className="overview-quiet">
+                  {overview.filter(o => o.value === 0).map(o => (
+                    <button key={o.status} type="button" onClick={() => goOrders(o.status)}>{o.label} <span className="font-mono">0</span></button>
+                  ))}
+                  <button type="button" onClick={() => goOrders('completed')}>已完成 <span className="font-mono">{stats.completed}</span></button>
+                </div>
+              </>
             )}
           </section>
 
           <div className="dashboard-financial">
-            <section className="revenue-panel">
-              <div className="section-title">本月营收</div>
-              {loading ? (
-                <div className="sk" style={{ width: 180, height: 40 }} />
-              ) : (
-                <span className="revenue-value">¥{monthlyRevenueDisplay}</span>
-              )}
-            </section>
-            {/* 挂账保持独立警示条，点击仍进入统计页 */}
             {stats.unpaidAmount > 0 && (
-              <button type="button" className="unpaid-panel pressable" onClick={() => router.push('/stats')}>
+              <button type="button" className="unpaid-panel" onClick={() => router.push('/stats')}>
                 <span>挂账未收</span>
                 <span className="amount">¥{fenToYuan(stats.unpaidAmount)}</span>
+                <ChevronRight size={18} aria-hidden="true" />
               </button>
             )}
+            <section className={`revenue-panel${!stats.monthlyRevenue && !loading ? ' is-empty' : ''}`}>
+              <div className="section-title">本月营收</div>
+              {loading ? <div className="sk" style={{ width: 160, height: 32 }} /> : <span className="revenue-value">¥{monthlyRevenueDisplay}</span>}
+            </section>
           </div>
 
           {/* 提醒使用连续列表，与数字概要区分层级 */}
@@ -228,25 +220,31 @@ export default function HomePage() {
               {pendingReminders.map(item => (
                 <Cell
                   key={item.id}
-                  title={item.content || getReminderTypeLabel(item.type)}
-                  label={`${item.vehicle?.plateNumber ?? ''} · ${formatMonthDay(item.remindDate)}`}
+                  className="reminder-work-row"
+                  title={<span className="order-plate">{item.vehicle?.plateNumber || getReminderTypeLabel(item.type)}</span>}
+                  label={<>{item.content || getReminderTypeLabel(item.type)}{item.vehicle?.model && <span className="block">{item.vehicle.brand} {item.vehicle.model}</span>}</>}
+                  right={<span className="font-mono">{formatMonthDay(item.remindDate)}</span>}
                   onClick={() => router.push('/reminders')}
                 />
               ))}
             </section>
           )}
+
+
         </div>
+        {/* 安装指引放在业务信息之后，仍按原有环境条件显示 */}
+        <InstallGuide />
       </div>
 
       {/* 设置面板：店铺名称 / 修改密码 / 恢复码 / 退出登录 */}
       <BottomSheet open={showSettings} onOpenChange={setShowSettings} title="设置">
-        <div className="flex flex-col gap-2">
-          <Button variant="outline" className="h-10" onClick={() => void openShopName()}>店铺名称</Button>
-          <Button variant="outline" className="h-10" onClick={openChangePwd}>修改密码</Button>
-          <Button variant="outline" className="h-10" disabled={generatingCode} onClick={() => void genRecoveryCode()}>
+        <div className="settings-links">
+          <Button variant="ghost" className="h-10" onClick={() => void openShopName()}>店铺名称</Button>
+          <Button variant="ghost" className="h-10" onClick={openChangePwd}>修改密码</Button>
+          <Button variant="ghost" className="h-10" disabled={generatingCode} onClick={() => void genRecoveryCode()}>
             找回密码恢复码
           </Button>
-          <Button variant="outline" className="h-10" onClick={quitLogout}>退出登录</Button>
+          <Button variant="ghost" className="h-10" onClick={quitLogout}>退出登录</Button>
         </div>
       </BottomSheet>
 

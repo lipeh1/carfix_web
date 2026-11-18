@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Search } from 'lucide-react'
 import { getCustomers, createCustomer } from '@/lib/api'
 import type { Customer } from '@/lib/types'
+import { formatDateTime } from '@/lib/format'
 
 export default function CustomersPage() {
   const router = useRouter()
@@ -101,9 +102,10 @@ export default function CustomersPage() {
         {customers.map(c => (
           <Cell
             key={c.id}
+            className="customer-row"
             title={c.name}
-            label={c.phone}
-            right={<span>{c._count?.vehicles || 0}辆车</span>}
+            label={<>{c.phone}{!!c.vehicles?.length && <span className="block">{c.vehicles.map(v => v.plateNumber).join(' · ')}</span>}{c.lastVisitAt && <span className="block">最近到店 {formatDateTime(c.lastVisitAt)}</span>}</>}
+            right={(c._count?.vehicles || 0) > 0 ? <span>{c._count?.vehicles}辆车</span> : null}
             onClick={() => router.push(`/customers/${c.id}`)}
           />
         ))}

@@ -69,7 +69,7 @@ export default function CustomerDetailPage() {
   }
 
   return (
-    <div className="page-container" style={{ paddingBottom: 'calc(84px + env(safe-area-inset-bottom))' }}>
+    <div className="page-container record-page" style={{ paddingBottom: 'calc(84px + env(safe-area-inset-bottom))' }}>
       <NavBar
         title="客户详情"
         right={
@@ -81,53 +81,18 @@ export default function CustomerDetailPage() {
 
       {customer ? (
         <div className="page-content">
-          {/* 客户信息卡片：表面2浮层 + 主色低透明度头像底 */}
-          <div className="card flex items-center gap-3" style={{ background: 'var(--surface-2)' }}>
-            <div
-              className="flex h-12 w-12 items-center justify-center rounded-full text-[20px] font-semibold"
-              style={{ background: 'color-mix(in srgb, var(--primary) 20%, transparent)', color: 'var(--primary-hover)' }}
-            >
-              {customer.name.charAt(0)}
-            </div>
+          {/* 客户档案以姓名和联系方式开头，不使用装饰头像 */}
+          <div className="card record-identity">
             <div className="min-w-0 flex-1">
-              <div className="text-[18px] font-semibold" style={{ color: 'var(--ink)' }}>{customer.name}</div>
-              <button
-                type="button"
-                className="pressable mt-0.5 font-mono text-[13px]"
-                style={{ color: 'var(--ink-muted)' }}
-                onClick={callPhone}
-              >
-                {customer.phone}
-              </button>
+              <div className="record-name">{customer.name}</div>
+              <button type="button" className="pressable mt-2 inline-flex min-h-10 items-center gap-2 font-mono text-[14px]" onClick={callPhone} style={{ color: 'var(--primary-hover)' }}><Phone size={16} />{customer.phone}</button>
             </div>
-            <Phone size={22} className="pressable shrink-0" style={{ color: 'var(--ink-muted)' }} onClick={callPhone} />
           </div>
-
-          {/* 消费统计 */}
-          <div className="card">
-            <div className="flex justify-around">
-              <div className="text-center">
-                <div className="text-[20px] font-bold" style={{ letterSpacing: '-0.02em', color: 'var(--ink)' }}>
-                  {customer.stats?.totalOrders || 0}
-                </div>
-                <div className="mt-1 text-[12px]" style={{ color: 'var(--ink-subtle)' }}>总工单</div>
-              </div>
-              <div className="text-center">
-                <div className="text-success text-[20px] font-bold" style={{ letterSpacing: '-0.02em' }}>
-                  {customer.stats?.completedOrders || 0}
-                </div>
-                <div className="mt-1 text-[12px]" style={{ color: 'var(--ink-subtle)' }}>已完成</div>
-              </div>
-              <div className="text-center">
-                <div className="text-danger text-[20px] font-bold" style={{ letterSpacing: '-0.02em' }}>
-                  ¥{fenToYuan(customer.stats?.totalSpent)}
-                </div>
-                <div className="mt-1 text-[12px]" style={{ color: 'var(--ink-subtle)' }}>累计消费</div>
-              </div>
-            </div>
-            {customer.stats?.lastVisit && (
-              <div className="text-muted mt-3">最近到店：{formatDateTime(customer.stats.lastVisit)}</div>
-            )}
+          <div className="record-summary">
+            <span>总工单 <span className="font-mono">{customer.stats?.totalOrders || 0}</span></span>
+            <span>已完成 <span className="font-mono">{customer.stats?.completedOrders || 0}</span></span>
+            <span>累计消费 <span className={customer.stats?.totalSpent ? 'amount' : 'font-mono'}>¥{fenToYuan(customer.stats?.totalSpent)}</span></span>
+            {customer.stats?.lastVisit && <span className="meta-line">最近到店：<time className="font-mono">{formatDateTime(customer.stats.lastVisit)}</time></span>}
           </div>
 
           {/* 备注 */}
@@ -147,7 +112,7 @@ export default function CustomerDetailPage() {
                 title={
                   <span className="flex items-center gap-2">
                     <CarFront size={17} style={{ color: 'var(--primary-hover)' }} />
-                    <span className="font-mono">{v.plateNumber}</span>
+                    <span className="order-plate">{v.plateNumber}</span>
                   </span>
                 }
                 label={`${v.brand || ''} ${v.model || ''}`}
@@ -163,11 +128,11 @@ export default function CustomerDetailPage() {
             {customer.workOrders?.map(o => (
               <div key={o.id} className="pressable cursor-pointer border-b py-3 last:border-b-0" style={{ borderColor: 'var(--hairline)' }} onClick={() => router.push(`/orders/${o.id}`)}>
                 <div className="flex-between">
-                  <span className="font-mono text-[14px] font-semibold">{o.orderNo}</span>
+                  <span className="order-plate">{o.vehicle?.plateNumber || '未知车辆'}</span>
                   <StatusBadge status={o.status} />
                 </div>
                 <div className="mt-1 text-[13px]" style={{ color: 'var(--primary-hover)' }}>
-                  {o.vehicle?.plateNumber || '未知车辆'}
+                  {o.orderNo}
                 </div>
                 <div className="mt-0.5 truncate text-[13px]" style={{ color: 'var(--ink-subtle)' }}>
                   {o.complaint || '无诉求'}
@@ -175,7 +140,7 @@ export default function CustomerDetailPage() {
                 <div className="flex-between mt-1.5">
                   <span className="text-muted">{formatDateTime(o.createdAt)}</span>
                   {!!o.settlement?.actualAmount && (
-                    <span className="font-mono text-[14px] font-semibold" style={{ color: 'var(--danger)' }}>
+                    <span className="font-mono text-[14px] font-semibold" style={{ color: 'var(--ink)' }}>
                       ¥{fenToYuan(o.settlement.actualAmount)}
                     </span>
                   )}
@@ -195,8 +160,8 @@ export default function CustomerDetailPage() {
 
       {/* 底部快捷操作：材质浮层 + 安全区 */}
       <div
-        className="material-bar fixed inset-x-0 bottom-0 border-t"
-        style={{ borderColor: 'var(--hairline)', padding: '12px 12px calc(12px + env(safe-area-inset-bottom))' }}
+        className="material-bar record-footer fixed inset-x-0 bottom-0 border-t"
+        style={{ borderColor: 'var(--hairline)' }}
       >
         <Button className="h-10 w-full" onClick={() => router.push('/checkin')}>
           <Plus size={16} /> 新建接车
