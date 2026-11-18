@@ -18,23 +18,130 @@
 }
 .nav-back { margin-left: -8px; }
 
-/* 桌面侧栏复用既有四个导航入口，手机仍为固定底栏 */
+/* 桌面侧栏复用既有四个导航入口，手机使用悬浮底栏 */
 .workspace-nav {
   position: fixed; inset: auto 0 0; z-index: 40; display: flex;
   border-top: 1px solid var(--hairline); background: var(--surface-1);
   padding-bottom: env(safe-area-inset-bottom);
 }
 .workspace-brand { display: none; }
+.workspace-nav-indicator, .workspace-nav-refraction { display: none; }
+.workspace-nav-content { display: contents; }
+.workspace-nav-icon { display: inline-flex; width: 20px; height: 20px; flex-shrink: 0; transform-origin: center; }
+.tab-lens-filter { position: absolute; width: 0; height: 0; pointer-events: none; }
 .tabs-shell .page-content.scroll-area { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 .workspace-nav-link {
   display: flex; flex: 1; flex-direction: column; align-items: center;
   justify-content: center; gap: 4px; min-height: 62px; position: relative;
-  color: var(--ink-subtle); font-size: 11px; font-weight: 500;
+  color: var(--ink-subtle); font-size: 12px; font-weight: 500;
   transition: color 120ms ease-out;
 }
 .workspace-nav-link[aria-current='page'] { color: var(--primary-hover); }
 .workspace-nav-link[aria-current='page']::before {
   content: ''; position: absolute; top: 0; width: 24px; height: 2px; background: var(--primary);
+}
+
+/* 玻璃只在手机底栏出现；实色为默认兜底，支持模糊时再透出滚动内容 */
+@media (max-width: 1023px) {
+  .workspace-nav {
+    left: max(12px, env(safe-area-inset-left), calc((100% - 560px) / 2));
+    right: max(12px, env(safe-area-inset-right), calc((100% - 560px) / 2));
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    height: 72px; padding: 6px;
+    border: 1px solid var(--hairline-strong); border-radius: 36px;
+    touch-action: pan-y pinch-zoom; user-select: none; -webkit-user-select: none;
+    -webkit-touch-callout: none; cursor: grab;
+  }
+  .workspace-nav-indicator, .workspace-nav-refraction {
+    display: block; position: absolute; top: 6px; bottom: 6px; left: 6px;
+    width: calc((100% - 12px) / var(--tab-count)); border-radius: 29px;
+    /* 主体在导航内容下方；单独的窄边缘层限制了图标经过镜片时的折射范围 */
+    pointer-events: none; z-index: 0;
+  }
+  .workspace-nav-refraction { z-index: 2; }
+  .tab-glass-lens {
+    display: block; position: absolute; inset: 0; border-radius: inherit;
+    background: var(--surface-2); border: 1px solid var(--hairline);
+  }
+  .tab-glass-rim { display: none; }
+  .workspace-nav-content {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  }
+  .workspace-nav-link {
+    min-width: 0; min-height: 0; border-radius: 29px;
+    color: var(--ink-muted); line-height: 16px; z-index: 1; cursor: inherit;
+    transition: color 120ms ease-out, transform 100ms ease-out;
+  }
+  .workspace-nav-link[aria-current='page'] { color: var(--ink-muted); }
+  .workspace-nav-link[data-selected='true'] { color: var(--primary-hover); font-weight: 600; }
+  .workspace-nav-link[aria-current='page']::before { content: none; }
+  .workspace-nav-link:focus-visible { outline-offset: -3px; }
+  .workspace-nav[data-dragging='true'] { cursor: grabbing; }
+  .workspace-nav[data-dragging='true'] .workspace-nav-link:active { transform: none; }
+  .tabs-shell .scroll-area,
+  .tabs-shell .page-content.scroll-area { padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
+
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .workspace-nav {
+      background: transparent; border-color: var(--tab-glass-border);
+      box-shadow: inset 0 1px 0 var(--tab-glass-highlight), 0 8px 24px var(--tab-glass-shadow);
+    }
+    /* 模糊放在独立底层，让透镜只读取页面背景，不处理上层导航内容 */
+    .workspace-nav::before {
+      content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: var(--tab-glass-bg);
+      -webkit-backdrop-filter: blur(12px) saturate(120%); backdrop-filter: blur(12px) saturate(120%);
+    }
+    .tab-glass-lens {
+      background: var(--tab-glass-active-bg); border-color: transparent;
+      box-shadow: inset 0 2px 6px var(--tab-glass-rim-shadow), inset 0 -2px 6px var(--tab-glass-rim-shadow), 0 5px 14px var(--tab-glass-shadow);
+      -webkit-backdrop-filter: brightness(1.08) saturate(120%); backdrop-filter: brightness(1.08) saturate(120%);
+    }
+    /* 高光仅沿玻璃弧边出现，方向随前后缘的拉伸变化，中心保持通透 */
+    .tab-glass-lens::before {
+      content: ''; position: absolute; inset: -1px; padding: 1.5px; border-radius: inherit;
+      background: conic-gradient(from var(--lens-light-angle, 115deg), var(--tab-glass-highlight), transparent 16%, var(--tab-glass-rim-shadow) 34%, var(--tab-glass-highlight) 50%, transparent 66%, var(--tab-glass-rim-shadow) 84%, var(--tab-glass-highlight));
+      -webkit-mask: linear-gradient(currentColor 0 0) content-box, linear-gradient(currentColor 0 0);
+      mask: linear-gradient(currentColor 0 0) content-box, linear-gradient(currentColor 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+    }
+    .tab-glass-lens::after {
+      content: ''; position: absolute; inset: 1px; border-radius: inherit;
+      background: radial-gradient(ellipse 80% 24% at 50% 0%, var(--tab-glass-highlight), transparent), radial-gradient(ellipse 70% 18% at 50% 100%, var(--tab-glass-highlight), transparent);
+      opacity: calc(0.18 + var(--lens-pressure, 0) * 0.62);
+    }
+    .tab-glass-lens[data-optics='true'] {
+      backdrop-filter: var(--lens-filter) brightness(1.06) saturate(120%);
+    }
+    /* 只让六像素窄边缘参与微折射，图标和文字的主体不会被切碎或染色 */
+    .tab-glass-rim[data-optics='true'] {
+      display: block; position: absolute; inset: 0; padding: 6px; border-radius: inherit;
+      backdrop-filter: var(--rim-filter);
+      -webkit-mask: linear-gradient(currentColor 0 0) content-box, linear-gradient(currentColor 0 0);
+      mask: linear-gradient(currentColor 0 0) content-box, linear-gradient(currentColor 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+    }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .workspace-nav {
+      background: var(--surface-1); border-color: var(--hairline-strong);
+      -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none;
+    }
+    .workspace-nav::before { display: none; }
+    .workspace-nav-refraction, .tab-glass-lens::before, .tab-glass-lens::after { display: none; }
+    .workspace-nav-indicator { z-index: 0; }
+    .tab-glass-lens, .tab-glass-lens[data-optics='true'] {
+      background: var(--surface-2); border-color: var(--hairline); box-shadow: none;
+      -webkit-backdrop-filter: none; backdrop-filter: none;
+    }
+  }
+  /* 用户在页面打开期间减弱动态时，也立即让底片落到选中位置 */
+  @media (prefers-reduced-motion: reduce) {
+    .workspace-nav:not([data-dragging='true']) .workspace-nav-indicator { transform: translateX(calc(var(--active-tab) * 100%)) !important; }
+    .workspace-nav-refraction { display: none; }
+    .tab-glass-lens, .workspace-nav-content, .workspace-nav-icon { transform: none !important; }
+    .tab-glass-lens, .tab-glass-lens[data-optics='true'] { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
 }
 .scroll-tabs {
   display: flex; flex-shrink: 0; overflow-x: auto; scrollbar-width: none;
@@ -80,6 +187,10 @@
   position: fixed; right: 16px; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 30;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding-inline: 16px;
   border: 1px solid var(--primary); border-radius: 6px; background: var(--primary); color: var(--on-primary); font-size: 14px; font-weight: 600;
+}
+/* 新建入口与悬浮底栏之间保留触控间隔 */
+@media (max-width: 1023px) {
+  .order-create { bottom: calc(100px + env(safe-area-inset-bottom)); }
 }
 
 /* 工单详情：身份信息、作业记录与财务单据使用不同的表面形态 */
@@ -198,10 +309,11 @@
   .workspace-brand { display: flex; align-items: center; gap: 10px; min-height: var(--nav-height); margin-bottom: 20px; padding-inline: 8px; font-size: 14px; font-weight: 600; color: var(--ink); }
   .workspace-brand svg { color: var(--primary); }
   .workspace-nav-link { flex: 0 0 auto; min-height: 44px; flex-direction: row; justify-content: flex-start; gap: 12px; padding: 12px; border-radius: 5px; font-size: 13px; }
+  .workspace-nav-icon { transform: none !important; }
   .workspace-nav-link[aria-current='page'] { background: var(--surface-2); color: var(--ink); }
   .workspace-nav-link[aria-current='page'] svg { color: var(--primary); }
   .workspace-nav-link[aria-current='page']::before { top: 14px; left: -12px; height: 16px; width: 2px; }
-  .tabs-shell .scroll-area { padding-bottom: 32px; }
+  .tabs-shell .scroll-area, .tabs-shell .page-content.scroll-area { padding-bottom: 32px; }
   .tabs-shell .scroll-tabs { padding-inline: max(32px, calc((100% - 1176px) / 2)); }
   .orders-toolbar { padding: 24px 32px 16px; }
   .order-create { bottom: 24px; right: max(32px, calc((100vw - 1360px) / 2)); }

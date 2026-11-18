@@ -7,7 +7,7 @@
 
 /* ============================================================
    汽修工单簿：冷纸色、车间灰与实体分隔线
-   使用本地字体与实色面板；
+   使用本地字体与实色面板，仅手机底部导航采用玻璃材质；
    颜色一律走设计令牌，令牌在 prefers-color-scheme: light 下切换浅色值
    ============================================================ */
 
@@ -31,6 +31,15 @@
   --overlay-danger: #913e3e;
   --preview-canvas: #182126;
   --preview-control: #34414a;
+
+  /* 玻璃材质仅用于手机底部导航，保持其余面板的实色层级 */
+  --tab-glass-bg: rgb(48 55 61 / 38%);
+  --tab-glass-border: rgb(206 225 236 / 20%);
+  --tab-glass-highlight: rgb(239 248 252 / 48%);
+  --tab-glass-shadow: rgb(12 20 26 / 22%);
+  --tab-glass-active-bg: rgb(206 228 240 / 5%);
+  --tab-glass-active-border: rgb(224 240 248 / 38%);
+  --tab-glass-rim-shadow: rgb(10 20 28 / 34%);
 
   /* 文字 */
   --ink: #eef1f3;
@@ -80,6 +89,14 @@
     --surface-3: #d7e0e6;
     --hairline: #cbd5db;
     --hairline-strong: #96a7b2;
+
+    --tab-glass-bg: rgb(244 249 252 / 40%);
+    --tab-glass-border: rgb(255 255 255 / 70%);
+    --tab-glass-highlight: rgb(255 255 255 / 94%);
+    --tab-glass-shadow: rgb(39 62 77 / 12%);
+    --tab-glass-active-bg: rgb(255 255 255 / 12%);
+    --tab-glass-active-border: rgb(255 255 255 / 88%);
+    --tab-glass-rim-shadow: rgb(64 87 101 / 18%);
 
     /* 浅色下正文用深墨色 */
     --ink: #24323b;
