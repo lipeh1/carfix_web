@@ -63,6 +63,20 @@ npm test               # 一键端到端：PG → 迁移 → 构建 → 服务 �
 npm run build && npm start
 ```
 
+### OCR 配置（可选）
+
+在 `web/.env.local` 配置视觉模型，接车页现有的拍车牌、扫行驶证入口即可使用，行驶证中的 VIN 也会一并提取：
+
+```dotenv
+OCR_AGENT_BASE_URL=https://api.deepseek.com
+OCR_AGENT_MODEL=deepseek-flash
+OCR_AGENT_API_KEY=填写服务端密钥
+```
+
+修改后重启开发服务。以上变量不可加 `NEXT_PUBLIC_` 前缀，真实密钥只放本地环境文件或云托管环境变量。也可通过“扫行驶证建档”选择车辆铭牌，预填 VIN 与品牌型号，再手动补齐客户和车牌信息。识别只预填可见字段，用户核对后保存；VIN 对应的详细车型资料查询需另接数据服务。
+
+缺少模型密钥或识别失败时，接车页面仍可手动录入。
+
 ## 部署（腾讯云 CloudBase 云托管）
 
 面向中国大陆公网访问，完整步骤见 **[docs/部署-腾讯云CloudBase.md](./docs/部署-腾讯云CloudBase.md)**。

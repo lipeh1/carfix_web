@@ -96,7 +96,7 @@ export async function uploadImage(file: File): Promise<{ url: string }> {
 // 删除已上传的图片（按上传返回的完整 URL，后端按 URL 反解存储键）
 export const deleteUpload = (url: string) => http.delete('/upload', { params: { url } })
 
-// ===== OCR 识别（后端代理百度） =====
+// ===== OCR 识别（后端代理视觉 Agent，密钥不进入浏览器） =====
 // File 转 base64（去 data: 前缀）
 const fileToBase64 = (file: File) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader()
@@ -108,13 +108,14 @@ const fileToBase64 = (file: File) => new Promise<string>((resolve, reject) => {
 // 行驶证识别（后端归一化输出结构化字段）
 export async function ocrVehicleLicense(file: File) {
   const image = await fileToBase64(file)
-  return http.post<VehicleLicenseOcrResult>('/ocr/vehicle-license', { image })
+  // 图片模型处理时间较长，前端等待时间略长于服务端的 45 秒上限
+  return http.post<VehicleLicenseOcrResult>('/ocr/vehicle-license', { image }, { timeout: 60000 })
 }
 
 // 车牌识别
 export async function ocrPlate(file: File) {
   const image = await fileToBase64(file)
-  return http.post<PlateOcrResult>('/ocr/plate', { image })
+  return http.post<PlateOcrResult>('/ocr/plate', { image }, { timeout: 60000 })
 }
 
 // 访问控制

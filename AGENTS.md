@@ -246,7 +246,7 @@ npm test
 - 单用户系统，采用**单访问密码**鉴权（无多用户/角色体系）：密码 scrypt 哈希存 `settings` 表，会话为 HMAC 签名的 httpOnly Cookie（30 天）；除 `/api/health` 与 `/api/auth` 外，所有 `/api` 均要求登录（`withAuth` 包装，新增后端接口默认继承）；登录与恢复码接口均带同 IP 防爆破锁定（计数存 `settings` 表，Serverless 多实例生效）；前端 401 统一跳 `/login`。
 - 找回密码：设置/修改密码时自动生成一次性**恢复码**（scrypt 哈希存 `settings` 表 `auth:recovery`，仅生成时明文返回一次）；忘记密码走 `POST /api/auth/recover`（凭恢复码重设密码，旧码作废、换发新码、成功即登录）；已登录可在设置中 `POST /api/auth/recovery-code` 重新生成。最终兜底：在云托管环境变量加 `RESET_PASSWORD=1` 发一次版，容器启动时清空密码（见 `web/docker-entrypoint.sh`），完成后立即删除该变量。
 - 接车照片走**服务端中转上传**：前端 `compressImage` 压缩后 POST multipart 到 `/api/upload`，后端经 `lib/storage.ts` 写入 COS（生产）或本地磁盘（开发），数据库存完整公开 URL（路径随机不可猜测）；删除走 `DELETE /api/upload`。
-- 百度 OCR 密钥（`BAIDU_OCR_API_KEY/SECRET_KEY`）为可选配置，未配置时识别功能自动停用、前端回退手输。
+- OCR 统一使用视觉 Agent：通过 `OCR_AGENT_BASE_URL/API_KEY/MODEL` 配置，默认 DeepSeek `deepseek-flash`。密钥仅供服务端读取，缺少配置或识别失败时前端仍可手输；图片只用于提取可见字段，不推断车型资料。
 - 生产部署在腾讯云 CloudBase 云托管（Docker，端口 3000），`DATABASE_URL` 指向云开发 MySQL 内网地址，服务需开启私有网络；容器启动自动执行 `prisma migrate deploy`。完整步骤见 `docs/部署-腾讯云CloudBase.md`。
 - 双 schema 约定：`prisma/schema.prisma` 为 PostgreSQL 版（本地开发）；`prisma/mysql/schema.prisma` 由 `scripts/gen-mysql-schema.mjs` 派生（生产），**禁止手改生成文件**。改模型只改前者，再执行 `npm run db:mysql:gen`。
 - 本地开发无 Docker 时用 `npm run dev:db` 起内嵌 PostgreSQL（端口 5433，数据在 `web/.pgdata`，已 gitignore）。

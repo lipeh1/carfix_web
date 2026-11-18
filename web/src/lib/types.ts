@@ -272,7 +272,7 @@ export interface StatsData {
   unpaid?: { total: number; count: number; list: UnpaidOrder[] }
 }
 
-// ===== OCR 识别（百度接口经后端代理，字段由后端归一化输出） =====
+// ===== OCR 识别（视觉 Agent 经后端代理，字段由后端归一化输出） =====
 
 // 行驶证识别：预填新建客户与车辆表单
 export interface VehicleLicenseOcrResult {

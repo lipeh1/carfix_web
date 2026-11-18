@@ -142,8 +142,9 @@ CLI 会把 `web/` 作为构建上下文上传，云端用 `Dockerfile` 构建镜
 | `COS_REGION` | ✅ | 如 `ap-shanghai` |
 | `STORAGE_DRIVER` | ⬜ | 固定填 `cos`（不填时按有无 `COS_BUCKET` 自动判断） |
 | `COS_PUBLIC_BASE` | ⬜ | CDN 加速域名，留空用 COS 源站域名 |
-| `BAIDU_OCR_API_KEY` | ⬜ | 不配则行驶证/车牌识别停用，前端自动回退手输 |
-| `BAIDU_OCR_SECRET_KEY` | ⬜ | 同上 |
+| `OCR_AGENT_BASE_URL` | ⬜ | Agent 接口地址，默认 `https://api.deepseek.com` |
+| `OCR_AGENT_MODEL` | ⬜ | 支持图片输入的模型，默认 `deepseek-flash` |
+| `OCR_AGENT_API_KEY` | ⬜ | Agent 服务端密钥；图片通过后端发送，不下发给浏览器 |
 | `ICP_BEIAN` | ⬜ | 备案通过后填，如 `粤ICP备2026123456号-1`，展示在登录页底部 |
 | `POLICE_BEIAN` | ⬜ | 公安联网备案通过后填，如 `粤公网安备 44030502001234号` |
 

@@ -50,6 +50,3 @@ next-env.d.ts
 
 # 本地存储驱动落盘目录（STORAGE_DRIVER=local 时产生）
 /.uploads
-
-.vercel
-.env*

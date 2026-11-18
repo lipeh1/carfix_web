@@ -149,9 +149,9 @@ export default function CheckinPage() {
     } catch { /* 已拦截 */ }
   }
 
-  // ===== OCR 扫描（后端代理百度，未配密钥/识别失败均不阻塞手输） =====
+  // ===== OCR 扫描（后端代理视觉 Agent，未配密钥/识别失败均不阻塞手输） =====
 
-  // 拍行驶证 → 识别 → 预填新建客户/车辆表单（电话需人工补录）
+  // 拍行驶证或铭牌 → 预填新建客户/车辆表单，铭牌缺少的客户和车牌信息需人工补录
   const onLicenseScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target
     const file = input.files?.[0]
@@ -161,8 +161,8 @@ export default function CheckinPage() {
     try {
       const compressed = await compressImage(file)
       const res = await ocrVehicleLicense(compressed)
-      if (!res.plateNumber && !res.owner) {
-        return toast('未能识别出行驶证内容，请正对证件、避免反光后重试')
+      if (!res.plateNumber && !res.owner && !res.vin && !res.brandModel) {
+        return toast('未能识别出车辆信息，请正对证件、避免反光后重试')
       }
       // 预填两个表单，客户弹窗先出（补电话），保存后自动衔接建车弹窗
       setNewCustomer({ name: res.owner || '', phone: '', address: res.address || '' })
@@ -173,7 +173,7 @@ export default function CheckinPage() {
         vin: res.vin || ''
       }))
       setShowNewCustomer(true)
-      toast.success('已识别，请补录客户电话')
+      toast.success('已识别，请核对并补全客户、车辆信息')
     } catch { /* 具体原因已由请求封装 toast，此处保持手输路径 */ } finally {
       scanningRef.current = false
     }
