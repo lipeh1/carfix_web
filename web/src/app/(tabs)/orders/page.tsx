@@ -3,10 +3,8 @@
 // 工单列表：搜索 + 8 状态 tabs + 下拉刷新 + 无限滚动 + 骨架屏（自旧 Orders.vue 移植）
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { AnimatePresence, motion } from 'motion/react'
-import { Plus, Search } from 'lucide-react'
+import { ChevronRight, Plus, Search } from 'lucide-react'
 import NavBar from '@/components/mobile/NavBar'
-import Cell from '@/components/mobile/Cell'
 import Empty from '@/components/mobile/Empty'
 import ScrollTabs from '@/components/mobile/ScrollTabs'
 import { StatusBadge } from '@/components/mobile/Badge'
@@ -53,7 +51,7 @@ function OrdersPageInner() {
     }
   }, [activeTab, keyword])
 
-  // 初次与 tab/搜索条件变化后加载（清空列表驱动骨架与进场动画重放）
+  // 初次与 tab/搜索条件变化后加载，清空列表驱动骨架
   useEffect(() => {
     setOrders([])
     setFinished(false)
@@ -68,22 +66,20 @@ function OrdersPageInner() {
       <NavBar title="工单" back={false} />
 
       {/* 搜索框 */}
-      <div className="flex items-center gap-2 px-3 py-2">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-tertiary)' }} />
+      <div className="orders-toolbar">
+        <div className="orders-search">
+          <Search size={17} strokeWidth={1.7} />
           <Input
             value={keyword}
             placeholder="搜索工单号/车牌号/客户名/诉求"
-            className="h-9 rounded-lg pl-8"
-            style={{ background: 'var(--surface-2)' }}
+            aria-label="搜索工单号/车牌号/客户名/诉求"
             onChange={e => setKeyword(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { setOrders([]); setFinished(false); void loadOrders() } }}
           />
         </div>
         <button
           type="button"
-          className="pressable shrink-0 text-[14px]"
-          style={{ color: 'var(--primary-hover)' }}
+          className="pressable orders-search-action"
           onClick={() => { setOrders([]); setFinished(false); void loadOrders() }}
         >
           搜索
@@ -93,7 +89,7 @@ function OrdersPageInner() {
       <ScrollTabs tabs={TABS} value={activeTab} onChange={setActiveTab} />
 
       <PullToRefresh className="scroll-area" onRefresh={loadOrders}>
-        <div className="page-content">
+        <div className="page-content orders-list">
           {/* 首次加载/切 tab 骨架：与工单行信息结构对应 */}
           {showSkeleton &&
             Array.from({ length: 6 }, (_, i) => (
@@ -107,65 +103,41 @@ function OrdersPageInner() {
               </div>
             ))}
 
-          {/* 列表项进场：弹簧上移淡入，逐项错开形成级联；换批时旧项平滑退场 */}
-          <AnimatePresence initial={false}>
-            {orders.map((order, idx) => (
-              <motion.div
-                key={order.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6, transition: { duration: 0.15 } }}
-                transition={{ type: 'spring', bounce: 0, duration: 0.35, delay: Math.min(idx * 0.03, 0.24) }}
-              >
-                <Cell
-                  onClick={() => router.push(`/orders/${order.id}`)}
-                  title={
-                    <span className="flex items-center gap-2">
-                      <span className="font-mono text-[15px] font-semibold">{order.vehicle?.plateNumber || '未知车辆'}</span>
-                      <StatusBadge status={order.status} />
-                    </span>
-                  }
-                  label={
-                    <div className="mt-1">
-                      <div className="flex flex-col gap-0.5">
-                        <span>{order.customer?.name || '未知客户'}</span>
-                        <span className="text-muted">{order.complaint || '无诉求'}</span>
-                      </div>
-                      {!!order.finalAmount && (
-                        <div className="mt-1 font-mono text-[14px] font-semibold" style={{ color: 'var(--danger)' }}>
-                          ¥{fenToYuan(order.finalAmount)}
-                        </div>
-                      )}
-                    </div>
-                  }
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
+          {/* 列表直接呈现，手机分行、桌面对齐固定列，不为每行播放进场 */}
+          {orders.map(order => (
+            <button
+              key={order.id}
+              type="button"
+              className="order-row"
+              onClick={() => router.push(`/orders/${order.id}`)}
+            >
+              <span className="order-row-identity">
+                <span className="order-plate">{order.vehicle?.plateNumber || '未知车辆'}</span>
+                <StatusBadge status={order.status} />
+              </span>
+              <span className="order-row-customer">{order.customer?.name || '未知客户'}</span>
+              <span className="order-row-complaint">{order.complaint || '无诉求'}</span>
+              <span className="order-row-amount">
+                {!!order.finalAmount && <span>¥{fenToYuan(order.finalAmount)}</span>}
+                <ChevronRight size={16} strokeWidth={1.7} aria-hidden="true" />
+              </span>
+            </button>
+          ))}
 
           {!showSkeleton && orders.length === 0 && !loading && <Empty description="暂无工单" />}
           <InfiniteScroll hasMore={!finished} onLoadMore={loadOrders} isEmpty={orders.length === 0 && !loading} />
         </div>
       </PullToRefresh>
 
-      {/* 右下角新建接车浮动按钮：按压弹簧缩放（避开 tabbar + 安全区） */}
-      <motion.button
+      {/* 接车入口使用紧凑矩形按钮，避开导航与底部安全区 */}
+      <button
         type="button"
         aria-label="新建接车"
-        className="fixed z-50 flex h-[52px] w-[52px] items-center justify-center rounded-full"
-        style={{
-          right: 20,
-          bottom: 'calc(80px + env(safe-area-inset-bottom))',
-          background: 'var(--primary)',
-          color: '#fff',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
-        }}
-        whileTap={{ scale: 0.92 }}
-        transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
+        className="order-create pressable"
         onClick={() => router.push('/checkin')}
       >
-        <Plus size={24} />
-      </motion.button>
+        <Plus size={18} strokeWidth={1.7} /> 新建接车
+      </button>
     </div>
   )
 }

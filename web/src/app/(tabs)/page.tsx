@@ -3,7 +3,6 @@
 // 工作台：快捷入口 + 今日概览 + 挂账/营收 + 待办提醒（自旧 Home.vue 移植）
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'motion/react'
 import { toast } from 'sonner'
 import { Settings, Plus, ChartLine, ClipboardList, ListChecks, Receipt, CircleCheck } from 'lucide-react'
 import NavBar from '@/components/mobile/NavBar'
@@ -22,9 +21,6 @@ import { getReminderTypeLabel, formatMonthDay } from '@/lib/format'
 import { hapticFeedback } from '@/lib/feedback'
 import { DEFAULT_SHOP_NAME, SHOP_NAME_MAX_LEN, setShopNameCache } from '@/lib/shop'
 import type { DashboardStats, Reminder } from '@/lib/types'
-
-// 级联进场弹簧：临界阻尼 + 按卡片序错开的延迟
-const springIn = (delay: number) => ({ type: 'spring' as const, bounce: 0, duration: 0.4, delay })
 
 export default function HomePage() {
   const router = useRouter()
@@ -150,10 +146,10 @@ export default function HomePage() {
   }
 
   const overview = [
-    { icon: ClipboardList, label: `待检测 ${stats.pendingInspection}`, status: 'pending_inspection' },
-    { icon: ListChecks, label: `维修中 ${stats.repairing}`, status: 'repairing' },
-    { icon: Receipt, label: `待结算 ${stats.pendingSettlement}`, status: 'pending_settlement' },
-    { icon: CircleCheck, label: `已完成 ${stats.completed}`, status: 'completed' }
+    { icon: ClipboardList, label: '待检测', value: stats.pendingInspection, status: 'pending_inspection' },
+    { icon: ListChecks, label: '维修中', value: stats.repairing, status: 'repairing' },
+    { icon: Receipt, label: '待结算', value: stats.pendingSettlement, status: 'pending_settlement' },
+    { icon: CircleCheck, label: '已完成', value: stats.completed, status: 'completed' }
   ]
 
   return (
@@ -172,85 +168,62 @@ export default function HomePage() {
         {/* 安装到桌面引导（移动端显示） */}
         <InstallGuide />
 
-        {/* 快捷操作 */}
-        <motion.div
-          className="mb-3 flex gap-2.5"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={springIn(0)}
-        >
-          <motion.div className="flex-1" whileTap={{ scale: 0.96 }} transition={{ type: 'spring', bounce: 0, duration: 0.3 }} onClick={() => router.push('/checkin')}>
-            <Button className="h-10 w-full" tabIndex={-1}>
-              <Plus size={16} /> 新建接车
-            </Button>
-          </motion.div>
-          <motion.div className="flex-1" whileTap={{ scale: 0.96 }} transition={{ type: 'spring', bounce: 0, duration: 0.3 }} onClick={() => router.push('/stats')}>
-            <Button variant="outline" className="h-10 w-full" tabIndex={-1}>
-              <ChartLine size={16} /> 统计报表
-            </Button>
-          </motion.div>
-        </motion.div>
+        {/* 快捷操作直接由按钮触发，避免视觉包装层干扰键盘操作 */}
+        <div className="dashboard-toolbar">
+          <Button onClick={() => router.push('/checkin')}><Plus size={16} /> 新建接车</Button>
+          <Button variant="outline" onClick={() => router.push('/stats')}><ChartLine size={16} /> 统计报表</Button>
+        </div>
 
-        {/* 今日概览：点击数字直达对应状态的工单列表 */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={springIn(0.05)}>
-          <div className="card">
+        <div className="dashboard-grid">
+          {/* 数量独立排版，点击仍直达对应状态的工单列表 */}
+          <section className="overview-panel">
             <div className="section-title">今日概览</div>
-            {/* 加载骨架：四格占位，数据到达后换成真实宫格 */}
             {loading ? (
-              <div className="grid grid-cols-4 gap-2">
-                {Array.from({ length: 4 }, (_, i) => <div key={i} className="sk" style={{ height: 44 }} />)}
+              <div className="overview-metrics" aria-busy="true">
+                {Array.from({ length: 4 }, (_, i) => <div key={i} className="overview-metric"><div className="sk w-full" style={{ height: 88 }} /></div>)}
               </div>
             ) : (
-              <div className="grid grid-cols-4 gap-2">
+              <div className="overview-metrics">
                 {overview.map(o => {
                   const Icon = o.icon
                   return (
                     <button
                       key={o.status}
                       type="button"
-                      className="pressable flex flex-col items-center gap-1.5 rounded-lg py-2 active:bg-[var(--surface-2)]"
+                      className="pressable overview-metric"
                       onClick={() => goOrders(o.status)}
                     >
-                      <Icon size={22} strokeWidth={1.6} style={{ color: 'var(--primary-hover)' }} />
-                      <span className="text-[11px]" style={{ color: 'var(--ink-muted)' }}>{o.label}</span>
+                      <Icon size={18} strokeWidth={1.7} aria-hidden="true" />
+                      <span className="overview-metric-label">{o.label}</span>
+                      <span className="overview-metric-value">{o.value}</span>
                     </button>
                   )
                 })}
               </div>
             )}
-          </div>
-        </motion.div>
+          </section>
 
-        {/* 挂账提醒：点击直达统计页挂账明细 */}
-        {stats.unpaidAmount > 0 && (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={springIn(0.1)}>
-            <div className="card pressable cursor-pointer active:bg-[var(--surface-2)]" onClick={() => router.push('/stats')}>
-              <div className="flex-between">
-                <span className="text-danger text-[13px]">挂账未收</span>
-                <span className="amount">¥{fenToYuan(stats.unpaidAmount)}</span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* 本月营收 */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={springIn(0.15)}>
-          <div className="card">
-            <div className="flex-between">
-              <span className="text-[14px] font-semibold" style={{ color: 'var(--ink)' }}>本月营收</span>
+          <div className="dashboard-financial">
+            <section className="revenue-panel">
+              <div className="section-title">本月营收</div>
               {loading ? (
-                <span className="sk" style={{ width: 96, height: 18 }} />
+                <div className="sk" style={{ width: 180, height: 40 }} />
               ) : (
-                <span className="amount">¥{monthlyRevenueDisplay}</span>
+                <span className="revenue-value">¥{monthlyRevenueDisplay}</span>
               )}
-            </div>
+            </section>
+            {/* 挂账保持独立警示条，点击仍进入统计页 */}
+            {stats.unpaidAmount > 0 && (
+              <button type="button" className="unpaid-panel pressable" onClick={() => router.push('/stats')}>
+                <span>挂账未收</span>
+                <span className="amount">¥{fenToYuan(stats.unpaidAmount)}</span>
+              </button>
+            )}
           </div>
-        </motion.div>
 
-        {/* 待办提醒 */}
-        {pendingReminders.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={springIn(0.2)}>
-            <div className="card">
+          {/* 提醒使用连续列表，与数字概要区分层级 */}
+          {pendingReminders.length > 0 && (
+            <section className="reminders-panel">
               <div className="section-title">待办提醒</div>
               {pendingReminders.map(item => (
                 <Cell
@@ -260,9 +233,9 @@ export default function HomePage() {
                   onClick={() => router.push('/reminders')}
                 />
               ))}
-            </div>
-          </motion.div>
-        )}
+            </section>
+          )}
+        </div>
       </div>
 
       {/* 设置面板：店铺名称 / 修改密码 / 恢复码 / 退出登录 */}

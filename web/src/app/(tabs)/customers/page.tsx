@@ -3,7 +3,6 @@
 // 客户列表：搜索 + 新增客户弹窗（自旧 Customers.vue 移植）
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AnimatePresence, motion } from 'motion/react'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import NavBar from '@/components/mobile/NavBar'
@@ -70,14 +69,13 @@ export default function CustomersPage() {
       />
 
       {/* 搜索框 */}
-      <div className="flex items-center px-3 py-2">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-tertiary)' }} />
+      <div className="orders-toolbar">
+        <div className="orders-search">
+          <Search size={17} strokeWidth={1.7} />
           <Input
             value={keyword}
             placeholder="搜索姓名/电话"
-            className="h-9 rounded-lg pl-8"
-            style={{ background: 'var(--surface-2)' }}
+            aria-label="搜索姓名/电话"
             onChange={e => setKeyword(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') void loadData() }}
           />
@@ -99,24 +97,16 @@ export default function CustomersPage() {
             </div>
           ))}
 
-        <AnimatePresence initial={false}>
-          {customers.map((c, idx) => (
-            <motion.div
-              key={c.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6, transition: { duration: 0.15 } }}
-              transition={{ type: 'spring', bounce: 0, duration: 0.35, delay: Math.min(idx * 0.03, 0.24) }}
-            >
-              <Cell
-                title={c.name}
-                label={c.phone}
-                right={<span>{c._count?.vehicles || 0}辆车</span>}
-                onClick={() => router.push(`/customers/${c.id}`)}
-              />
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        {/* 连续列表保持稳定位置，不为每行重复播放进场动画 */}
+        {customers.map(c => (
+          <Cell
+            key={c.id}
+            title={c.name}
+            label={c.phone}
+            right={<span>{c._count?.vehicles || 0}辆车</span>}
+            onClick={() => router.push(`/customers/${c.id}`)}
+          />
+        ))}
 
         {customers.length === 0 && !loading && <Empty description="暂无客户" />}
       </div>
