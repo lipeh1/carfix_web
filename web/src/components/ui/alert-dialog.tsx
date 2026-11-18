@@ -1,5 +1,6 @@
 "use client"
 
+// 确认对话框：实体遮罩和实色内容，保持已有确认流程
 import * as React from "react"
 import { cn } from "cn"
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
@@ -36,7 +37,7 @@ function AlertDialogOverlay({
     <AlertDialogPrimitive.Overlay
       data-slot="alert-dialog-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 z-50 bg-[var(--overlay)] duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}

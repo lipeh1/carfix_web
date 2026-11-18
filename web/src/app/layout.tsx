@@ -1,7 +1,17 @@
+// 应用根布局：加载自托管字体、全局视觉令牌与共用交互容器
 import type { Metadata, Viewport } from 'next'
 import { Toaster } from '@/components/ui/sonner'
 import { ConfirmProvider } from '@/components/mobile/ConfirmProvider'
+// 字体随应用打包，部署和访问均不依赖外部字体服务
+import '@fontsource/ibm-plex-sans/latin-400.css'
+import '@fontsource/ibm-plex-sans/latin-500.css'
+import '@fontsource/ibm-plex-sans/latin-600.css'
+import '@fontsource/ibm-plex-mono/latin-400.css'
+import '@fontsource/ibm-plex-mono/latin-500.css'
+import '@fontsource/ibm-plex-mono/latin-600.css'
+import '@fontsource-variable/noto-sans-sc'
 import './globals.css'
+import './workspace.css'
 
 export const metadata: Metadata = {
   title: '汽修管理系统',
@@ -18,8 +28,8 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: dark)', color: '#010102' },
-    { media: '(prefers-color-scheme: light)', color: '#fbfbfc' }
+    { media: '(prefers-color-scheme: dark)', color: '#111411' },
+    { media: '(prefers-color-scheme: light)', color: '#f4f4ef' }
   ]
 }
 

@@ -1,4 +1,4 @@
-// 状态徽章：pill 圆角 + 语义色低饱和底 + 同色文字（仅小面积使用，符合 UI 规范）
+// 状态徽章：紧凑文字、小圆点与语义底色，不改变既有状态映射
 import { cn } from '@/lib/utils'
 import { getOrderStatusTone } from '@/lib/format'
 
@@ -17,7 +17,7 @@ export function Badge({ tone = 'default', children, className }: { tone?: Tone; 
   const v = TONE_VARS[tone]
   return (
     <span
-      className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] leading-4', className)}
+      className={cn('status-badge', className)}
       style={{
         color: v.text,
         background: tone === 'default' ? 'var(--surface-2)' : `color-mix(in srgb, ${v.bg} 14%, transparent)`

@@ -59,7 +59,7 @@ export default function PlateKeyboard({ open, onOpenChange, value, onChange }: P
                 key={i}
                 className={cn(
                   'flex h-[38px] flex-1 items-center justify-center rounded-md border font-mono text-[17px] font-semibold',
-                  i < value.length ? 'border-[var(--primary)] bg-[var(--primary)] text-white' : 'border-[var(--hairline-strong)] bg-[var(--surface-1)] text-[var(--ink)]',
+                  i < value.length ? 'border-[var(--primary)] bg-[var(--primary)] text-[var(--on-primary)]' : 'border-[var(--hairline-strong)] bg-[var(--surface-1)] text-[var(--ink)]',
                   i === value.length && 'border-[var(--primary-hover)]'
                 )}
               >

@@ -85,7 +85,7 @@ export default function CustomerDetailPage() {
           <div className="card flex items-center gap-3" style={{ background: 'var(--surface-2)' }}>
             <div
               className="flex h-12 w-12 items-center justify-center rounded-full text-[20px] font-semibold"
-              style={{ background: 'rgba(94, 106, 210, 0.2)', color: 'var(--primary-hover)' }}
+              style={{ background: 'color-mix(in srgb, var(--primary) 20%, transparent)', color: 'var(--primary-hover)' }}
             >
               {customer.name.charAt(0)}
             </div>

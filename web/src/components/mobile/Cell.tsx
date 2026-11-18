@@ -19,7 +19,7 @@ export default function Cell({ title, label, right, onClick, className }: CellPr
   return (
     <div
       className={cn(
-        'flex items-center gap-2 border-b py-[13px]',
+        'data-cell flex items-center border-b py-[13px]',
         clickable && 'pressable cursor-pointer',
         className
       )}
@@ -28,12 +28,12 @@ export default function Cell({ title, label, right, onClick, className }: CellPr
       role={clickable ? 'button' : undefined}
     >
       <div className="min-w-0 flex-1">
-        <div className="text-[15px] leading-snug" style={{ color: 'var(--ink)' }}>{title}</div>
+        <div className="cell-title" style={{ color: 'var(--ink)' }}>{title}</div>
         {label != null && label !== '' && (
-          <div className="mt-0.5 text-[12px] leading-snug" style={{ color: 'var(--ink-subtle)' }}>{label}</div>
+          <div className="cell-description">{label}</div>
         )}
       </div>
-      {right != null && <div className="shrink-0 text-[12px]" style={{ color: 'var(--ink-subtle)' }}>{right}</div>}
+      {right != null && <div className="cell-value shrink-0" style={{ color: 'var(--ink-subtle)' }}>{right}</div>}
       {clickable && <ChevronRight size={16} className="shrink-0" style={{ color: 'var(--ink-tertiary)' }} />}
     </div>
   )

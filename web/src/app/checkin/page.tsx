@@ -433,7 +433,7 @@ export default function CheckinPage() {
                   type="button"
                   className="pressable rounded-full border px-2.5 py-0.5 text-[12px]"
                   style={active
-                    ? { color: '#fff', background: 'var(--primary)', borderColor: 'var(--primary)' }
+                    ? { color: 'var(--on-primary)', background: 'var(--primary)', borderColor: 'var(--primary)' }
                     : { color: 'var(--ink-subtle)', background: 'var(--surface-2)', borderColor: 'var(--hairline)' }}
                   onClick={() => appendComplaint(t)}
                 >

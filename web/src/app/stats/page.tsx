@@ -161,7 +161,7 @@ export default function StatsPage() {
                   <div
                     className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-[12px] font-semibold"
                     style={idx < 3
-                      ? { background: `rgba(94, 106, 210, ${0.28 - idx * 0.08})`, color: 'var(--primary-hover)' }
+                      ? { background: `color-mix(in srgb, var(--primary) ${28 - idx * 8}%, transparent)`, color: 'var(--primary-hover)' }
                       : { background: 'var(--surface-2)', color: 'var(--ink-subtle)' }}
                   >
                     {idx + 1}

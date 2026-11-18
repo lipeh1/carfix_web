@@ -1,4 +1,4 @@
-// PWA manifest（与旧 vite-plugin-pwa manifest 保持一致）
+// PWA 安装信息：启动背景与工作台深色画布保持一致
 import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
@@ -12,8 +12,8 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
-    theme_color: '#010102',
-    background_color: '#010102',
+    theme_color: '#111411',
+    background_color: '#111411',
     icons: [
       { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
       { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },

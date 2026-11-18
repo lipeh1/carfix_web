@@ -1,6 +1,6 @@
 'use client'
 
-// toast 出口：主题跟随系统（不引入 next-themes，用 matchMedia 轻量实现）
+// 消息提示出口：主题跟随系统，字体和实色面板沿用工作台令牌
 import { useEffect, useState } from 'react'
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
 
@@ -26,6 +26,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       style={
         {
+          fontFamily: 'var(--type-sans)',
           '--normal-bg': 'var(--popover)',
           '--normal-text': 'var(--popover-foreground)',
           '--normal-border': 'var(--border)',

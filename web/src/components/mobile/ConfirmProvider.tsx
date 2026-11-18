@@ -60,7 +60,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => settle(true)}
-              className={entry?.options.danger ? 'bg-destructive text-white hover:bg-destructive/90' : ''}
+              className={entry?.options.danger ? 'bg-destructive text-[var(--on-danger)] hover:bg-destructive/90' : ''}
             >
               {entry?.options.confirmText ?? '确定'}
             </AlertDialogAction>
