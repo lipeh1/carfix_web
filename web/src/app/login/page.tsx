@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Wrench } from 'lucide-react'
 import BottomSheet from '@/components/mobile/BottomSheet'
 import Field from '@/components/mobile/Field'
 import RecoveryCodeSheet from '@/components/RecoveryCodeSheet'
@@ -114,20 +114,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div
-      className="flex min-h-screen items-center justify-center px-6"
-      style={{ background: 'var(--canvas)' }}
-    >
-      <div className="w-full max-w-[360px] text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/icons/icon-192.png" alt="" className="mx-auto h-16 w-16 rounded-[14px]" />
-        <div
-          className="mt-4 text-[24px] font-semibold"
-          style={{ color: 'var(--ink)', fontFamily: 'var(--type-heading)' }}
-        >
-          汽修管理系统
-        </div>
-        <div className="mt-2 mb-6 text-[13px]" style={{ color: 'var(--ink-subtle)' }}>
+    <div className="login-page">
+      <main className="login-form">
+        <h1><Wrench size={22} strokeWidth={1.7} aria-hidden="true" />汽修管理系统</h1>
+        <div className="mb-4 text-[14px]" style={{ color: 'var(--ink-muted)' }}>
           {initialized ? '输入访问密码继续' : '首次使用，请设置访问密码'}
         </div>
 
@@ -141,6 +131,7 @@ export default function LoginPage() {
           <Input
             type="password"
             name="password"
+            aria-label={initialized ? '访问密码' : '设置密码'}
             value={password}
             onChange={e => setPassword(e.target.value)}
             placeholder={initialized ? '访问密码' : '设置密码（至少 6 位）'}
@@ -156,6 +147,7 @@ export default function LoginPage() {
             <Input
               type="password"
               name="confirm"
+              aria-label="确认密码"
               value={confirm}
               onChange={e => setConfirm(e.target.value)}
               placeholder="确认密码"
@@ -176,8 +168,7 @@ export default function LoginPage() {
         {initialized && (
           <button
             type="button"
-            className="pressable mt-3 text-[13px]"
-            style={{ color: 'var(--primary)' }}
+            className="inline-action mt-1"
             onClick={openRecover}
           >
             忘记密码？
@@ -192,7 +183,7 @@ export default function LoginPage() {
 
         {/* 备案号：由 ICP_BEIAN / POLICE_BEIAN 环境变量注入，未配置时不渲染 */}
         <ComplianceFooter />
-      </div>
+      </main>
 
       {/* 找回密码：恢复码 + 新密码 */}
       <BottomSheet open={showRecover} onOpenChange={setShowRecover} title="找回密码">
