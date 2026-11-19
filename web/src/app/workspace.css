@@ -487,17 +487,18 @@
 .report-overview > .section-title { margin: 0; }
 .report-revenue { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; }
 .report-revenue .amount { font-size: 32px; font-weight: 500; }
+.report-revenue.is-zero, .report-revenue.is-zero .amount { color: var(--ink-subtle); font-size: 14px; font-weight: 400; }
 .report-counts { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 13px; color: var(--ink-muted); }
 .report-counts b { font-family: var(--type-mono); font-weight: 500; color: var(--ink); }
 .report-section { min-width: 0; }
 .report-section > .section-title { margin-bottom: 20px; }
-.report-chart { display: flex; align-items: flex-end; gap: 8px; height: 224px; padding-top: 32px; border-bottom: 1px solid var(--hairline-strong); }
-.report-month { height: 100%; flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
-.report-bar-area { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
-.report-bar { width: min(36px, 60%); position: relative; background: var(--hairline-strong); min-height: 1px; }
-.report-bar.is-current { background: var(--primary); }
-.report-bar > span { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); white-space: nowrap; font-family: var(--type-mono); font-size: 11px; color: var(--ink-muted); }
-.report-month > time { flex-shrink: 0; padding-block: 12px; font-size: 12px; font-family: var(--type-mono); color: var(--ink-subtle); }
+.report-chart { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 16px; border-block: 1px solid var(--hairline); padding-block: 8px; }
+.report-month { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; min-height: 32px; font: 400 13px/1.5 var(--type-mono); }
+.report-month time { color: var(--ink-subtle); font-size: 12px; }
+.report-month > span:last-child { text-align: right; }
+.report-bar-area { display: block; height: 6px; background: var(--surface-2); }
+.report-bar { display: block; height: 100%; background: var(--hairline-strong); }
+.report-bar.is-current { background: var(--primary); transform-origin: left; animation: fill-grow 280ms ease-out both; }
 .report-chart-total { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding-top: 12px; color: var(--ink-muted); font-size: 12px; }
 .report-chart-total .amount { font-size: 15px; font-weight: 500; }
 .report-status-row { display: flex; align-items: center; gap: 12px; padding-block: 12px; border-bottom: 1px solid var(--hairline); font-size: 13px; }
@@ -513,8 +514,12 @@
 .report-unpaid { border-top: 2px solid var(--hairline-strong); padding-top: 16px; }
 .report-unpaid > .flex-between { flex-wrap: wrap; gap: 8px; }
 .report-unpaid .amount { font-size: 24px; }
-.report-unpaid-row { display: block; width: 100%; text-align: left; padding: 20px 0; border-bottom: 1px solid var(--hairline); cursor: pointer; }
+.report-unpaid-row { display: block; width: 100%; text-align: left; padding: 12px 0; border-bottom: 1px solid var(--hairline); cursor: pointer; }
+.unpaid-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.unpaid-line small { font: 400 12px var(--type-sans); color: var(--ink-subtle); }
 .report-unpaid-row .amount { font-size: 20px; }
+.report-quiet { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; align-self: start; gap: 8px; border-block: 1px solid var(--hairline); padding-block: 12px; }
+.report-quiet .section-title { margin: 0; font: 500 14px var(--type-sans); }
 [data-slot='button'][data-variant='link'] { color: var(--primary-hover); background: transparent; border: 0; }
 
 @media (min-width: 768px) {
@@ -529,7 +534,6 @@
   .report-overview { grid-column: 1 / -1; }
   .report-trend { grid-column: 1; }
   .report-unpaid { grid-column: 2; grid-row: 2 / 4; }
-  .report-chart { height: 280px; }
 }
 @media (min-width: 1024px) {
   .dashboard-grid:has(> .dashboard-financial) { grid-template-columns: minmax(0, 1.6fr) minmax(240px, 1fr); gap: 32px 48px; }
