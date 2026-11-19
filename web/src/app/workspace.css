@@ -191,15 +191,11 @@
 .order-row-complaint { color: var(--ink-subtle); font-size: 12px; overflow-wrap: anywhere; grid-column: 1; }
 .order-row-amount { display: flex; align-items: center; gap: 8px; font-family: var(--type-mono); font-size: 14px; white-space: nowrap; grid-column: 2; grid-row: 2 / 4; }
 .order-row-amount svg { color: var(--ink-tertiary); }
-.order-create {
-  position: fixed; right: 16px; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 30;
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding-inline: 16px;
-  border: 1px solid var(--primary); border-radius: 6px; background: var(--primary); color: var(--on-primary); font-size: 14px; font-weight: 600;
-}
-/* 新建入口与悬浮底栏之间保留触控间隔 */
-@media (max-width: 1023px) {
-  .order-create { bottom: calc(100px + env(safe-area-inset-bottom)); }
-}
+.list-create, .list-empty [data-slot='button'] { min-height: 44px; padding-inline: 16px; }
+.app-nav-actions > .list-create { color: var(--on-primary); }
+.inline-action { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--primary-hover); font-size: 13px; font-weight: 500; cursor: pointer; }
+.list-empty { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 12px; min-height: clamp(152px, 32dvh, 268px); padding-block: 24px; }
+.list-empty > p { font: 500 19px/1.55 var(--type-heading); color: var(--ink); overflow-wrap: anywhere; }
 
 /* 工单详情：身份信息、作业记录与财务单据使用不同的表面形态 */
 .order-detail-grid { display: grid; gap: 16px; align-items: start; }
@@ -324,7 +320,6 @@
   .tabs-shell .scroll-area, .tabs-shell .page-content.scroll-area { padding-bottom: 32px; }
   .tabs-shell .scroll-tabs { padding-inline: max(32px, calc((100% - 1176px) / 2)); }
   .orders-toolbar { padding: 24px 32px 16px; }
-  .order-create { bottom: 24px; right: max(32px, calc((100vw - 1360px) / 2)); }
   .order-detail-grid.has-settlement { grid-template-columns: minmax(0, 1fr) 360px; }
   .order-actions { padding-inline: 32px; }
   .order-actions-inner { max-width: 1176px; }
@@ -451,12 +446,12 @@
 .record-summary .meta-line { flex-basis: 100%; font-size: 12px; color: var(--ink-subtle); }
 .record-footer { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
 .record-footer > button { display: flex; margin-inline: auto; max-width: 520px; min-height: 44px; }
-.customer-row { padding-block: 20px; }
+.customer-row { padding-block: 14px; }
 .customer-row .cell-title { font-size: 18px; font-weight: 500; }
-.customer-row .cell-description, .customer-row .cell-value { font-family: var(--type-mono); }
 .checkin-page .scan-link { min-height: 40px; padding-inline: 0; background: transparent; border-radius: 0; }
-.empty-state { padding: 24px 0; color: var(--ink-subtle); font-size: 13px; text-align: left; }
-.empty-state::before { content: ''; display: inline-block; width: 16px; height: 1px; margin-right: 12px; vertical-align: middle; background: var(--hairline-strong); }
+.customer-contact { display: flex; flex-wrap: wrap; gap: 0 16px; color: var(--ink-muted); }
+.customer-contact, .customer-row time, .customer-row .cell-value { font-family: var(--type-mono); }
+.record-empty, .empty-state { padding-block: 12px; color: var(--ink-subtle); font-size: 13px; text-align: left; }
 .report-layout { display: grid; gap: 28px; }
 .report-overview { display: flex; flex-direction: column; gap: 16px; border-bottom: 2px solid var(--ink); padding-bottom: 24px; }
 .report-overview > .section-title { margin: 0; }

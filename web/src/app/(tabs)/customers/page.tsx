@@ -1,10 +1,10 @@
 'use client'
 
 // 客户列表：搜索 + 新增客户弹窗（自旧 Customers.vue 移植）
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Plus } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import NavBar from '@/components/mobile/NavBar'
 import Cell from '@/components/mobile/Cell'
 import Empty from '@/components/mobile/Empty'
@@ -13,34 +13,21 @@ import Field from '@/components/mobile/Field'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { Search } from 'lucide-react'
 import { getCustomers, createCustomer } from '@/lib/api'
-import type { Customer } from '@/lib/types'
+import { useListView } from '@/lib/useListView'
 import { formatDateTime } from '@/lib/format'
 
 export default function CustomersPage() {
   const router = useRouter()
 
-  const [customers, setCustomers] = useState<Customer[]>([])
   const [keyword, setKeyword] = useState('')
-  const [loading, setLoading] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({ name: '', phone: '', remark: '' })
   // 保存中状态：防弱网双击重复建档
   const [adding, setAdding] = useState(false)
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await getCustomers({ keyword })
-      setCustomers(data)
-    } catch { /* 静默 */ } finally {
-      setLoading(false)
-    }
-  }, [keyword])
-
-  useEffect(() => { void loadData() }, [loadData])
-
+  const read = useCallback(() => getCustomers({ keyword }), [keyword])
+  const { rows: customers, phase, refresh: loadData } = useListView(read)
   const submitAdd = async () => {
     if (adding) return
     if (!form.name) return toast('请输入姓名')
@@ -57,16 +44,17 @@ export default function CustomersPage() {
     }
   }
 
+  const empty = phase === 'ready' && customers.length === 0
+  const addCustomer = (
+    <Button className="list-create" onClick={() => setShowAdd(true)}><Plus size={16} />新增客户</Button>
+  )
+
   return (
     <div className="page-container page-frame">
       <NavBar
         title="客户"
         back={false}
-        right={
-          <button type="button" aria-label="新增客户" className="pressable" onClick={() => setShowAdd(true)}>
-            <Plus size={20} />
-          </button>
-        }
+        right={(!empty || keyword) && addCustomer}
       />
 
       {/* 搜索框 */}
@@ -85,7 +73,7 @@ export default function CustomersPage() {
 
       <div className="page-content scroll-area">
         {/* 首次加载骨架：与客户行信息结构对应 */}
-        {loading && customers.length === 0 &&
+        {phase === 'loading' && customers.length === 0 &&
           Array.from({ length: 7 }, (_, i) => (
             <div key={i} className="border-b py-[13px]" style={{ borderColor: 'var(--hairline)' }}>
               <div className="flex-between">
@@ -104,13 +92,24 @@ export default function CustomersPage() {
             key={c.id}
             className="customer-row"
             title={c.name}
-            label={<>{c.phone}{!!c.vehicles?.length && <span className="block">{c.vehicles.map(v => v.plateNumber).join(' · ')}</span>}{c.lastVisitAt && <span className="block">最近到店 {formatDateTime(c.lastVisitAt)}</span>}</>}
+            label={<>
+              <span className="customer-contact">
+                {c.phone}
+                {!!c.vehicles?.length && <span>{c.vehicles.map(v => v.plateNumber).join(' · ')}</span>}
+              </span>
+              {c.lastVisitAt && <span className="block">最近到店 <time>{formatDateTime(c.lastVisitAt)}</time></span>}
+            </>}
             right={(c._count?.vehicles || 0) > 0 ? <span>{c._count?.vehicles}辆车</span> : null}
             onClick={() => router.push(`/customers/${c.id}`)}
           />
         ))}
 
-        {customers.length === 0 && !loading && <Empty description="暂无客户" />}
+        {empty && (keyword ? (
+          <Empty page description="没有匹配的客户"><button className="inline-action" onClick={() => setKeyword('')}>清除搜索</button></Empty>
+        ) : <Empty page description="还没有客户档案">{addCustomer}</Empty>)}
+        {phase === 'error' && !customers.length && (
+          <Empty page description="客户加载失败"><button className="inline-action" onClick={loadData}>重试</button></Empty>
+        )}
       </div>
 
       {/* 新增客户弹窗 */}

@@ -15,26 +15,26 @@ interface CellProps {
 }
 
 export default function Cell({ title, label, right, onClick, className }: CellProps) {
-  const clickable = !!onClick
+  const Row = onClick ? 'button' : 'div'
   return (
-    <div
+    <Row
+      type={onClick ? 'button' : undefined}
       className={cn(
-        'data-cell flex items-center border-b py-[13px]',
-        clickable && 'pressable cursor-pointer',
+        'data-cell flex w-full items-center border-b py-[13px] text-left',
+        onClick && 'pressable cursor-pointer',
         className
       )}
       style={{ borderColor: 'var(--hairline)' }}
       onClick={onClick}
-      role={clickable ? 'button' : undefined}
     >
-      <div className="min-w-0 flex-1">
-        <div className="cell-title" style={{ color: 'var(--ink)' }}>{title}</div>
+      <span className="min-w-0 flex-1">
+        <span className="cell-title block" style={{ color: 'var(--ink)' }}>{title}</span>
         {label != null && label !== '' && (
-          <div className="cell-description">{label}</div>
+          <span className="cell-description block">{label}</span>
         )}
-      </div>
-      {right != null && <div className="cell-value shrink-0" style={{ color: 'var(--ink-subtle)' }}>{right}</div>}
-      {clickable && <ChevronRight size={16} className="shrink-0" style={{ color: 'var(--ink-tertiary)' }} />}
-    </div>
+      </span>
+      {right != null && <span className="cell-value shrink-0" style={{ color: 'var(--ink-subtle)' }}>{right}</span>}
+      {onClick && <ChevronRight aria-hidden="true" size={16} className="shrink-0" style={{ color: 'var(--ink-tertiary)' }} />}
+    </Row>
   )
 }

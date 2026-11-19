@@ -10,9 +10,11 @@ interface InfiniteScrollProps {
   onLoadMore: () => Promise<unknown>
   /** 空列表时不渲染底部提示（空态由页面自己画） */
   isEmpty?: boolean
+  /** 结果较少时可传空字符串，省去单独的列表尾行。 */
+  finishedLabel?: string
 }
 
-export default function InfiniteScroll({ hasMore, onLoadMore, isEmpty }: InfiniteScrollProps) {
+export default function InfiniteScroll({ hasMore, onLoadMore, isEmpty, finishedLabel = '没有更多了' }: InfiniteScrollProps) {
   const sentinelRef = useRef<HTMLDivElement>(null)
   // 用 ref 保存最新的加载函数，避免 observer 反复重建（在 effect 中同步，不在渲染期写 ref）
   const loadRef = useRef(onLoadMore)
@@ -43,7 +45,7 @@ export default function InfiniteScroll({ hasMore, onLoadMore, isEmpty }: Infinit
     return () => observer.disconnect()
   }, [hasMore])
 
-  if (isEmpty) return null
+  if (isEmpty || (!hasMore && !finishedLabel)) return null
 
   return (
     <div ref={sentinelRef} className="flex items-center justify-center gap-2 py-4 text-[12px]" style={{ color: 'var(--ink-subtle)' }}>
@@ -53,7 +55,7 @@ export default function InfiniteScroll({ hasMore, onLoadMore, isEmpty }: Infinit
           加载中...
         </>
       ) : (
-        '没有更多了'
+        finishedLabel
       )}
     </div>
   )

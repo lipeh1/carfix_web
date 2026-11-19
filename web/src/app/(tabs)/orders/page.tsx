@@ -1,8 +1,9 @@
 'use client'
 
 // 工单列表：搜索 + 8 状态 tabs + 下拉刷新 + 无限滚动 + 骨架屏（自旧 Orders.vue 移植）
-import { Suspense, useCallback, useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useCallback, useState } from 'react'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { ChevronRight, Plus, Search } from 'lucide-react'
 import NavBar from '@/components/mobile/NavBar'
 import Empty from '@/components/mobile/Empty'
@@ -11,8 +12,9 @@ import { StatusBadge } from '@/components/mobile/Badge'
 import PullToRefresh from '@/components/mobile/PullToRefresh'
 import InfiniteScroll from '@/components/mobile/InfiniteScroll'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { getOrders } from '@/lib/api'
-import type { WorkOrder } from '@/lib/types'
+import { useListView } from '@/lib/useListView'
 import { fenToYuan } from '@/lib/money'
 import { formatDateTime } from '@/lib/format'
 
@@ -28,43 +30,21 @@ const TABS = [
 ]
 
 function OrdersPageInner() {
-  const router = useRouter()
   // 支持 /orders?status=xxx 直达指定状态（首页概览数字跳转入口）
   const queryStatus = useSearchParams().get('status') ?? ''
 
   const [activeTab, setActiveTab] = useState(TABS.some(t => t.value === queryStatus) ? queryStatus : '')
   const [keyword, setKeyword] = useState('')
-  const [orders, setOrders] = useState<WorkOrder[]>([])
-  const [loading, setLoading] = useState(false)
-  const [finished, setFinished] = useState(false)
-
-  const loadOrders = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params: Record<string, string> = {}
-      if (activeTab) params.status = activeTab
-      if (keyword) params.keyword = keyword
-      const data = await getOrders(params)
-      setOrders(data)
-      setFinished(true)
-    } catch { /* 静默 */ } finally {
-      setLoading(false)
-    }
-  }, [activeTab, keyword])
-
-  // 初次与 tab/搜索条件变化后加载，清空列表驱动骨架
-  useEffect(() => {
-    setOrders([])
-    setFinished(false)
-    void loadOrders()
-  }, [loadOrders])
-
-  // 骨架屏展示条件：正在加载且当前无内容（首次进入或切 tab/搜索清空后）
-  const showSkeleton = loading && orders.length === 0
+  const read = useCallback(() => getOrders({ status: activeTab, keyword }), [activeTab, keyword])
+  const { rows: orders, phase, refresh: loadOrders } = useListView(read)
+  const showSkeleton = phase === 'loading' && !orders.length
+  const filtered = Boolean(activeTab || keyword)
+  const empty = phase === 'ready' && orders.length === 0
+  const checkin = <Button asChild className="list-create"><Link href="/checkin"><Plus size={16} />新建接车</Link></Button>
 
   return (
     <div className="page-container page-frame">
-      <NavBar title="工单" back={false} />
+      <NavBar title="工单" back={false} right={(!empty || filtered) && checkin} />
 
       {/* 搜索框 */}
       <div className="orders-toolbar">
@@ -75,13 +55,13 @@ function OrdersPageInner() {
             placeholder="搜索工单号/车牌号/客户名/诉求"
             aria-label="搜索工单号/车牌号/客户名/诉求"
             onChange={e => setKeyword(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { setOrders([]); setFinished(false); void loadOrders() } }}
+            onKeyDown={e => { if (e.key === 'Enter') void loadOrders() }}
           />
         </div>
         <button
           type="button"
           className="pressable orders-search-action"
-          onClick={() => { setOrders([]); setFinished(false); void loadOrders() }}
+          onClick={loadOrders}
         >
           搜索
         </button>
@@ -106,14 +86,13 @@ function OrdersPageInner() {
 
           {/* 列表直接呈现，手机分行、桌面对齐固定列，不为每行播放进场 */}
           {orders.map(order => (
-            <button
+            <Link
               key={order.id}
-              type="button"
+              href={`/orders/${order.id}`}
               className="order-row"
-              onClick={() => router.push(`/orders/${order.id}`)}
             >
               <span className="order-row-identity">
-                <span className="order-plate">{order.vehicle?.plateNumber || '未知车辆'}</span>
+                <span className="order-plate">{order.vehicle?.plateNumber || order.orderNo}</span>
                 <StatusBadge status={order.status} />
               </span>
               <span className="order-row-customer">{order.customer?.name || '未知客户'}</span>
@@ -125,25 +104,30 @@ function OrdersPageInner() {
               <span className="order-row-meta">
                 {(order.vehicle?.brand || order.vehicle?.model) && <span>{order.vehicle.brand} {order.vehicle.model}</span>}
                 <time>进厂 {formatDateTime(order.createdAt)}</time>
-                <span className="font-mono">{order.orderNo}</span>
+                {order.vehicle?.plateNumber && <span className="font-mono">{order.orderNo}</span>}
               </span>
-            </button>
+            </Link>
           ))}
 
-          {!showSkeleton && orders.length === 0 && !loading && <Empty description="暂无工单" />}
-          <InfiniteScroll hasMore={!finished} onLoadMore={loadOrders} isEmpty={orders.length === 0 && !loading} />
+          {empty && (filtered ? (
+            <Empty page description={keyword ? '没有匹配的工单' : '当前状态下没有工单'}>
+              <button className="inline-action" onClick={() => { setKeyword(''); setActiveTab('') }}>查看全部工单</button>
+            </Empty>
+          ) : (
+            <Empty page description="还没有工单，来车时从这里登记">{checkin}</Empty>
+          ))}
+          {phase === 'error' && !orders.length && (
+            <Empty page description="工单加载失败"><button className="inline-action" onClick={loadOrders}>重试</button></Empty>
+          )}
+          <InfiniteScroll
+            hasMore={showSkeleton}
+            onLoadMore={loadOrders}
+            isEmpty={!orders.length}
+            finishedLabel={orders.length > 1 ? `共 ${orders.length} 张工单` : ''}
+          />
         </div>
       </PullToRefresh>
 
-      {/* 接车入口使用紧凑矩形按钮，避开导航与底部安全区 */}
-      <button
-        type="button"
-        aria-label="新建接车"
-        className="order-create pressable"
-        onClick={() => router.push('/checkin')}
-      >
-        <Plus size={18} strokeWidth={1.7} /> 新建接车
-      </button>
     </div>
   )
 }

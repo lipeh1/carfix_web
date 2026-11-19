@@ -1,7 +1,7 @@
 'use client'
 
 // 提醒列表：3 状态 tabs + 详情弹窗 + 标记已提醒（自旧 Reminders.vue 移植）
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 import NavBar from '@/components/mobile/NavBar'
 import Cell from '@/components/mobile/Cell'
@@ -16,19 +16,17 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { getReminders, updateReminder } from '@/lib/api'
 import type { Reminder } from '@/lib/types'
+import { useListView } from '@/lib/useListView'
 import { getReminderTypeLabel, formatDate, formatDateTime } from '@/lib/format'
 
 const TABS = [
-  { label: '待提醒', value: 'pending' },
-  { label: '已提醒', value: 'done' },
-  { label: '全部', value: '' }
+  { label: '待提醒', value: 'pending', empty: '暂时没有要跟进的提醒' },
+  { label: '已提醒', value: 'done', empty: '还没有已提醒记录' },
+  { label: '全部', value: '', empty: '还没有提醒记录' }
 ]
 
 export default function RemindersPage() {
   const [activeTab, setActiveTab] = useState('pending')
-  const [reminders, setReminders] = useState<Reminder[]>([])
-  // 首次/切 tab 加载中状态，驱动骨架屏
-  const [loading, setLoading] = useState(true)
   const [showDetail, setShowDetail] = useState(false)
   const [current, setCurrent] = useState<Reminder | null>(null)
   // 标记已提醒的补充信息
@@ -36,20 +34,8 @@ export default function RemindersPage() {
   // 标记中状态：防弱网双击重复提交
   const [marking, setMarking] = useState(false)
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params: Record<string, string> = {}
-      if (activeTab) params.status = activeTab
-      const data = await getReminders(params)
-      setReminders(data)
-    } catch { /* 静默 */ } finally {
-      setLoading(false)
-    }
-  }, [activeTab])
-
-  useEffect(() => { void loadData() }, [loadData])
-
+  const read = useCallback(() => getReminders(activeTab ? { status: activeTab } : {}), [activeTab])
+  const { rows: reminders, phase, refresh: loadData } = useListView(read)
   const openDetail = (item: Reminder) => {
     setCurrent(item)
     // 打开新条目时重置待填项，避免上一条的反馈串到下一条
@@ -84,7 +70,7 @@ export default function RemindersPage() {
 
       <div className="page-content scroll-area">
         {/* 首次加载骨架：与提醒行信息结构对应 */}
-        {loading &&
+        {phase === 'loading' &&
           Array.from({ length: 7 }, (_, i) => (
             <div key={i} className="border-b py-[13px]" style={{ borderColor: 'var(--hairline)' }}>
               <div className="flex-between">
@@ -97,22 +83,34 @@ export default function RemindersPage() {
             </div>
           ))}
 
-        {!loading && (
-          <>
-            {reminders.map(item => (
+        {phase === 'ready' && reminders.map(item => (
               <Cell
                 key={item.id}
                 className="reminder-work-row"
-                title={<><span className="order-plate">{item.vehicle?.plateNumber || getReminderTypeLabel(item.type)}</span><Badge tone={item.type === 'maintenance' ? 'warning' : 'primary'}>{getReminderTypeLabel(item.type)}</Badge></>}
-                label={<>{item.content || getReminderTypeLabel(item.type)}{(item.vehicle?.brand || item.vehicle?.model) && <span className="block">{item.vehicle?.brand} {item.vehicle?.model}</span>}</>}
+                title={<>
+                  <span className="order-plate">{item.vehicle?.plateNumber || getReminderTypeLabel(item.type)}</span>
+                  {item.vehicle?.plateNumber && <Badge tone={item.type === 'maintenance' ? 'warning' : 'primary'}>{getReminderTypeLabel(item.type)}</Badge>}
+                </>}
+                label={<>
+                  {item.content}
+                  {(item.vehicle?.brand || item.vehicle?.model) && <span className="block">{item.vehicle?.brand} {item.vehicle?.model}</span>}
+                </>}
                 right={
-                  <span className="reminder-date">建议 <time className="font-mono block">{formatDate(item.remindDate)}</time></span>
+                  <span className="reminder-date">
+                    建议日期<time className="font-mono block">{formatDate(item.remindDate)}</time>
+                    {!activeTab && <span>{item.status === 'done' ? '已提醒' : '待提醒'}</span>}
+                  </span>
                 }
                 onClick={() => openDetail(item)}
               />
-            ))}
-            {reminders.length === 0 && <Empty description="暂无提醒" />}
-          </>
+        ))}
+        {phase === 'error' && (
+          <Empty page description="提醒加载失败"><button className="inline-action" onClick={loadData}>重试</button></Empty>
+        )}
+        {phase === 'ready' && !reminders.length && (
+          <Empty page description={TABS.find(tab => tab.value === activeTab)?.empty || '还没有提醒记录'}>
+            {activeTab && <button className="inline-action" onClick={() => setActiveTab('')}>查看全部提醒</button>}
+          </Empty>
         )}
       </div>
 

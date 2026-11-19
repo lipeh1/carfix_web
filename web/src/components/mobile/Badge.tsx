@@ -1,6 +1,6 @@
 // 状态徽章：紧凑文字、小圆点与语义底色，不改变既有状态映射
 import { cn } from '@/lib/utils'
-import { getOrderStatusTone } from '@/lib/format'
+import { getOrderStatusLabel, getOrderStatusTone } from '@/lib/format'
 
 type Tone = 'primary' | 'success' | 'warning' | 'danger' | 'default'
 
@@ -30,6 +30,5 @@ export function Badge({ tone = 'default', children, className }: { tone?: Tone; 
 
 // 工单状态徽章（按状态取语义色）
 export function StatusBadge({ status, className }: { status: string; className?: string }) {
-  const label = { pending_inspection: '待检测', pending_quote: '待报价', repairing: '维修中', pending_quality_check: '待质检', pending_settlement: '待结算', completed: '已完成', cancelled: '已取消' }[status] || status
-  return <Badge tone={getOrderStatusTone(status)} className={className}>{label}</Badge>
+  return <Badge tone={getOrderStatusTone(status)} className={className}>{getOrderStatusLabel(status)}</Badge>
 }
