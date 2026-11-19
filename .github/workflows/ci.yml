@@ -79,7 +79,8 @@ jobs:
       github.ref_name == github.event.repository.default_branch &&
       vars.LIGHTHOUSE_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 首次需要上传全部镜像，为跨地域链路预留传输时间
+    timeout-minutes: 60
     environment: production
     concurrency:
       group: lighthouse-production
@@ -121,15 +122,63 @@ jobs:
           test -n "$DEPLOY_KEY"
           test -n "$DEPLOY_KNOWN_HOSTS"
           sha256sum -c release.tar.sha256
+          echo "发布包大小：$(du -h release.tar | cut -f1)"
+          umask 077
           key_dir="$RUNNER_TEMP/carweb-ssh"
           install -d -m 700 "$key_dir"
           printf '%s\n' "$DEPLOY_KEY" > "$key_dir/key"
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$key_dir/known_hosts"
           chmod 600 "$key_dir/key" "$key_dir/known_hosts"
-          trap 'rm -f -- "$key_dir/key" "$key_dir/known_hosts"' EXIT
-          options=(-i "$key_dir/key" -o BatchMode=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$key_dir/known_hosts" -o ConnectTimeout=20 -o ServerAliveInterval=15)
-          target="$DEPLOY_USER@$DEPLOY_HOST"
+          trap 'rm -f -- "$key_dir/key" "$key_dir/known_hosts" "$key_dir/config"' EXIT
+          # SSH 与 rsync 共用连接配置，持续保留严格主机校验
+          cat > "$key_dir/config" <<EOF
+          Host lighthouse
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            Port $DEPLOY_PORT
+            IdentityFile "$key_dir/key"
+            UserKnownHostsFile "$key_dir/known_hosts"
+            IdentitiesOnly yes
+            BatchMode yes
+            StrictHostKeyChecking yes
+            ConnectTimeout 20
+            ServerAliveInterval 15
+            ServerAliveCountMax 3
+          EOF
+          if ! command -v rsync >/dev/null; then
+            sudo -n apt-get update
+            sudo -n apt-get install -y rsync
+          fi
           remote_dir="/opt/carweb/releases/$RELEASE_SHA"
-          ssh "${options[@]}" -p "$DEPLOY_PORT" "$target" "test -f /opt/carweb/.env && mkdir -p '$remote_dir'"
-          scp "${options[@]}" -P "$DEPLOY_PORT" release.tar release.tar.sha256 "$target:$remote_dir/"
-          ssh "${options[@]}" -p "$DEPLOY_PORT" "$target" "set -e; cd '$remote_dir'; sha256sum -c release.tar.sha256; tar -xf release.tar; bash deploy.sh /opt/carweb; rm -f release.tar release.tar.sha256"
+          echo '检查 SSH 连接、运行配置和上传工具'
+          ssh -F "$key_dir/config" lighthouse "bash -s -- '$remote_dir'" <<'REMOTE'
+          set -Eeuo pipefail
+          test -f /opt/carweb/.env || { echo '请先初始化 /opt/carweb/.env' >&2; exit 1; }
+          docker info >/dev/null
+          docker compose version
+          if ! command -v rsync >/dev/null; then
+            echo '服务器缺少 rsync，正在安装'
+            sudo -n apt-get update
+            sudo -n apt-get install -y rsync
+          fi
+          mkdir -p -- "$1"
+          REMOTE
+          # 部分文件留在该版本目录；网络中断后重试可复用已传数据，完成后再校验整包
+          uploaded=false
+          for attempt in 1 2 3; do
+            echo "上传发布包，第 $attempt/3 次尝试"
+            if rsync -rt --checksum --partial-dir=.rsync-partial --timeout=120 \
+              --info=progress2 --human-readable --outbuf=L \
+              --rsh="ssh -F '$key_dir/config'" \
+              release.tar release.tar.sha256 "lighthouse:$remote_dir/"; then
+              uploaded=true
+              break
+            fi
+            if [[ "$attempt" -lt 3 ]]; then
+              echo '传输中断，10 秒后从已上传的数据继续'
+              sleep 10
+            fi
+          done
+          [[ "$uploaded" == true ]] || { echo '发布包上传失败，尚未执行应用更新' >&2; exit 1; }
+          echo '发布包已传完，开始服务器校验、镜像导入和应用探活'
+          ssh -F "$key_dir/config" lighthouse "set -e; cd '$remote_dir'; sha256sum -c release.tar.sha256; tar -xf release.tar; bash deploy.sh /opt/carweb; rm -f release.tar release.tar.sha256"
