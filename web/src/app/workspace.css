@@ -448,10 +448,23 @@
 .record-footer > button { display: flex; margin-inline: auto; max-width: 520px; min-height: 44px; }
 .customer-row { padding-block: 14px; }
 .customer-row .cell-title { font-size: 18px; font-weight: 500; }
-.checkin-page .scan-link { min-height: 40px; padding-inline: 0; background: transparent; border-radius: 0; }
 .customer-contact { display: flex; flex-wrap: wrap; gap: 0 16px; color: var(--ink-muted); }
 .customer-contact, .customer-row time, .customer-row .cell-value { font-family: var(--type-mono); }
 .record-empty, .empty-state { padding-block: 12px; color: var(--ink-subtle); font-size: 13px; text-align: left; }
+.record-empty { border-bottom: 1px solid var(--hairline); }
+.repair-history > li + li { border-top: 1px solid var(--hairline); }
+.history-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 6px 12px; padding-block: 12px; }
+.history-entry > .order-plate, .history-complaint { overflow-wrap: anywhere; }
+.history-entry .status-badge, .history-amount { justify-self: end; }
+.history-complaint { font-weight: 500; }
+.history-items { grid-column: 1 / -1; color: var(--ink-muted); font-size: 13px; }
+.history-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--ink-subtle); font: 400 12px/1.6 var(--type-mono); overflow-wrap: anywhere; }
+.history-amount { font: 500 14px var(--type-mono); }
+.checkin-section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.checkin-section-head .section-title { margin: 0; }
+.complaint-shortcuts { display: flex; flex-wrap: wrap; column-gap: 12px; }
+.complaint-shortcuts > button { min-height: 36px; padding-inline: 2px; color: var(--primary-hover); font-size: 12px; cursor: pointer; }
+.complaint-shortcuts > button[data-used='true'] { color: var(--ink-muted); text-decoration: underline; text-underline-offset: 4px; }
 .report-layout { display: grid; gap: 28px; }
 .report-overview { display: flex; flex-direction: column; gap: 16px; border-bottom: 2px solid var(--ink); padding-bottom: 24px; }
 .report-overview > .section-title { margin: 0; }

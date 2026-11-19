@@ -381,21 +381,18 @@ export default function CheckinPage() {
         <div className="checkin-context">
         {/* 客户选择 */}
         <div className="card">
-          <div className="section-title">客户信息</div>
-          {/* 扫行驶证一次建档：识别所有人/车牌/品牌型号/VIN，电话需人工补录 */}
-          <button
-            type="button"
-            className="pressable scan-link mb-2 inline-flex items-center gap-2 text-[13px]"
-            style={{ color: 'var(--primary-hover)', border: '1px dashed var(--primary)' }}
-            onClick={() => licenseInputRef.current?.click()}
-          >
-            <ScanLine size={16} />
-            <span>扫行驶证建档</span>
-          </button>
+          <div className="checkin-section-head">
+            <h2 className="section-title">客户信息</h2>
+            {/* 扫行驶证一次建档：识别所有人/车牌/品牌型号/VIN，电话需人工补录 */}
+            <button type="button" className="inline-action" onClick={() => licenseInputRef.current?.click()}>
+              <ScanLine size={16} />
+              <span>扫行驶证建档</span>
+            </button>
+          </div>
           {selectedCustomer ? (
             <Cell title={selectedCustomer.name} label={selectedCustomer.phone} onClick={() => setShowCustomerPicker(true)} />
           ) : (
-            <Cell title="选择客户" right={<span>请选择</span>} onClick={() => setShowCustomerPicker(true)} />
+            <Cell title="选择客户" onClick={() => setShowCustomerPicker(true)} />
           )}
           <Button variant="link" size="sm" className="mt-2 px-0" onClick={() => setShowNewCustomer(true)}>
             + 新建客户
@@ -408,12 +405,12 @@ export default function CheckinPage() {
             <div className="section-title">车辆信息</div>
             {selectedVehicle ? (
               <Cell
-                title={selectedVehicle.plateNumber}
+                title={<span className="order-plate">{selectedVehicle.plateNumber}</span>}
                 label={`${selectedVehicle.brand || ''} ${selectedVehicle.model || ''}`}
                 onClick={() => setShowVehiclePicker(true)}
               />
             ) : (
-              <Cell title="选择车辆" right={<span>请选择</span>} onClick={() => setShowVehiclePicker(true)} />
+              <Cell title="选择车辆" onClick={() => setShowVehiclePicker(true)} />
             )}
             <Button variant="link" size="sm" className="mt-2 px-0" onClick={() => setShowNewVehicle(true)}>
               + 新建车辆
@@ -426,29 +423,15 @@ export default function CheckinPage() {
         {/* 接车信息 */}
         <div className="card">
           <div className="section-title">接车信息</div>
-          {/* 常用诉求标签：点击追加，减少手打 */}
-          <div className="mb-2.5 flex flex-wrap gap-1.5">
-            {COMPLAINT_TAGS.map(t => {
-              const active = form.complaint.includes(t)
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  className="pressable min-h-10 rounded-sm border px-3 py-1 text-[12px]"
-                  style={active
-                    ? { color: 'var(--on-primary)', background: 'var(--primary)', borderColor: 'var(--primary)' }
-                    : { color: 'var(--ink-subtle)', background: 'var(--surface-2)', borderColor: 'var(--hairline)' }}
-                  onClick={() => appendComplaint(t)}
-                >
-                  {t}
-                </button>
-              )
-            })}
-          </div>
           <div className="flex flex-col gap-3">
             <Field label="客户诉求">
-              <Textarea rows={2} value={form.complaint} placeholder="描述故障或需求"
+              <Textarea rows={2} aria-label="客户诉求" value={form.complaint} placeholder="描述故障或需求"
                 onChange={e => setForm(f => ({ ...f, complaint: e.target.value }))} />
+              <div className="complaint-shortcuts" role="group" aria-label="常用诉求">
+                {COMPLAINT_TAGS.map(tag => (
+                  <button key={tag} type="button" data-used={form.complaint.includes(tag)} onClick={() => appendComplaint(tag)}>{tag}</button>
+                ))}
+              </div>
             </Field>
             <Field label="当前里程">
               <Input inputMode="numeric" value={form.mileage} placeholder="公里数"
@@ -587,7 +570,10 @@ export default function CheckinPage() {
         {customerList.map(c => (
           <Cell key={c.id} title={c.name} label={c.phone} onClick={() => selectCustomer(c)} />
         ))}
-        {customerList.length === 0 && <Empty description="暂无客户" />}
+        {customerList.length === 0 && <>
+          <Empty description={customerKeyword ? '没有匹配的客户' : '暂无客户档案'} />
+          <button className="inline-action" onClick={() => { setShowCustomerPicker(false); setShowNewCustomer(true) }}>新建客户</button>
+        </>}
       </BottomSheet>
 
       {/* 车辆选择弹窗 */}
@@ -595,8 +581,7 @@ export default function CheckinPage() {
         {/* 拍车牌快速定位已建档车辆（跨客户） */}
         <button
           type="button"
-          className="pressable scan-link mb-2 inline-flex items-center gap-2 text-[13px]"
-          style={{ color: 'var(--primary-hover)', border: '1px dashed var(--primary)' }}
+          className="inline-action"
           onClick={() => plateInputRef.current?.click()}
         >
           <Camera size={16} />
@@ -610,7 +595,10 @@ export default function CheckinPage() {
             onClick={() => selectVehicle(v)}
           />
         ))}
-        {vehicleList.length === 0 && <Empty description="暂无车辆" />}
+        {vehicleList.length === 0 && <>
+          <Empty description="这位客户还没有车辆" />
+          <button className="inline-action" onClick={() => { setShowVehiclePicker(false); setShowNewVehicle(true) }}>新建车辆</button>
+        </>}
       </BottomSheet>
 
       {/* 新建客户弹窗 */}

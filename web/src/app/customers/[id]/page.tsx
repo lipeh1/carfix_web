@@ -4,13 +4,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Pencil, Phone, CarFront, Plus } from 'lucide-react'
+import { Pencil, Phone, Plus } from 'lucide-react'
 import NavBar from '@/components/mobile/NavBar'
 import Cell from '@/components/mobile/Cell'
 import Empty from '@/components/mobile/Empty'
 import BottomSheet from '@/components/mobile/BottomSheet'
 import Field from '@/components/mobile/Field'
-import { StatusBadge } from '@/components/mobile/Badge'
+import RepairHistory from '@/components/RepairHistory'
 import PageSkeleton from '@/components/PageSkeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -68,6 +68,9 @@ export default function CustomerDetailPage() {
     }
   }
 
+  const hasHistory = Boolean(customer?.vehicles?.length || customer?.workOrders?.length)
+  const checkin = <Button onClick={() => router.push('/checkin')}><Plus size={16} />新建接车</Button>
+
   return (
     <div className="page-container record-page" style={{ paddingBottom: 'calc(84px + env(safe-area-inset-bottom))' }}>
       <NavBar
@@ -103,52 +106,24 @@ export default function CustomerDetailPage() {
             </div>
           )}
 
-          {/* 名下车辆 */}
-          <div className="card">
-            <div className="section-title">名下车辆 ({customer.vehicles?.length || 0})</div>
-            {customer.vehicles?.map((v) => (
-              <Cell
-                key={v.id}
-                title={
-                  <span className="flex items-center gap-2">
-                    <CarFront size={17} style={{ color: 'var(--primary-hover)' }} />
-                    <span className="order-plate">{v.plateNumber}</span>
-                  </span>
-                }
-                label={`${v.brand || ''} ${v.model || ''}`}
-                onClick={() => router.push(`/vehicles/${v.id}`)}
-              />
-            ))}
-            {!customer.vehicles?.length && <Empty description="暂无车辆" />}
-          </div>
+          {customer.vehicles?.length ? (
+            <section className="card">
+              <h2 className="section-title">名下车辆 ({customer.vehicles.length})</h2>
+              {customer.vehicles.map(v => (
+                <Cell key={v.id} title={<span className="order-plate">{v.plateNumber}</span>}
+                  label={[v.brand, v.model].filter(Boolean).join(' ')} onClick={() => router.push(`/vehicles/${v.id}`)} />
+              ))}
+            </section>
+          ) : hasHistory && <p className="record-empty">暂无车辆</p>}
 
-          {/* 历史工单 */}
-          <div className="card">
-            <div className="section-title">历史工单 ({customer.workOrders?.length || 0})</div>
-            {customer.workOrders?.map(o => (
-              <div key={o.id} className="pressable cursor-pointer border-b py-3 last:border-b-0" style={{ borderColor: 'var(--hairline)' }} onClick={() => router.push(`/orders/${o.id}`)}>
-                <div className="flex-between">
-                  <span className="order-plate">{o.vehicle?.plateNumber || '未知车辆'}</span>
-                  <StatusBadge status={o.status} />
-                </div>
-                <div className="mt-1 text-[13px]" style={{ color: 'var(--primary-hover)' }}>
-                  {o.orderNo}
-                </div>
-                <div className="mt-0.5 truncate text-[13px]" style={{ color: 'var(--ink-subtle)' }}>
-                  {o.complaint || '无诉求'}
-                </div>
-                <div className="flex-between mt-1.5">
-                  <span className="text-muted">{formatDateTime(o.createdAt)}</span>
-                  {!!o.settlement?.actualAmount && (
-                    <span className="font-mono text-[14px] font-semibold" style={{ color: 'var(--ink)' }}>
-                      ¥{fenToYuan(o.settlement.actualAmount)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-            {!customer.workOrders?.length && <Empty description="暂无工单" />}
-          </div>
+          {customer.workOrders?.length ? (
+            <section className="card">
+              <h2 className="section-title">历史工单 ({customer.workOrders.length})</h2>
+              <RepairHistory orders={customer.workOrders} showPlate />
+            </section>
+          ) : hasHistory ? <p className="record-empty">暂无历史工单</p> : (
+            <Empty page description="这位客户还没有车辆和工单">{checkin}</Empty>
+          )}
         </div>
       ) : !loadFailed ? (
         <PageSkeleton cards={2} />
@@ -159,14 +134,12 @@ export default function CustomerDetailPage() {
       )}
 
       {/* 底部快捷操作：材质浮层 + 安全区 */}
-      <div
+      {(!customer || hasHistory) && <div
         className="material-bar record-footer fixed inset-x-0 bottom-0 border-t"
         style={{ borderColor: 'var(--hairline)' }}
       >
-        <Button className="h-10 w-full" onClick={() => router.push('/checkin')}>
-          <Plus size={16} /> 新建接车
-        </Button>
-      </div>
+        {checkin}
+      </div>}
 
       {/* 编辑客户弹窗 */}
       <BottomSheet open={showEdit} onOpenChange={setShowEdit} title="编辑客户">
