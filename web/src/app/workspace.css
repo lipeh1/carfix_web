@@ -225,13 +225,12 @@
 .order-actions-inner > button { min-height: 44px; }
 
 /* 报价为可编辑单据：项目连续排列，桌面汇总固定在右侧 */
-.quote-page { min-height: 100vh; background: var(--canvas); padding-bottom: calc(220px + env(safe-area-inset-bottom)); }
+.quote-page { min-height: 100vh; background: var(--canvas); padding-bottom: calc(152px + env(safe-area-inset-bottom)); }
 .quote-layout { width: 100%; max-width: var(--content-width); padding: 16px; margin-inline: auto; }
 .quote-main { min-width: 0; }
 .quote-main .card { margin-bottom: 16px; }
 .quote-projects { border-radius: 2px !important; }
-.quote-projects-header { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 24px; }
-.quote-projects-header > span { font-size: 15px; font-weight: 600; }
+.quote-projects-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 12px; margin-bottom: 8px; }
 .quote-presets { display: flex; flex-wrap: wrap; gap: 6px; }
 .quote-presets > button { min-height: 36px; padding-inline: 10px; font-size: 12px; }
 .quote-group-title { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; padding-block: 8px; font-size: 12px; color: var(--ink-muted); }
@@ -249,11 +248,12 @@
 .quote-item-subtotal > span:last-child { min-height: 38px; display: flex; justify-content: flex-end; align-items: center; font-family: var(--type-mono); font-size: 14px; overflow-wrap: anywhere; }
 .quote-discount { border-radius: 6px; }
 .quote-discount .section-title { font-size: 13px; color: var(--ink-muted); }
-.quote-summary { position: fixed; inset: auto 0 0; z-index: 35; border-top: 1px solid var(--hairline-strong); background: var(--surface-1); padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
-.quote-summary-lines { margin-bottom: 12px; }
-.quote-summary-total { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hairline); }
-.quote-summary-total > span:last-child { font-family: var(--type-mono); font-size: 24px; font-weight: 500; letter-spacing: 0; }
-.quote-summary > button { min-height: 44px; width: 100%; }
+.quote-summary { position: fixed; inset: auto 0 0; z-index: 35; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 16px; border-top: 1px solid var(--hairline-strong); background: var(--surface-1); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
+.quote-summary-lines { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 2px 16px; color: var(--ink-subtle); font-size: 12px; }
+.quote-summary-lines b { font-family: var(--type-mono); font-weight: 400; }
+.quote-summary-total { display: grid; gap: 2px; font-size: 12px; color: var(--ink-muted); }
+.quote-summary-total > span:last-child { font: 500 24px/1.2 var(--type-mono); color: var(--ink); overflow-wrap: anywhere; }
+.quote-summary > button { min-height: 44px; padding-inline: 16px; }
 
 /* 收款对话框以待收为主要数字，其余信息保持账单式对齐 */
 .payment-overview { margin-bottom: 20px; border: 1px solid var(--hairline); border-radius: 3px; padding: 16px; background: var(--surface-2); }
@@ -290,6 +290,8 @@
   .order-row-identity, .order-row-complaint, .order-row-amount { grid-column: auto; grid-row: auto; }
   .order-row-amount { justify-content: flex-end; }
   .order-detail-grid.has-settlement { grid-template-columns: minmax(0, 1fr) 310px; gap: 24px; }
+  .has-settlement > .order-aside { grid-column: 2; grid-row: 2; }
+  .has-settlement > .order-main { grid-column: 1; grid-row: 2; }
   .order-identity { grid-column: 1 / -1; padding-bottom: 24px; }
   .order-identity .order-plate { font-size: 30px; }
   .order-aside { position: sticky; top: calc(var(--nav-height) + 24px); }
@@ -325,7 +327,9 @@
   .order-actions-inner { max-width: 1176px; }
   .quote-page { padding-bottom: 32px; }
   .quote-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; gap: 24px; padding: 28px 32px; }
-  .quote-summary { position: sticky; inset: auto; top: calc(var(--nav-height) + 28px); border: 1px solid var(--hairline); border-top: 3px solid var(--hairline-strong); border-radius: 3px; padding: 24px; }
+  .quote-summary { position: sticky; inset: auto; top: calc(var(--nav-height) + 28px); grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 20px; }
+  .quote-summary-lines { display: grid; gap: 8px; }
+  .quote-summary-lines > span { display: flex; justify-content: space-between; }
   .quote-summary-total { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
   .quote-summary-total > span:last-child { font-size: 30px; }
   .quote-summary > button { margin-top: 12px; }
@@ -402,6 +406,9 @@
 .order-main .document-panel { padding: 20px 16px; background: var(--surface-1); border-top: 2px solid var(--hairline-strong); border-bottom: 1px solid var(--hairline-strong); }
 .order-main .data-cell { padding-block: 12px; }
 .order-aside .settlement-panel { border: 0; border-radius: 0; border-top: 2px solid var(--ink); padding: 20px 16px; }
+@media (max-width: 767px) {
+  .has-settlement > .order-identity { border-bottom: 0; padding-bottom: 0; }
+}
 .settlement-panel .settlement-total .cell-value { font-size: 24px; }
 .settlement-due { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--hairline-strong); font-size: 14px; }
 .settlement-due .amount { font-size: 30px; font-weight: 500; }
@@ -413,14 +420,25 @@
 .settlement-ledger .ledger-total { border-top: 1px solid var(--hairline); padding-top: 16px; margin-top: 8px; }
 .settlement-ledger .ledger-total dd { font-size: 22px; font-weight: 500; }
 .settlement-ledger .ledger-quiet { font-size: 12px; color: var(--ink-subtle); }
-.settlement-state { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12px; padding-top: 12px; border-top: 1px dashed var(--hairline-strong); color: var(--ink-subtle); }
+.settlement-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.settlement-heading .section-title { margin: 0; }
+.sheet-vehicle, .delivery-due { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-bottom: 16px; }
+.sheet-vehicle { border-bottom: 1px solid var(--hairline); padding-bottom: 12px; }
+.sheet-vehicle > span:last-child { color: var(--ink-subtle); font-size: 13px; }
+.delivery-due { font-size: 13px; color: var(--ink-muted); }
+.delivery-due .amount { color: var(--ink); font-size: 20px; }
 .order-actions-inner { align-items: center; gap: 8px 16px; }
 .order-actions-inner > button { min-width: 0; padding-inline: 0; }
 .order-actions-inner > button[data-variant='default'] { order: 2; flex: 1; margin-left: auto; padding-inline: 16px; }
 .order-actions-inner > button[data-variant='link'] { font-size: 13px; }
 .quote-main .card { margin-bottom: 28px; padding: 0; border: 0; border-radius: 0; background: transparent; }
 .quote-main .quote-projects { border-top: 2px solid var(--ink); padding-top: 16px; }
-.quote-projects-header > span { font-family: var(--type-heading); font-size: 18px; }
+.quote-identity { margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--hairline); }
+.quote-identity .order-plate { font-size: 22px; }
+.quote-identity .identity-meta { margin-top: 4px; }
+.quote-projects-header .section-title { margin: 0; }
+.quote-projects-header small { margin-left: 8px; font: 400 12px var(--type-mono); color: var(--ink-subtle); }
+.quote-empty-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; border-block: 1px solid var(--hairline); padding-block: 8px; color: var(--ink-muted); font-size: 13px; }
 .quote-presets { gap: 8px 16px; }
 .quote-presets > button { min-height: 40px; padding-inline: 0; }
 .quote-item-name input { height: 44px; }
@@ -432,10 +450,9 @@
 .quote-main .quote-discount { display: flex; justify-content: space-between; align-items: center; gap: 16px; border-top: 1px solid var(--hairline); padding-top: 20px; }
 .quote-discount .section-title { margin: 0; font-family: var(--type-sans); font-size: 14px; font-weight: 400; }
 .quote-discount > div:last-child { max-width: 180px; }
-.quote-summary-total > span:last-child { font-size: 28px; }
 .payment-overview { border: 0; border-radius: 0; padding: 0 0 16px; background: transparent; border-bottom: 1px solid var(--hairline-strong); }
-.payment-methods { display: flex; flex-wrap: wrap; gap: 8px 24px; }
-.payment-method { border: 0; padding: 0; min-height: 44px; }
+.payment-methods { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.payment-method { border: 0; padding: 0; gap: 5px; min-height: 44px; }
 .payment-method:has([data-state='checked']) { background: transparent; }
 .record-page .card, .checkin-page .card { background: transparent; border: 0; border-radius: 0; border-bottom: 1px solid var(--hairline); padding: 0 0 24px; margin-bottom: 24px; }
 .record-page .record-identity { display: flex; align-items: center; gap: 16px; padding-block: 8px 24px; border-bottom: 2px solid var(--ink); }
@@ -529,5 +546,5 @@
 }
 
 @media (max-width: 359px) {
-  .payment-methods { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .payment-methods { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

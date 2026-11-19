@@ -8,7 +8,6 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { X, Plus } from 'lucide-react'
 import NavBar from '@/components/mobile/NavBar'
 import Cell from '@/components/mobile/Cell'
-import Empty from '@/components/mobile/Empty'
 import BottomSheet from '@/components/mobile/BottomSheet'
 import ScrollTabs from '@/components/mobile/ScrollTabs'
 import { useConfirm } from '@/components/mobile/ConfirmProvider'
@@ -17,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2 } from 'lucide-react'
 import { getOrder, saveQuote, getLastQuote } from '@/lib/api'
+import type { WorkOrder } from '@/lib/types'
 import { fenToYuan, yuanToFen } from '@/lib/money'
 import { saveDraft, loadDraft, clearDraft } from '@/lib/draft'
 
@@ -90,6 +90,7 @@ export default function QuotePage() {
   const [pickerTab, setPickerTab] = useState('service')
   // 服务端数据是否已载入完成（之后再开始记录草稿）
   const [loaded, setLoaded] = useState(false)
+  const [identity, setIdentity] = useState<Pick<WorkOrder, 'orderNo' | 'vehicle'> | null>(null)
 
   const serviceItems = items.filter(i => i.type === 'service')
   const partItems = items.filter(i => i.type === 'part')
@@ -184,6 +185,7 @@ export default function QuotePage() {
   const loadExistingQuote = useCallback(async () => {
     try {
       const order = await getOrder(orderId)
+      setIdentity({ orderNo: order.orderNo, vehicle: order.vehicle })
       // 检测结果用独立的 inspection 字段回填（与客户诉求 complaint 是两回事）
       setInspection(order.inspection || '')
       // 回显报价时登记的优惠（接口返回分，输入为元）
@@ -348,6 +350,15 @@ export default function QuotePage() {
 
       <div className="quote-layout">
         <div className="quote-main">
+          {identity && (
+            <header className="quote-identity">
+              <strong className="order-plate">{identity.vehicle?.plateNumber || identity.orderNo}</strong>
+              <div className="identity-meta">
+                {(identity.vehicle?.brand || identity.vehicle?.model) && <span>{identity.vehicle.brand} {identity.vehicle.model}</span>}
+                {identity.vehicle?.plateNumber && <span className="font-mono">{identity.orderNo}</span>}
+              </div>
+            </header>
+          )}
           {/* 故障描述 */}
           <div className="card">
             <div className="section-title">故障描述</div>
@@ -362,13 +373,13 @@ export default function QuotePage() {
           {/* 维修项目 */}
           <div className="card quote-projects">
             <div className="quote-projects-header">
-              <span>维修项目 ({items.length})</span>
+              <h2 className="section-title">维修项目{items.length > 0 && <small>{items.length} 项</small>}</h2>
               <div className="quote-presets">
                 <Button variant="link" size="sm" onClick={applyMinorMaintenance}>小保养</Button>
                 <Button variant="link" size="sm" onClick={copyLastItems}>上次项目</Button>
-                <Button variant="link" size="sm" onClick={() => setShowItemPicker(true)}>
+                {items.length > 0 && <Button variant="link" size="sm" onClick={() => setShowItemPicker(true)}>
                   <Plus size={13} /> 常用项目
-                </Button>
+                </Button>}
               </div>
             </div>
 
@@ -393,7 +404,10 @@ export default function QuotePage() {
             )}
 
             {/* 空状态 */}
-            {items.length === 0 && <Empty description="暂无维修项目，点击上方常用项目添加" />}
+            {items.length === 0 && <div className="quote-empty-line">
+              <span>尚未添加维修项目</span>
+              <button type="button" className="inline-action" onClick={() => setShowItemPicker(true)}><Plus size={15} />常用项目</button>
+            </div>}
 
             {/* 手动添加 */}
             <div className="quote-add-actions">
@@ -408,9 +422,10 @@ export default function QuotePage() {
 
           {/* 优惠 */}
           <div className="card quote-discount">
-            <div className="section-title">优惠</div>
+            <label className="section-title" htmlFor="quote-discount">优惠</label>
             <div className="flex items-center gap-2">
               <Input
+                id="quote-discount"
                 inputMode="decimal"
                 value={discount}
                 placeholder="0.00"
@@ -424,23 +439,15 @@ export default function QuotePage() {
 
         {/* 汇总在桌面跟随右侧阅读，在手机固定底部方便提交 */}
         <aside className="quote-summary">
-          <div className="quote-summary-lines">
-            <div className="flex-between py-0.5 text-[13px]" style={{ color: 'var(--ink-muted)' }}>
-              <span>项目合计</span>
-              <span className="font-mono">¥{formatAmount(itemsTotal)}</span>
-            </div>
+          {(items.length > 0 || Number(discount) > 0) && <div className="quote-summary-lines">
+            <span>项目合计 <b>¥{formatAmount(itemsTotal)}</b></span>
             {Number(discount) > 0 && (
-              <div className="flex-between py-0.5 text-[13px]" style={{ color: 'var(--ink-muted)' }}>
-                <span>优惠</span>
-                <span className="text-success font-mono">-¥{formatAmount(discount)}</span>
-              </div>
+              <span>优惠 <b>-¥{formatAmount(discount)}</b></span>
             )}
-            <div className="flex-between quote-summary-total">
-              <span>应收金额</span>
-              <span>
-                ¥{formatAmount(finalAmount)}
-              </span>
-            </div>
+          </div>}
+          <div className="quote-summary-total">
+            <span>应收金额</span>
+            <span>¥{formatAmount(finalAmount)}</span>
           </div>
           <Button className="h-11 w-full" disabled={saving} onClick={saveQuoteHandler}>
             {saving && <Loader2 className="animate-spin" />}
@@ -461,7 +468,7 @@ export default function QuotePage() {
             <Cell
               key={item.name}
               title={item.name}
-              label={`参考价 ¥${item.price}`}
+              right={<span className="font-mono">参考价 ¥{formatAmount(item.price)}</span>}
               onClick={() => addPresetItem(item)}
             />
           ))}

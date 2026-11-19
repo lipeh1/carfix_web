@@ -11,7 +11,7 @@ import Empty from '@/components/mobile/Empty'
 import BottomSheet from '@/components/mobile/BottomSheet'
 import Field from '@/components/mobile/Field'
 import ImagePreview from '@/components/mobile/ImagePreview'
-import { Badge } from '@/components/mobile/Badge'
+import { Badge, StatusBadge } from '@/components/mobile/Badge'
 import PageSkeleton from '@/components/PageSkeleton'
 import { useConfirm } from '@/components/mobile/ConfirmProvider'
 import { Button } from '@/components/ui/button'
@@ -29,17 +29,6 @@ import { fenToYuan, yuanToFen } from '@/lib/money'
 import { formatDateTime, getPaymentMethodLabel } from '@/lib/format'
 import { hapticFeedback } from '@/lib/feedback'
 import { generateQuoteCard } from '@/lib/quoteCard'
-
-// 本页状态标签：pending_quote 在详情语境下强调「待报价确认」
-const STATUS_LABELS: Record<string, { label: string; tone: 'primary' | 'success' | 'warning' | 'danger' | 'default' }> = {
-  pending_inspection: { label: '待检测', tone: 'warning' },
-  pending_quote: { label: '待报价确认', tone: 'primary' },
-  repairing: { label: '维修中', tone: 'danger' },
-  pending_quality_check: { label: '待质检', tone: 'warning' },
-  pending_settlement: { label: '待结算', tone: 'primary' },
-  completed: { label: '已完成', tone: 'success' },
-  cancelled: { label: '已取消', tone: 'default' }
-}
 
 // 底部操作按钮定义（根据当前状态动态显示）
 interface ActionButton {
@@ -399,14 +388,19 @@ export default function OrderDetailPage() {
     } catch { /* 已拦截 */ }
   }
 
-  const statusInfo = STATUS_LABELS[order?.status ?? ''] || { label: order?.status ?? '', tone: 'default' as const }
+  const sheetIdentity = order && (
+    <div className="sheet-vehicle">
+      <span className="order-plate">{order.vehicle?.plateNumber || order.orderNo}</span>
+      <span>{order.vehicle?.brand} {order.vehicle?.model}</span>
+    </div>
+  )
   // 仅决定视觉强调；原有动作、出现条件和处理顺序均保持不变
   const primaryAction = actionButtons.find(btn => btn.tone === 'primary')?.key
     ?? actionButtons.find(btn => btn.tone === 'success')?.key
 
   return (
     <div className="page-container" style={{ paddingBottom: 'calc(84px + env(safe-area-inset-bottom))' }}>
-      <NavBar title={`工单 #${order?.orderNo || ''}`} />
+      <NavBar title={order ? `工单 #${order.orderNo}` : '工单'} />
 
       {order ? (
         <div className={`page-content order-detail-grid${settlement ? ' has-settlement' : ''}`}>
@@ -414,13 +408,45 @@ export default function OrderDetailPage() {
           <div className="order-identity">
             <div className="flex-between w-full gap-3">
               <div className="min-w-0">
-                <div className="order-plate">{order.vehicle?.plateNumber}</div>
+                <div className="order-plate">{order.vehicle?.plateNumber || order.orderNo}</div>
                 {(order.vehicle?.brand || order.vehicle?.model) && <div className="identity-meta">{order.vehicle?.brand} {order.vehicle?.model}</div>}
-                <div className="text-muted mt-2">{order.customer?.name} · {order.customer?.phone}</div>
+                {order.customer && <div className="text-muted mt-2">{order.customer.name} <span className="font-mono">{order.customer.phone}</span></div>}
               </div>
-              <Badge tone={statusInfo.tone}>{statusInfo.label}</Badge>
+              {order.status === 'pending_quote' ? <Badge tone="primary">待报价确认</Badge> : <StatusBadge status={order.status} />}
             </div>
           </div>
+
+          {/* 有结算单时，手机先看待收和结清状态；桌面将单据排在作业记录右侧。 */}
+          {settlement && (
+            <aside className="order-aside">
+              <div className="card settlement-panel">
+                <div className="settlement-heading">
+                  <h2 className="section-title">结算信息</h2>
+                  <Badge tone={settlement.status === 'paid' ? 'success' : 'warning'}>{settlement.status === 'paid' ? '已结清' : '挂账'}</Badge>
+                </div>
+                <div className="settlement-number"><span>结算单号</span><span className="font-mono">{settlement.settlementNo}</span></div>
+                {unpaidAmount > 0 && <div className="settlement-due"><span>待收金额</span><span className="amount">¥{fenToYuan(unpaidAmount)}</span></div>}
+                <dl className="settlement-ledger">
+                  <div><dt>应收金额</dt><dd>¥{fenToYuan(settlement.totalAmount)}</dd></div>
+                  <div className={!settlement.discount ? 'ledger-quiet' : ''}><dt>优惠</dt><dd>¥{fenToYuan(settlement.discount || 0)}</dd></div>
+                  <div className="ledger-total"><dt>实收金额</dt><dd>¥{fenToYuan(settlement.actualAmount)}</dd></div>
+                  <div className={!settlement.paidAmount ? 'ledger-quiet' : ''}><dt>已收金额</dt><dd>¥{fenToYuan(settlement.paidAmount)}</dd></div>
+                </dl>
+                {/* 收款记录 */}
+                {settlement.payments && settlement.payments.length > 0 && (
+                  <div className="settlement-payments">
+                    <div className="text-muted mb-2">收款记录</div>
+                    {settlement.payments.map((p) => (
+                      <div key={p.id} className="payment-record last:border-b-0">
+                        <span>{formatDateTime(p.createdAt)} · {getPaymentMethodLabel(p.method)}</span>
+                        <span className="text-success">+¥{fenToYuan(p.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </aside>
+          )}
 
           <div className="order-main">
             {/* 接车信息 */}
@@ -432,7 +458,7 @@ export default function OrderDetailPage() {
                 </Button>
               </div>
               <Cell title="客户诉求" right={<span style={{ color: 'var(--ink)' }}>{order.complaint || '-'}</span>} />
-              <Cell title="接车里程" right={<span style={{ color: 'var(--ink)' }}>{order.mileageIn ? order.mileageIn + ' km' : '-'}</span>} />
+              <Cell title="接车里程" right={<span className="font-mono">{order.mileageIn != null ? order.mileageIn + ' km' : '-'}</span>} />
               <Cell title="车况描述" right={<span style={{ color: 'var(--ink)' }}>{order.checkinRecord?.vehicleCondition || '-'}</span>} />
               <Cell title="创建时间" right={<span style={{ color: 'var(--ink)' }}>{formatDateTime(order.createdAt)}</span>} />
             </div>
@@ -529,35 +555,6 @@ export default function OrderDetailPage() {
 
           </div>
 
-          {/* 结算信息在桌面独立侧栏，手机仍顺序展示 */}
-          {settlement && (
-            <aside className="order-aside">
-              <div className="card settlement-panel">
-                <div className="section-title">结算信息</div>
-                <div className="settlement-number"><span>结算单号</span><span className="font-mono">{settlement.settlementNo}</span></div>
-                {unpaidAmount > 0 && <div className="settlement-due"><span>待收金额</span><span className="amount">¥{fenToYuan(unpaidAmount)}</span></div>}
-                <dl className="settlement-ledger">
-                  <div><dt>应收金额</dt><dd>¥{fenToYuan(settlement.totalAmount)}</dd></div>
-                  <div className={!settlement.discount ? 'ledger-quiet' : ''}><dt>优惠</dt><dd>¥{fenToYuan(settlement.discount || 0)}</dd></div>
-                  <div className="ledger-total"><dt>实收金额</dt><dd>¥{fenToYuan(settlement.actualAmount)}</dd></div>
-                  <div className={!settlement.paidAmount ? 'ledger-quiet' : ''}><dt>已收金额</dt><dd>¥{fenToYuan(settlement.paidAmount)}</dd></div>
-                </dl>
-                <div className="settlement-state"><span>状态</span><Badge tone={settlement.status === 'paid' ? 'success' : 'warning'}>{settlement.status === 'paid' ? '已结清' : '挂账'}</Badge></div>
-                {/* 收款记录 */}
-                {settlement.payments && settlement.payments.length > 0 && (
-                  <div className="settlement-payments">
-                    <div className="text-muted mb-2">收款记录</div>
-                    {settlement.payments.map((p) => (
-                      <div key={p.id} className="payment-record last:border-b-0">
-                        <span>{formatDateTime(p.createdAt)} · {getPaymentMethodLabel(p.method)}</span>
-                        <span className="text-success">+¥{fenToYuan(p.amount)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </aside>
-          )}
 
           {/* 每个状态只强调一个主操作，其他动作以文字入口保留 */}
           {actionButtons.length > 0 && (
@@ -657,6 +654,7 @@ export default function OrderDetailPage() {
 
       {/* ===== 收款弹窗 ===== */}
       <BottomSheet open={showPaymentPopup} onOpenChange={setShowPaymentPopup} title="收款">
+        {sheetIdentity}
         {settlement && (
           <div className="payment-overview">
             <div className="flex-between"><span>应收金额</span><span className="font-mono">¥{fenToYuan(settlement.totalAmount)}</span></div>
@@ -696,6 +694,8 @@ export default function OrderDetailPage() {
 
       {/* ===== 交车弹窗 ===== */}
       <BottomSheet open={showDeliverPopup} onOpenChange={setShowDeliverPopup} title="确认交车">
+        {sheetIdentity}
+        {unpaidAmount > 0 && <p className="delivery-due">待收金额 <span className="amount">¥{fenToYuan(unpaidAmount)}</span></p>}
         <div className="flex flex-col gap-3">
           <Field label="交车里程">
             <Input inputMode="numeric" value={deliverMileage} placeholder="公里数，可不填"
