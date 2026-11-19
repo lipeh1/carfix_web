@@ -6,9 +6,12 @@ import dayjs from 'dayjs'
 export const ORDER_STATUS_MAP: Record<string, { label: string; tone: 'primary' | 'success' | 'warning' | 'danger' | 'default' }> = {
   pending_inspection: { label: '待检测', tone: 'warning' },
   pending_quote: { label: '待报价', tone: 'primary' },
+  quoted: { label: '已报价待确认', tone: 'default' },
+  confirmed: { label: '已确认待维修', tone: 'default' },
   repairing: { label: '维修中', tone: 'danger' },
   pending_quality_check: { label: '待质检', tone: 'warning' },
   pending_settlement: { label: '待结算', tone: 'primary' },
+  pending_delivery: { label: '待交车', tone: 'default' },
   completed: { label: '已完成', tone: 'success' },
   cancelled: { label: '已取消', tone: 'default' }
 }

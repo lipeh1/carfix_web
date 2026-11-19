@@ -1,6 +1,6 @@
 'use client'
 
-// 添加到桌面安装引导卡片：按运行环境（微信/iOS Safari/安卓浏览器）给出对应的安装路径
+// 工作台底部的安装提示：按运行环境（微信/iOS Safari/安卓浏览器）给出对应的安装路径
 // （自旧 client/src/components/InstallGuide.vue 移植）
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
@@ -74,10 +74,10 @@ export default function InstallGuide() {
   if (!visible) return null
 
   return (
-    <div className="install-note">
+    <aside className="install-note" aria-labelledby="install-note-title">
       <div className="min-w-0 flex-1">
-        <div className="text-[14px] font-semibold" style={{ color: 'var(--ink)' }}>安装到手机桌面</div>
-        <div className="text-muted mt-1 leading-normal">{tip}</div>
+        <p id="install-note-title" className="install-note-title">安装到手机桌面</p>
+        <p className="text-muted leading-normal">{tip}</p>
       </div>
       {deferredPrompt ? (
         <Button variant="link" size="sm" onClick={installNow}>立即安装</Button>
@@ -85,13 +85,12 @@ export default function InstallGuide() {
         <button
           type="button"
           aria-label="关闭"
-          className="pressable p-1"
-          style={{ color: 'var(--ink-tertiary)' }}
+          className="pressable install-note-close"
           onClick={dismiss}
         >
-          <X size={18} />
+          <X size={18} strokeWidth={1.7} aria-hidden="true" />
         </button>
       )}
-    </div>
+    </aside>
   )
 }

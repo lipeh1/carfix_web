@@ -1,7 +1,8 @@
 'use client'
 
-// 工作台：先呈现待处理状态与车辆提醒，再呈现收支汇总；数据与操作沿用既有接口
+// 工作台：空闲时引导接车，有待办时展示实际工单、收支和车辆提醒
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Settings, Plus, ChevronRight } from 'lucide-react'
@@ -14,13 +15,15 @@ import RecoveryCodeSheet from '@/components/RecoveryCodeSheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useConfirm } from '@/components/mobile/ConfirmProvider'
-import { getDashboard, getReminders, logout, changePassword, regenerateRecoveryCode, getShopName, saveShopName } from '@/lib/api'
+import { getDashboard, getOrders, getReminders, logout, changePassword, regenerateRecoveryCode, getShopName, saveShopName } from '@/lib/api'
 import { fenToYuan } from '@/lib/money'
 import { useAnimatedYuan } from '@/lib/hooks'
-import { getReminderTypeLabel, formatMonthDay } from '@/lib/format'
+import { formatDateTime, formatMonthDay, getOrderStatusLabel, getReminderTypeLabel } from '@/lib/format'
 import { hapticFeedback } from '@/lib/feedback'
 import { DEFAULT_SHOP_NAME, SHOP_NAME_MAX_LEN, setShopNameCache } from '@/lib/shop'
-import type { DashboardStats, Reminder } from '@/lib/types'
+import type { DashboardStats, Reminder, WorkOrder } from '@/lib/types'
+
+const ORDER_PREVIEW_LIMIT = 5
 
 export default function HomePage() {
   const router = useRouter()
@@ -29,28 +32,31 @@ export default function HomePage() {
   const [stats, setStats] = useState<DashboardStats>({
     pendingInspection: 0, repairing: 0, pendingSettlement: 0, completed: 0, monthlyRevenue: 0, unpaidAmount: 0
   })
-  const [pendingReminders, setPendingReminders] = useState<Reminder[]>([])
+  const [pendingReminders, setPendingReminders] = useState<Reminder[] | null>(null)
+  const [pendingOrders, setPendingOrders] = useState<WorkOrder[] | null>(null)
+  const [showAllOrders, setShowAllOrders] = useState(false)
   // 首次加载中状态，驱动概览/营收骨架
   const [loading, setLoading] = useState(true)
 
   // 本月营收数字滚动展示（分值驱动）
   const monthlyRevenueDisplay = useAnimatedYuan(stats.monthlyRevenue)
 
-  const loadData = async () => {
-    setLoading(true)
-    try {
-      const [dash, reminders] = await Promise.all([
-        getDashboard(),
-        getReminders({ status: 'pending' })
-      ])
+  useEffect(() => {
+    let current = true
+    void Promise.all([getDashboard(), getReminders({ status: 'pending' })]).then(([dash, reminders]) => {
+      if (!current) return
       setStats(dash)
       setPendingReminders(reminders.slice(0, 5))
-    } catch { /* 后端未就绪时静默 */ } finally {
-      setLoading(false)
-    }
-  }
+    }).catch(() => { /* 请求错误由接口层提示 */ }).finally(() => {
+      if (current) setLoading(false)
+    })
 
-  useEffect(() => { void loadData() }, [])
+    // 工单列表独立加载，保留进厂时间倒序，也包含概览未单列的待报价、待质检等工单。
+    void getOrders().then(orders => {
+      if (current) setPendingOrders(orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled'))
+    }).catch(() => { /* 读取失败时保留未知状态，避免提示门店已经空闲 */ })
+    return () => { current = false }
+  }, [])
 
   // 概览数字直达对应状态工单列表
   const goOrders = (status: string) => router.push(`/orders?status=${status}`)
@@ -150,6 +156,22 @@ export default function HomePage() {
     { label: '维修中', value: stats.repairing, status: 'repairing' },
     { label: '待结算', value: stats.pendingSettlement, status: 'pending_settlement' }
   ]
+  const activeOverview = overview.filter(o => o.value > 0)
+  const isIdle = !loading && pendingOrders?.length === 0 && pendingReminders?.length === 0 &&
+    activeOverview.length === 0 && stats.unpaidAmount === 0
+  const reportLink = (
+    <Button variant="link" asChild><Link href="/stats">统计报表 <ChevronRight size={16} /></Link></Button>
+  )
+  const isZeroRevenue = !loading && stats.monthlyRevenue === 0
+  const showFinancialPanel = stats.unpaidAmount > 0 || !isZeroRevenue
+  const revenue = (
+    <dl className={`revenue-panel${isZeroRevenue ? ' is-empty' : ''}`}>
+      <dt>本月营收</dt>
+      <dd className="revenue-value">
+        {loading ? <div className="sk" style={{ width: 160, height: 32 }} /> : <>¥{monthlyRevenueDisplay}</>}
+      </dd>
+    </dl>
+  )
 
   return (
     <div className="page-container page-frame">
@@ -164,57 +186,87 @@ export default function HomePage() {
       />
 
       <div className="page-content scroll-area dashboard-content">
-        {/* 快捷操作直接由按钮触发，避免视觉包装层干扰键盘操作 */}
-        <div className="dashboard-toolbar">
-          <Button onClick={() => router.push('/checkin')}><Plus size={16} /> 新建接车</Button>
-          <Button variant="link" onClick={() => router.push('/stats')}>统计报表 <ChevronRight size={16} /></Button>
+        <div className={`dashboard-toolbar${isIdle ? ' is-idle' : ''}`}>
+          {isIdle && <p className="dashboard-idle-note">暂无待办，来车时可在这里登记</p>}
+          <Button asChild><Link href="/checkin"><Plus size={16} /> 新建接车</Link></Button>
+          {!isIdle && reportLink}
         </div>
 
         <div className="dashboard-grid">
-          {/* 非零待办展开为作业行，空状态收成文字入口，保留原有跳转 */}
-          <section className="overview-panel">
-            <div className="section-title">今日概览</div>
+          {/* 概览保留可点的状态计数，紧凑排布为下方工单留出空间 */}
+          <section className="overview-panel" aria-busy={loading}>
+            <div className="dashboard-section-heading">
+              <h2 className="section-title">今日概览</h2>
+              {isIdle && reportLink}
+            </div>
             {loading ? (
-              <div className="overview-metrics" aria-busy="true">
-                {Array.from({ length: 3 }, (_, i) => <div key={i} className="sk" style={{ height: 56 }} />)}
-              </div>
+              <div className="sk overview-placeholder" />
             ) : (
               <>
-                <div className="overview-metrics">
-                  {overview.filter(o => o.value > 0).map(o => (
-                    <button key={o.status} type="button" className="overview-metric" onClick={() => goOrders(o.status)}>
-                      <span className="overview-metric-label">{o.label}</span>
-                      <span className="overview-metric-value">{o.value}</span>
-                      <ChevronRight size={18} strokeWidth={1.7} aria-hidden="true" />
-                    </button>
-                  ))}
-                </div>
+                {activeOverview.length > 0 && (
+                  <div className="overview-active">
+                    {activeOverview.map(o => (
+                      <button key={o.status} type="button" className="overview-metric" onClick={() => goOrders(o.status)}>
+                        <span>{o.label}</span>
+                        <span className="overview-metric-value">{o.value}</span>
+                        <ChevronRight size={14} strokeWidth={1.7} aria-hidden="true" />
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="overview-quiet">
                   {overview.filter(o => o.value === 0).map(o => (
                     <button key={o.status} type="button" onClick={() => goOrders(o.status)}>{o.label} <span className="font-mono">0</span></button>
                   ))}
                   <button type="button" onClick={() => goOrders('completed')}>已完成 <span className="font-mono">{stats.completed}</span></button>
                 </div>
+                {!showFinancialPanel && revenue}
               </>
             )}
           </section>
 
-          <div className="dashboard-financial">
-            {stats.unpaidAmount > 0 && (
-              <button type="button" className="unpaid-panel" onClick={() => router.push('/stats')}>
-                <span>挂账未收</span>
-                <span className="amount">¥{fenToYuan(stats.unpaidAmount)}</span>
-                <ChevronRight size={18} aria-hidden="true" />
-              </button>
-            )}
-            <section className={`revenue-panel${!stats.monthlyRevenue && !loading ? ' is-empty' : ''}`}>
-              <div className="section-title">本月营收</div>
-              {loading ? <div className="sk" style={{ width: 160, height: 32 }} /> : <span className="revenue-value">¥{monthlyRevenueDisplay}</span>}
+          {pendingOrders && pendingOrders.length > 0 && (
+            <section className="dashboard-orders" aria-labelledby="dashboard-orders-title">
+              <h2 id="dashboard-orders-title" className="section-title">待处理工单</h2>
+              <ul id="dashboard-order-list">
+                {(showAllOrders ? pendingOrders : pendingOrders.slice(0, ORDER_PREVIEW_LIMIT)).map(order => (
+                  <li key={order.id}>
+                    <Link href={`/orders/${order.id}`} className="dashboard-order-link pressable">
+                      <span className="order-plate">{order.vehicle?.plateNumber || order.orderNo}</span>
+                      <span className="dashboard-order-status">{getOrderStatusLabel(order.status)}</span>
+                      <ChevronRight size={16} strokeWidth={1.7} aria-hidden="true" />
+                      <span className="dashboard-order-meta">
+                        {(order.vehicle?.brand || order.vehicle?.model) && <span>{order.vehicle.brand} {order.vehicle.model}</span>}
+                        <time dateTime={order.createdAt}>进厂 {formatDateTime(order.createdAt)}</time>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              {pendingOrders.length > ORDER_PREVIEW_LIMIT && (
+                <button type="button" className="dashboard-orders-more" aria-controls="dashboard-order-list"
+                  aria-expanded={showAllOrders} onClick={() => setShowAllOrders(shown => !shown)}>
+                  {showAllOrders ? '收起' : `展开其余 ${pendingOrders.length - ORDER_PREVIEW_LIMIT} 单`}
+                </button>
+              )}
             </section>
-          </div>
+          )}
+
+          {showFinancialPanel && (
+            <div className="dashboard-financial">
+              {stats.unpaidAmount > 0 && (
+                <button type="button" className="unpaid-panel" onClick={() => router.push('/stats')}>
+                  <span>挂账未收</span>
+                  <span className="amount">¥{fenToYuan(stats.unpaidAmount)}</span>
+                  <ChevronRight size={18} aria-hidden="true" />
+                </button>
+              )}
+              {revenue}
+            </div>
+          )}
 
           {/* 提醒使用连续列表，与数字概要区分层级 */}
-          {pendingReminders.length > 0 && (
+          {pendingReminders && pendingReminders.length > 0 && (
             <section className="reminders-panel">
               <div className="section-title">待办提醒</div>
               {pendingReminders.map(item => (
@@ -229,12 +281,9 @@ export default function HomePage() {
               ))}
             </section>
           )}
-
-
         </div>
-        {/* 安装指引放在业务信息之后，仍按原有环境条件显示 */}
-        <InstallGuide />
       </div>
+      <InstallGuide />
 
       {/* 设置面板：店铺名称 / 修改密码 / 恢复码 / 退出登录 */}
       <BottomSheet open={showSettings} onOpenChange={setShowSettings} title="设置">
